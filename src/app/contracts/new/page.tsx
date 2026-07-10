@@ -31,6 +31,11 @@ export default function NewContractPage() {
         status: values.status,
         signed_date: values.signed_date || null,
         notes: values.notes || null,
+        payment_type: values.payment_type,
+        installment_months: values.installment_months
+          ? Number(values.installment_months)
+          : null,
+        barter_details: values.barter_details || null,
       })
       .select("id")
       .single();

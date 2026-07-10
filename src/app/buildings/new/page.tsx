@@ -27,6 +27,9 @@ export default function NewBuildingPage() {
         address: values.address || null,
         floors_count: values.floors_count ? Number(values.floors_count) : null,
         units_per_floor: values.units_per_floor ? Number(values.units_per_floor) : null,
+        price_per_sqm: values.price_per_sqm ? Number(values.price_per_sqm) : null,
+        facade_url: values.facade_url || null,
+        plan_url: values.plan_url || null,
       })
       .select("id")
       .single();

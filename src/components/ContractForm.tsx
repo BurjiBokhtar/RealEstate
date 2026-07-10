@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
-import { CONTRACT_STATUSES, type ContractInput } from "@/lib/contracts/types";
+import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
@@ -16,6 +16,9 @@ const emptyInput: ContractInput = {
   status: "draft",
   signed_date: "",
   notes: "",
+  payment_type: "full",
+  installment_months: "",
+  barter_details: "",
 };
 
 export function ContractForm({
@@ -155,6 +158,53 @@ export function ContractForm({
           />
         </label>
       </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.contracts.form.paymentType}</span>
+          <select
+            value={values.payment_type}
+            onChange={(e) =>
+              update("payment_type", e.target.value as ContractInput["payment_type"])
+            }
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            {PAYMENT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.contracts.paymentTypes[type]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {values.payment_type === "installment" && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">
+              {t.contracts.form.installmentMonths}
+            </span>
+            <input
+              type="number"
+              min="1"
+              value={values.installment_months}
+              onChange={(e) => update("installment_months", e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2"
+            />
+          </label>
+        )}
+      </div>
+
+      {values.payment_type === "barter" && (
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">
+            {t.contracts.form.barterDetails}
+          </span>
+          <textarea
+            value={values.barter_details}
+            onChange={(e) => update("barter_details", e.target.value)}
+            rows={2}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.contracts.form.notes}</span>

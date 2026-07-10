@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { STATUS_COLORS, formatPrice } from "@/lib/objects/format";
+import { STATUS_COLORS } from "@/lib/objects/format";
+import { formatDualCurrency } from "@/lib/currency";
+import { useSettings } from "@/lib/settings/SettingsProvider";
 import type { PropertyObject } from "@/lib/objects/types";
 
 export function ShakhmatkaGrid({ units }: { units: PropertyObject[] }) {
   const { t } = useLocale();
+  const { settings } = useSettings();
 
   if (units.length === 0) {
     return <p className="text-slate-400">{t.buildings.noUnits}</p>;
@@ -42,7 +45,7 @@ export function ShakhmatkaGrid({ units }: { units: PropertyObject[] }) {
                   <Link
                     key={unit.id}
                     href={`/objects/${unit.id}`}
-                    title={`${unit.name} · ${formatPrice(unit.price)}`}
+                    title={`${unit.name} · ${formatDualCurrency(unit.price, settings.usd_rate)}`}
                     className={`flex h-14 w-16 flex-col items-center justify-center rounded-md text-xs font-medium transition-transform hover:scale-105 ${STATUS_COLORS[unit.status]}`}
                   >
                     <span>{unit.position_in_floor}</span>

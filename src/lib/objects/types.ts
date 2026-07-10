@@ -28,6 +28,7 @@ export type PropertyObject = {
   building_id: string | null;
   floor: number | null;
   position_in_floor: number | null;
+  plan_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -40,4 +41,5 @@ export type PropertyObjectInput = {
   area: string;
   price: string;
   description: string;
+  plan_url: string;
 };

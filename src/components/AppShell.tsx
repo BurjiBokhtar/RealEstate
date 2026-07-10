@@ -12,6 +12,7 @@ const navItems = [
   { href: "/tasks", key: "tasks" as const },
   { href: "/contracts", key: "contracts" as const },
   { href: "/buildings", key: "buildings" as const },
+  { href: "/settings", key: "settings" as const },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -61,7 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     : "text-slate-500 hover:bg-slate-100"
                 }`}
               >
-                {l === "ru" ? "RU" : "ТҶ"}
+                {l === "ru" ? "RU" : "ТОҶ"}
               </button>
             ))}
           </div>

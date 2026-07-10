@@ -24,6 +24,7 @@ export default function BuildingDetailPage() {
   const [generating, setGenerating] = useState(false);
   const [genFloors, setGenFloors] = useState("");
   const [genUnitsPerFloor, setGenUnitsPerFloor] = useState("");
+  const [genArea, setGenArea] = useState("");
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -69,6 +70,9 @@ export default function BuildingDetailPage() {
         address: values.address || null,
         floors_count: values.floors_count ? Number(values.floors_count) : null,
         units_per_floor: values.units_per_floor ? Number(values.units_per_floor) : null,
+        price_per_sqm: values.price_per_sqm ? Number(values.price_per_sqm) : null,
+        facade_url: values.facade_url || null,
+        plan_url: values.plan_url || null,
       })
       .eq("id", params.id);
     setSubmitting(false);
@@ -88,6 +92,8 @@ export default function BuildingDetailPage() {
     if (!floors || !perFloor) return;
 
     setGenerating(true);
+    const area = genArea ? Number(genArea) : null;
+    const price = area && building?.price_per_sqm ? area * building.price_per_sqm : null;
     const occupied = new Set(units.map((u) => `${u.floor}-${u.position_in_floor}`));
     const toCreate: Array<Record<string, unknown>> = [];
     for (let floor = 1; floor <= floors; floor++) {
@@ -100,6 +106,8 @@ export default function BuildingDetailPage() {
           building_id: params.id,
           floor,
           position_in_floor: position,
+          area,
+          price,
         });
       }
     }
@@ -136,6 +144,9 @@ export default function BuildingDetailPage() {
               address: building.address ?? "",
               floors_count: building.floors_count?.toString() ?? "",
               units_per_floor: building.units_per_floor?.toString() ?? "",
+              price_per_sqm: building.price_per_sqm?.toString() ?? "",
+              facade_url: building.facade_url ?? "",
+              plan_url: building.plan_url ?? "",
             }}
             submitting={submitting}
             onSubmit={handleSubmit}
@@ -166,6 +177,19 @@ export default function BuildingDetailPage() {
                   min="1"
                   value={genUnitsPerFloor}
                   onChange={(e) => setGenUnitsPerFloor(e.target.value)}
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="font-medium text-slate-700">
+                  {t.buildings.defaultArea}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={genArea}
+                  onChange={(e) => setGenArea(e.target.value)}
                   className="rounded-md border border-slate-300 px-3 py-2"
                 />
               </label>

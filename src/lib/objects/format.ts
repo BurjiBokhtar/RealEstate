@@ -5,11 +5,6 @@ export function formatArea(area: number | null) {
   return `${area} м²`;
 }
 
-export function formatPrice(price: number | null) {
-  if (price === null) return "—";
-  return new Intl.NumberFormat("ru-RU").format(price) + " смн";
-}
-
 export const STATUS_COLORS: Record<ObjectStatus, string> = {
   available: "bg-emerald-100 text-emerald-700",
   reserved: "bg-amber-100 text-amber-700",

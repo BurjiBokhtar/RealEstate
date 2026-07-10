@@ -6,6 +6,9 @@ export type Building = {
   address: string | null;
   floors_count: number | null;
   units_per_floor: number | null;
+  price_per_sqm: number | null;
+  facade_url: string | null;
+  plan_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -15,6 +18,9 @@ export type BuildingInput = {
   address: string;
   floors_count: string;
   units_per_floor: string;
+  price_per_sqm: string;
+  facade_url: string;
+  plan_url: string;
 };
 
 export type BuildingUnit = {

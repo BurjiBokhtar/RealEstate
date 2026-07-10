@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
+import { SettingsProvider } from "@/lib/settings/SettingsProvider";
 import { AppShell } from "@/components/AppShell";
 
 const geistSans = Geist({
@@ -31,7 +32,9 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <LocaleProvider>
-          <AppShell>{children}</AppShell>
+          <SettingsProvider>
+            <AppShell>{children}</AppShell>
+          </SettingsProvider>
         </LocaleProvider>
       </body>
     </html>

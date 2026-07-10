@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractForm } from "@/components/ContractForm";
+import { ContractPayments } from "@/components/ContractPayments";
 import type { Contract, ContractInput } from "@/lib/contracts/types";
 
 export default function ContractDetailPage() {
@@ -49,6 +50,11 @@ export default function ContractDetailPage() {
         status: values.status,
         signed_date: values.signed_date || null,
         notes: values.notes || null,
+        payment_type: values.payment_type,
+        installment_months: values.installment_months
+          ? Number(values.installment_months)
+          : null,
+        barter_details: values.barter_details || null,
       })
       .eq("id", params.id);
     setSubmitting(false);
@@ -92,11 +98,15 @@ export default function ContractDetailPage() {
               status: contract.status,
               signed_date: contract.signed_date ?? "",
               notes: contract.notes ?? "",
+              payment_type: contract.payment_type,
+              installment_months: contract.installment_months?.toString() ?? "",
+              barter_details: contract.barter_details ?? "",
             }}
             submitting={submitting}
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          <ContractPayments contract={contract} />
         </>
       )}
     </div>

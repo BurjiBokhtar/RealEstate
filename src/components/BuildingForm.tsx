@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { FileUploadField } from "@/components/FileUploadField";
 import type { BuildingInput } from "@/lib/buildings/types";
 
 const emptyInput: BuildingInput = {
@@ -9,6 +10,9 @@ const emptyInput: BuildingInput = {
   address: "",
   floors_count: "",
   units_per_floor: "",
+  price_per_sqm: "",
+  facade_url: "",
+  plan_url: "",
 };
 
 export function BuildingForm({
@@ -78,6 +82,35 @@ export function BuildingForm({
             className="rounded-md border border-slate-300 px-3 py-2"
           />
         </label>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">{t.buildings.form.pricePerSqm}</span>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.price_per_sqm}
+          onChange={(e) => update("price_per_sqm", e.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FileUploadField
+          label={t.buildings.form.facade}
+          value={values.facade_url}
+          onChange={(url) => update("facade_url", url)}
+          folder="building-facades"
+          uploadingLabel={t.buildings.form.uploading}
+        />
+        <FileUploadField
+          label={t.buildings.form.plan}
+          value={values.plan_url}
+          onChange={(url) => update("plan_url", url)}
+          folder="building-plans"
+          uploadingLabel={t.buildings.form.uploading}
+        />
       </div>
 
       <div className="flex items-center gap-3 pt-2">

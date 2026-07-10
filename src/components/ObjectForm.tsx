@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { FileUploadField } from "@/components/FileUploadField";
 import {
   OBJECT_STATUSES,
   OBJECT_TYPES,
@@ -16,6 +17,7 @@ const emptyInput: PropertyObjectInput = {
   area: "",
   price: "",
   description: "",
+  plan_url: "",
 };
 
 export function ObjectForm({
@@ -138,6 +140,14 @@ export function ObjectForm({
           className="rounded-md border border-slate-300 px-3 py-2"
         />
       </label>
+
+      <FileUploadField
+        label={t.objects.form.plan}
+        value={values.plan_url}
+        onChange={(url) => update("plan_url", url)}
+        folder="unit-plans"
+        uploadingLabel={t.objects.form.uploading}
+      />
 
       <div className="flex items-center gap-3 pt-2">
         <button

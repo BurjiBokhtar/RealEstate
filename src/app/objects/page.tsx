@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
-import { STATUS_COLORS, formatArea, formatPrice } from "@/lib/objects/format";
+import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
+import { formatDualCurrency } from "@/lib/currency";
+import { useSettings } from "@/lib/settings/SettingsProvider";
 import {
   OBJECT_STATUSES,
   OBJECT_TYPES,
@@ -17,6 +19,7 @@ import {
 
 export default function ObjectsPage() {
   const { t } = useLocale();
+  const { settings } = useSettings();
   const configured = isSupabaseConfigured();
 
   const [objects, setObjects] = useState<PropertyObject[]>([]);
@@ -149,7 +152,9 @@ export default function ObjectsPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{formatArea(obj.area)}</td>
-                <td className="px-4 py-3 text-slate-600">{formatPrice(obj.price)}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {formatDualCurrency(obj.price, settings.usd_rate)}
+                </td>
               </tr>
             ))}
           </tbody>

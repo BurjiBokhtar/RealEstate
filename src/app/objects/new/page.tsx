@@ -30,6 +30,7 @@ export default function NewObjectPage() {
         area: values.area ? Number(values.area) : null,
         price: values.price ? Number(values.price) : null,
         description: values.description || null,
+        plan_url: values.plan_url || null,
       })
       .select("id")
       .single();
