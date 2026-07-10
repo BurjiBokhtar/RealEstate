@@ -8,8 +8,10 @@ export type Task = {
   due_date: string | null;
   status: TaskStatusValue;
   assignee: string | null;
+  assignee_phone: string | null;
   client_id: string | null;
   object_id: string | null;
+  reminder_sent_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -20,6 +22,7 @@ export type TaskInput = {
   due_date: string;
   status: TaskStatusValue;
   assignee: string;
+  assignee_phone: string;
   client_id: string;
   object_id: string;
 };

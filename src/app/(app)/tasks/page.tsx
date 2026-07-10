@@ -92,27 +92,45 @@ export default function TasksPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((task) => (
-              <tr
-                key={task.id}
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
-              >
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  <Link href={`/tasks/${task.id}`} className="block">
-                    {task.title}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{task.due_date || "—"}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${TASK_STATUS_COLORS[task.status]}`}
+            {filtered.map((task) => {
+              const today = new Date().toISOString().slice(0, 10);
+              const soonDate = new Date();
+              soonDate.setDate(soonDate.getDate() + 3);
+              const soon = soonDate.toISOString().slice(0, 10);
+              const overdue =
+                task.status !== "done" && !!task.due_date && task.due_date < today;
+              const dueSoon =
+                task.status !== "done" &&
+                !!task.due_date &&
+                task.due_date >= today &&
+                task.due_date <= soon;
+
+              return (
+                <tr
+                  key={task.id}
+                  className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                >
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <Link href={`/tasks/${task.id}`} className="block">
+                      {task.title}
+                    </Link>
+                  </td>
+                  <td
+                    className={`px-4 py-3 ${overdue ? "font-medium text-rose-600" : dueSoon ? "font-medium text-amber-600" : "text-slate-600"}`}
                   >
-                    {t.tasks.statuses[task.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{task.assignee || "—"}</td>
-              </tr>
-            ))}
+                    {task.due_date || "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${TASK_STATUS_COLORS[task.status]}`}
+                    >
+                      {t.tasks.statuses[task.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{task.assignee || "—"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -85,9 +85,17 @@ export default function ContractDetailPage() {
 
       {contract && (
         <>
-          <h1 className="text-2xl font-semibold">
-            {contract.number || t.contracts.newContract}
-          </h1>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h1 className="text-2xl font-semibold">
+              {contract.number || t.contracts.newContract}
+            </h1>
+            <Link
+              href={`/contracts/${params.id}/print`}
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.contracts.print.button}
+            </Link>
+          </div>
           <ContractForm
             initial={{
               number: contract.number ?? "",

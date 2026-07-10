@@ -13,6 +13,7 @@ const emptyInput: TaskInput = {
   due_date: "",
   status: "todo",
   assignee: "",
+  assignee_phone: "",
   client_id: "",
   object_id: "",
 };
@@ -106,14 +107,25 @@ export function TaskForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.tasks.form.assignee}</span>
-        <input
-          value={values.assignee}
-          onChange={(e) => update("assignee", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
-      </label>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.assignee}</span>
+          <input
+            value={values.assignee}
+            onChange={(e) => update("assignee", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.assigneePhone}</span>
+          <input
+            value={values.assignee_phone}
+            onChange={(e) => update("assignee_phone", e.target.value)}
+            placeholder="+992"
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">

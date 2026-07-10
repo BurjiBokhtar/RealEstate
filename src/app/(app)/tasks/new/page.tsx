@@ -28,6 +28,7 @@ export default function NewTaskPage() {
         due_date: values.due_date || null,
         status: values.status,
         assignee: values.assignee || null,
+        assignee_phone: values.assignee_phone || null,
         client_id: values.client_id || null,
         object_id: values.object_id || null,
       })

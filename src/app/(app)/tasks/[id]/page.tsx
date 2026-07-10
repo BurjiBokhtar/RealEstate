@@ -46,8 +46,10 @@ export default function TaskDetailPage() {
         due_date: values.due_date || null,
         status: values.status,
         assignee: values.assignee || null,
+        assignee_phone: values.assignee_phone || null,
         client_id: values.client_id || null,
         object_id: values.object_id || null,
+        reminder_sent_at: null,
       })
       .eq("id", params.id);
     setSubmitting(false);
@@ -84,6 +86,7 @@ export default function TaskDetailPage() {
               due_date: task.due_date ?? "",
               status: task.status,
               assignee: task.assignee ?? "",
+              assignee_phone: task.assignee_phone ?? "",
               client_id: task.client_id ?? "",
               object_id: task.object_id ?? "",
             }}

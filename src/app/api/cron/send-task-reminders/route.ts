@@ -3,14 +3,12 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type DuePayment = {
+type DueTask = {
   id: string;
+  title: string;
   due_date: string;
-  amount: number;
-  contract: {
-    number: string | null;
-    client: { name: string; phone: string | null } | null;
-  } | null;
+  assignee: string | null;
+  assignee_phone: string | null;
 };
 
 export async function GET(request: Request) {
@@ -40,26 +38,27 @@ export async function GET(request: Request) {
   targetDate.setDate(targetDate.getDate() + (settings.sms_reminder_days ?? 3));
   const targetDateStr = targetDate.toISOString().slice(0, 10);
 
-  const { data: payments, error } = await supabase
-    .from("contract_payments")
-    .select("id, due_date, amount, contract:contracts(number, client:clients(name, phone))")
-    .eq("paid", false)
+  const { data: tasks, error } = await supabase
+    .from("tasks")
+    .select("id, title, due_date, assignee, assignee_phone")
+    .neq("status", "done")
     .is("reminder_sent_at", null)
+    .not("assignee_phone", "is", null)
+    .not("due_date", "is", null)
     .lte("due_date", targetDateStr);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const dueList = (payments ?? []) as unknown as DuePayment[];
+  const dueList = (tasks ?? []) as DueTask[];
   let sent = 0;
   let failed = 0;
 
-  for (const payment of dueList) {
-    const phone = payment.contract?.client?.phone;
-    if (!phone) continue;
+  for (const task of dueList) {
+    if (!task.assignee_phone) continue;
 
-    const text = `Уважаемый(ая) ${payment.contract?.client?.name ?? ""}, напоминаем: оплата ${payment.amount} TJS по договору №${payment.contract?.number ?? ""} до ${payment.due_date}.`;
+    const text = `${task.assignee ?? ""}, напоминаем: задача "${task.title}" — срок ${task.due_date}.`;
 
     try {
       const res = await fetch("https://gateway.payom.tj/api/message", {
@@ -70,7 +69,7 @@ export async function GET(request: Request) {
           Authorization: `Bearer ${settings.sms_api_key}`,
         },
         body: JSON.stringify({
-          telephone: phone,
+          telephone: task.assignee_phone,
           text,
           senderName: settings.sms_sender_name,
           type: "SMS",
@@ -78,9 +77,9 @@ export async function GET(request: Request) {
       });
       if (res.ok || [200, 201, 202].includes(res.status)) {
         await supabase
-          .from("contract_payments")
+          .from("tasks")
           .update({ reminder_sent_at: new Date().toISOString() })
-          .eq("id", payment.id);
+          .eq("id", task.id);
         sent++;
       } else {
         failed++;

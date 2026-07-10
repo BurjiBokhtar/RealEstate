@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { createClient } from "@/lib/supabase/client";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 const navItems = [
@@ -18,10 +20,24 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useLocale();
   const pathname = usePathname();
+  const router = useRouter();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
+  }, []);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   return (
     <div className="flex min-h-screen w-full">
-      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white sm:flex sm:flex-col">
+      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white sm:flex sm:flex-col print:hidden">
         <div className="px-5 py-5 text-lg font-semibold tracking-tight text-slate-900">
           {t.appName}
         </div>
@@ -46,10 +62,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+        <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 px-3 py-4">
+          {userEmail && <span className="truncate px-3 text-xs text-slate-400">{userEmail}</span>}
+          <button
+            onClick={handleLogout}
+            className="rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            {t.login.logout}
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3 sm:justify-end">
+        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3 sm:justify-end print:hidden">
           <span className="text-lg font-semibold sm:hidden">{t.appName}</span>
           <div className="flex items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
             {(["ru", "tj"] as Locale[]).map((l) => (
@@ -68,7 +93,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 bg-slate-50 p-5">{children}</main>
+        <main className="flex-1 bg-slate-50 p-5 print:bg-white print:p-0">{children}</main>
       </div>
     </div>
   );
