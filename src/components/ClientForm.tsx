@@ -11,6 +11,9 @@ const emptyInput: ClientInput = {
   phone: "",
   email: "",
   passport: "",
+  passport_issued_by: "",
+  birth_date: "",
+  address: "",
   source: "",
   status: "new",
   interested_object_id: "",
@@ -83,15 +86,47 @@ export function ClientForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.clients.form.passport}</span>
-        <input
-          value={values.passport}
-          onChange={(e) => update("passport", e.target.value)}
-          placeholder={t.clients.form.passportPlaceholder}
-          className="rounded-md border border-slate-300 px-3 py-2"
-        />
-      </label>
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.clients.form.passport}</span>
+          <input
+            value={values.passport}
+            onChange={(e) => update("passport", e.target.value)}
+            placeholder={t.clients.form.passportPlaceholder}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">
+            {t.clients.form.passportIssuedBy}
+          </span>
+          <input
+            value={values.passport_issued_by}
+            onChange={(e) => update("passport_issued_by", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.clients.form.birthDate}</span>
+          <input
+            type="date"
+            value={values.birth_date}
+            onChange={(e) => update("birth_date", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.clients.form.address}</span>
+          <input
+            value={values.address}
+            onChange={(e) => update("address", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+      </div>
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">

@@ -21,12 +21,16 @@ function FloorRow({
   contractsByUnit,
   onBookUnit,
   onMergeUnits,
+  canEditSold,
+  onViewUnit,
 }: {
   floor: number;
   floorUnits: PropertyObject[];
   contractsByUnit: Record<string, UnitContractInfo>;
   onBookUnit: (unit: PropertyObject) => void;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
+  canEditSold: boolean;
+  onViewUnit: (unit: PropertyObject) => void;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -51,11 +55,15 @@ function FloorRow({
             <div key={unit.id} className="group relative" style={{ width }}>
               <button
                 type="button"
-                onClick={() =>
-                  unit.status === "available"
-                    ? onBookUnit(unit)
-                    : router.push(`/objects/${unit.id}`)
-                }
+                onClick={() => {
+                  if (unit.status === "available") {
+                    onBookUnit(unit);
+                  } else if (canEditSold) {
+                    router.push(`/objects/${unit.id}`);
+                  } else {
+                    onViewUnit(unit);
+                  }
+                }}
                 style={{ width }}
                 className={`flex h-14 flex-col items-center justify-center rounded-md text-xs font-medium transition-transform hover:scale-105 ${STATUS_COLORS[unit.status]}`}
               >
@@ -116,11 +124,15 @@ export function ShakhmatkaGrid({
   contractsByUnit,
   onBookUnit,
   onMergeUnits,
+  canEditSold,
+  onViewUnit,
 }: {
   units: PropertyObject[];
   contractsByUnit: Record<string, UnitContractInfo>;
   onBookUnit: (unit: PropertyObject) => void;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
+  canEditSold: boolean;
+  onViewUnit: (unit: PropertyObject) => void;
 }) {
   const { t } = useLocale();
 
@@ -167,6 +179,8 @@ export function ShakhmatkaGrid({
                   contractsByUnit={contractsByUnit}
                   onBookUnit={onBookUnit}
                   onMergeUnits={onMergeUnits}
+                  canEditSold={canEditSold}
+                  onViewUnit={onViewUnit}
                 />
               ))}
             </div>

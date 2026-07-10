@@ -17,7 +17,6 @@ const DEFAULT_SETTINGS: Settings = {
   company_address: null,
   company_bank_details: null,
   company_logo_url: null,
-  contract_template: null,
   updated_at: new Date(0).toISOString(),
 };
 

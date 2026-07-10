@@ -47,8 +47,10 @@ export default function PaymentReceiptPage() {
     return <p className="text-slate-400">{t.contracts.notFound}</p>;
   }
 
+  const remaining = contract.amount - contract.paid_amount;
+
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-5 bg-white p-8 print:p-0">
+    <div className="mx-auto flex max-w-sm flex-col gap-4 py-6 print:py-0">
       <button
         type="button"
         onClick={() => window.print()}
@@ -57,59 +59,94 @@ export default function PaymentReceiptPage() {
         {t.contracts.print.button}
       </button>
 
-      <div className="flex flex-col items-center gap-2 border-b border-slate-200 pb-4 text-center">
-        {settings.company_logo_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={settings.company_logo_url} alt="" className="h-12 w-12 object-contain" />
-        )}
-        <p className="font-semibold text-slate-900">{settings.company_name || t.appName}</p>
-        <p className="text-lg font-semibold text-slate-900">{t.contracts.receipt.title}</p>
-      </div>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
+        {/* Header band */}
+        <div className="relative flex flex-col items-center gap-2 bg-gradient-to-br from-slate-900 to-slate-700 px-6 py-7 text-center text-white print:bg-slate-900">
+          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
+          {settings.company_logo_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={settings.company_logo_url}
+              alt=""
+              className="h-12 w-12 rounded-lg bg-white object-contain p-1"
+            />
+          )}
+          <p className="text-sm font-medium text-slate-200">
+            {settings.company_name || t.appName}
+          </p>
+          <p className="text-lg font-semibold tracking-tight">{t.contracts.receipt.title}</p>
+          <span
+            className={`rounded-full px-3 py-0.5 text-xs font-medium ${
+              payment.paid
+                ? "bg-emerald-400/20 text-emerald-300"
+                : "bg-amber-400/20 text-amber-300"
+            }`}
+          >
+            {payment.paid ? t.contracts.receipt.statusPaid : t.contracts.receipt.statusUnpaid}
+          </span>
+        </div>
 
-      <div className="flex flex-col gap-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-slate-500">{t.contracts.form.number}</span>
-          <span className="font-medium text-slate-900">{contract.number || "—"}</span>
+        {/* Amount */}
+        <div className="flex flex-col items-center gap-1 border-b border-dashed border-slate-200 px-6 py-6 text-center">
+          <p className="text-xs uppercase tracking-wide text-slate-400">
+            {t.contracts.receipt.amountPaid}
+          </p>
+          <p className="text-4xl font-bold text-slate-900">
+            {formatCurrency(payment.amount, contract.currency)}
+          </p>
         </div>
-        <div className="flex justify-between">
-          <span className="text-slate-500">{t.contracts.print.client}</span>
-          <span className="font-medium text-slate-900">{contract.client?.name ?? "—"}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-slate-500">{t.contracts.print.object}</span>
-          <span className="font-medium text-slate-900">{contract.object?.name ?? "—"}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-slate-500">{t.contracts.payments.dueDate}</span>
-          <span className="font-medium text-slate-900">{payment.due_date}</span>
-        </div>
-        {payment.paid_date && (
+
+        {/* Details */}
+        <div className="flex flex-col gap-2.5 px-6 py-5 text-sm">
           <div className="flex justify-between">
-            <span className="text-slate-500">{t.contracts.receipt.paidDate}</span>
-            <span className="font-medium text-slate-900">{payment.paid_date}</span>
+            <span className="text-slate-500">{t.contracts.form.number}</span>
+            <span className="font-medium text-slate-900">{contract.number || "—"}</span>
           </div>
-        )}
-      </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">{t.contracts.print.client}</span>
+            <span className="font-medium text-slate-900">{contract.client?.name ?? "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">{t.contracts.print.object}</span>
+            <span className="font-medium text-slate-900">{contract.object?.name ?? "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">{t.contracts.payments.dueDate}</span>
+            <span className="font-medium text-slate-900">{payment.due_date}</span>
+          </div>
+          {payment.paid_date && (
+            <div className="flex justify-between">
+              <span className="text-slate-500">{t.contracts.receipt.paidDate}</span>
+              <span className="font-medium text-slate-900">{payment.paid_date}</span>
+            </div>
+          )}
+        </div>
 
-      <div className="rounded-lg bg-slate-50 p-4 text-center">
-        <p className="text-xs text-slate-500">{t.contracts.receipt.amountPaid}</p>
-        <p className="text-2xl font-semibold text-slate-900">
-          {formatCurrency(payment.amount, contract.currency)}
+        {/* Contract totals */}
+        <div className="grid grid-cols-2 gap-px border-t border-dashed border-slate-200 bg-slate-100 text-center">
+          <div className="bg-slate-50 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.contracts.form.paidAmount}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-emerald-600">
+              {formatCurrency(contract.paid_amount, contract.currency)}
+            </p>
+          </div>
+          <div className="bg-slate-50 px-4 py-3">
+            <p className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.buildings.hover.remaining}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-amber-600">
+              {formatCurrency(remaining, contract.currency)}
+            </p>
+          </div>
+        </div>
+
+        <p className="px-6 py-4 text-center text-xs text-slate-400">
+          {settings.company_name || t.appName}
         </p>
+        <div className="h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
       </div>
-
-      <div className="flex justify-between text-xs text-slate-500">
-        <span>{t.contracts.form.amount}</span>
-        <span>{formatCurrency(contract.amount, contract.currency)}</span>
-      </div>
-      <div className="flex justify-between text-xs text-slate-500">
-        <span>{t.contracts.form.paidAmount}</span>
-        <span>{formatCurrency(contract.paid_amount, contract.currency)}</span>
-      </div>
-
-      <p className="mt-6 border-t border-slate-200 pt-4 text-center text-xs text-slate-400">
-        {payment.paid ? t.contracts.receipt.statusPaid : t.contracts.receipt.statusUnpaid}
-      </p>
     </div>
   );
 }

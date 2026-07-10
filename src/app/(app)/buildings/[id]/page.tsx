@@ -16,6 +16,9 @@ import type { Building, BuildingInput } from "@/lib/buildings/types";
 import { emptyBuildingInput } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { ContractInput } from "@/lib/contracts/types";
+import { useRole } from "@/lib/auth/useRole";
+import { formatCurrency } from "@/lib/currency";
+import { formatArea } from "@/lib/objects/format";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
@@ -33,6 +36,8 @@ export default function BuildingDetailPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [viewingUnit, setViewingUnit] = useState<PropertyObject | null>(null);
+  const { role } = useRole();
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -189,6 +194,19 @@ export default function BuildingDetailPage() {
         .from("objects")
         .update({ status: "reserved" })
         .eq("id", values.object_id);
+
+      const paidAmount = values.paid_amount ? Number(values.paid_amount) : 0;
+      if (paidAmount > 0) {
+        const paidDate = values.signed_date || new Date().toISOString().slice(0, 10);
+        await supabase.schema("crm").from("contract_payments").insert({
+          contract_id: data.id,
+          due_date: paidDate,
+          amount: paidAmount,
+          paid: true,
+          paid_date: paidDate,
+        });
+      }
+
       router.push(`/contracts/${data.id}`);
       return;
     }
@@ -234,6 +252,8 @@ export default function BuildingDetailPage() {
             contractsByUnit={contractsByUnit}
             onBookUnit={setBookingUnit}
             onMergeUnits={handleMergeUnits}
+            canEditSold={role === "admin"}
+            onViewUnit={setViewingUnit}
           />
 
           {bookingUnit && (
@@ -247,6 +267,51 @@ export default function BuildingDetailPage() {
                 submitting={bookingSubmitting}
                 onSubmit={handleBookingSubmit}
               />
+            </Modal>
+          )}
+
+          {viewingUnit && (
+            <Modal title={viewingUnit.name} onClose={() => setViewingUnit(null)}>
+              <div className="flex flex-col gap-3 text-sm">
+                <p className="text-xs text-slate-400">{t.buildings.viewOnlyHint}</p>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.objects.form.status}</span>
+                  <span className="font-medium text-slate-900">
+                    {t.buildings.legend[viewingUnit.status]}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.buildings.hover.area}</span>
+                  <span className="font-medium text-slate-900">
+                    {formatArea(viewingUnit.area)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">{t.buildings.hover.price}</span>
+                  <span className="font-medium text-slate-900">
+                    {formatCurrency(viewingUnit.price, viewingUnit.currency)}
+                  </span>
+                </div>
+                {contractsByUnit[viewingUnit.id] && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{t.buildings.hover.owner}</span>
+                      <span className="font-medium text-slate-900">
+                        {contractsByUnit[viewingUnit.id].clientName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{t.buildings.hover.remaining}</span>
+                      <span className="font-medium text-slate-900">
+                        {formatCurrency(
+                          contractsByUnit[viewingUnit.id].remaining,
+                          contractsByUnit[viewingUnit.id].currency
+                        )}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
             </Modal>
           )}
         </>

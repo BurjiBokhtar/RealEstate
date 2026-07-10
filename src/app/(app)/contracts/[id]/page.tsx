@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
+import { SendActions } from "@/components/SendActions";
 import type { Contract, ContractInput } from "@/lib/contracts/types";
 
 export default function ContractDetailPage() {
@@ -98,6 +99,7 @@ export default function ContractDetailPage() {
               {t.contracts.print.button}
             </Link>
           </div>
+          <SendActions contractId={params.id} kind="contract" />
           <ContractForm
             initial={{
               number: contract.number ?? "",

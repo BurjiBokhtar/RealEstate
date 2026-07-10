@@ -9,24 +9,6 @@ import { FileUploadField } from "@/components/FileUploadField";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import type { SettingsInput } from "@/lib/settings/types";
 
-const PLACEHOLDERS = [
-  "contract_number",
-  "signed_date",
-  "client_name",
-  "client_passport",
-  "object_name",
-  "object_area",
-  "building_address",
-  "price_per_sqm",
-  "amount",
-  "amount_words",
-  "currency",
-  "company_name",
-  "company_director",
-  "company_address",
-  "company_bank_details",
-];
-
 const PAYMENT_SMS_PLACEHOLDERS = [
   "client_name",
   "amount",
@@ -53,7 +35,6 @@ export default function SettingsPage() {
     company_address: "",
     company_bank_details: "",
     company_logo_url: "",
-    contract_template: "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -70,7 +51,6 @@ export default function SettingsPage() {
       company_address: settings.company_address ?? "",
       company_bank_details: settings.company_bank_details ?? "",
       company_logo_url: settings.company_logo_url ?? "",
-      contract_template: settings.contract_template ?? "",
     });
   }, [settings]);
 
@@ -96,7 +76,6 @@ export default function SettingsPage() {
         company_address: values.company_address || null,
         company_bank_details: values.company_bank_details || null,
         company_logo_url: values.company_logo_url || null,
-        contract_template: values.contract_template || null,
       })
       .eq("id", true);
     await refresh();
@@ -159,30 +138,9 @@ export default function SettingsPage() {
         </label>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-700">{t.settings.template.title}</p>
-        <span className="text-xs text-slate-400">{t.settings.template.hint}</span>
-        <textarea
-          value={values.contract_template}
-          onChange={(e) => update("contract_template", e.target.value)}
-          rows={18}
-          className="rounded-md border border-slate-300 px-3 py-2 font-mono text-xs leading-relaxed"
-        />
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-slate-500">
-            {t.settings.template.placeholders}
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            {PLACEHOLDERS.map((p) => (
-              <code
-                key={p}
-                className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
-              >
-                {`{{${p}}}`}
-              </code>
-            ))}
-          </div>
-        </div>
+        <span className="text-xs text-slate-400">{t.settings.template.locked}</span>
       </div>
 
       <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">

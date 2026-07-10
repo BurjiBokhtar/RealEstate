@@ -10,7 +10,6 @@ export type Settings = {
   company_address: string | null;
   company_bank_details: string | null;
   company_logo_url: string | null;
-  contract_template: string | null;
   updated_at: string;
 };
 
@@ -25,5 +24,4 @@ export type SettingsInput = {
   company_address: string;
   company_bank_details: string;
   company_logo_url: string;
-  contract_template: string;
 };

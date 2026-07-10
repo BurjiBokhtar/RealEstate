@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, CURRENCIES } from "@/lib/currency";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
+import { ClientAutocomplete } from "@/components/ClientAutocomplete";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
@@ -86,23 +87,12 @@ export function ContractForm({
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.contracts.form.client}</span>
-          <select
-            required
-            value={values.client_id}
-            onChange={(e) => update("client_id", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
-          >
-            <option value="">{t.contracts.form.selectClient}</option>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="grid grid-cols-2 gap-4 items-start">
+        <ClientAutocomplete
+          clients={clients}
+          value={values.client_id}
+          onChange={(id) => update("client_id", id)}
+        />
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
           <select

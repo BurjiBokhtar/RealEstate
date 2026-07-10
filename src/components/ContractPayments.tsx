@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/currency";
+import { SendActions } from "@/components/SendActions";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 function addMonths(dateStr: string, months: number) {
@@ -33,7 +34,7 @@ export function ContractPayments({ contract }: { contract: Contract }) {
     load();
   }, [load]);
 
-  if (contract.payment_type !== "installment") return null;
+  if (contract.payment_type !== "installment" && payments.length === 0) return null;
 
   const handleGenerate = async () => {
     const months = contract.installment_months ?? 0;
@@ -119,12 +120,17 @@ export function ContractPayments({ contract }: { contract: Contract }) {
                   </button>
                 </td>
                 <td className="py-2">
-                  <Link
-                    href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
-                    className="text-xs text-slate-500 hover:underline"
-                  >
-                    {t.contracts.receipt.print}
-                  </Link>
+                  <div className="flex flex-col items-start gap-1.5">
+                    <Link
+                      href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
+                      className="text-xs text-slate-500 hover:underline"
+                    >
+                      {t.contracts.receipt.print}
+                    </Link>
+                    {p.paid && (
+                      <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
