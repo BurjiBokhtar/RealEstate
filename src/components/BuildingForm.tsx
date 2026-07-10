@@ -20,11 +20,13 @@ export function BuildingForm({
   submitting,
   onSubmit,
   onDelete,
+  children,
 }: {
   initial?: Partial<BuildingInput>;
   submitting: boolean;
   onSubmit: (values: BuildingInput) => void;
   onDelete?: () => void;
+  children?: React.ReactNode;
 }) {
   const { t } = useLocale();
   const [values, setValues] = useState<BuildingInput>({ ...emptyInput, ...initial });
@@ -38,7 +40,7 @@ export function BuildingForm({
         e.preventDefault();
         onSubmit(values);
       }}
-      className="flex max-w-xl flex-col gap-4"
+      className="flex max-w-3xl flex-col gap-4"
     >
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.buildings.form.name}</span>
@@ -114,6 +116,8 @@ export function BuildingForm({
           uploadingLabel={t.buildings.form.uploading}
         />
       </div>
+
+      {children}
 
       <div className="flex items-center gap-3 pt-2">
         <button
