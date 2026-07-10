@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { FileUploadField } from "@/components/FileUploadField";
 import { useSettings } from "@/lib/settings/SettingsProvider";
+import { useRole } from "@/lib/auth/useRole";
 import type { SettingsInput } from "@/lib/settings/types";
 
 const PAYMENT_SMS_PLACEHOLDERS = [
@@ -23,6 +25,7 @@ export default function SettingsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const { settings, refresh } = useSettings();
+  const { role } = useRole();
 
   const [values, setValues] = useState<SettingsInput>({
     sms_api_key: "",
@@ -85,7 +88,17 @@ export default function SettingsPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
+        {role === "admin" && (
+          <Link
+            href="/settings/users"
+            className="text-sm font-medium text-slate-600 hover:text-slate-900"
+          >
+            {t.settings.usersLink}
+          </Link>
+        )}
+      </div>
 
       {!configured && <SetupNotice />}
 

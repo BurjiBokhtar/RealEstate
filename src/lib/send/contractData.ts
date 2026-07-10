@@ -1,26 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient, requireUser, type ServiceClient } from "@/lib/supabase/serviceClient";
 
-function makeServiceClient(url: string, key: string) {
-  return createClient(url, key, { db: { schema: "crm" } });
-}
-
-type ServiceClient = ReturnType<typeof makeServiceClient>;
-
-export function getServiceClient(): ServiceClient | null {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) return null;
-  return makeServiceClient(supabaseUrl, serviceRoleKey);
-}
-
-export async function requireUser(supabase: ServiceClient, request: Request) {
-  const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace(/^Bearer\s+/i, "");
-  if (!token) return null;
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data.user) return null;
-  return data.user;
-}
+export { getServiceClient, requireUser };
 
 export type ContractSendData = {
   id: string;
