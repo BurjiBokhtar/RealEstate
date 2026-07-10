@@ -35,6 +35,7 @@ export type PropertyObject = {
   position_in_floor: number | null;
   plan_url: string | null;
   span: number;
+  rooms: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -49,4 +50,5 @@ export type PropertyObjectInput = {
   currency: Currency;
   description: string;
   plan_url: string;
+  rooms: string;
 };

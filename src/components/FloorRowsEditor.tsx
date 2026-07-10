@@ -30,7 +30,7 @@ export function FloorRowsEditor({
         {rows.map((row, index) => (
           <div
             key={index}
-            className="grid grid-cols-[1fr_1fr_1.3fr_1fr_1fr_auto] items-end gap-2"
+            className="grid grid-cols-[1fr_1fr_0.8fr_1.3fr_1fr_1fr_auto] items-end gap-2"
           >
             <label className="flex flex-col gap-1 text-xs">
               <span className="font-medium text-slate-700">
@@ -52,6 +52,18 @@ export function FloorRowsEditor({
                 value={row.floor}
                 onChange={(e) => updateRow(index, "floor", e.target.value)}
                 placeholder={t.buildings.floorBuilder.floorPlaceholder}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="font-medium text-slate-700">
+                {t.buildings.constructor.rowRooms}
+              </span>
+              <input
+                type="number"
+                min="0"
+                value={row.rooms}
+                onChange={(e) => updateRow(index, "rooms", e.target.value)}
                 className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
               />
             </label>

@@ -11,6 +11,7 @@ export function BuildingForm({
   onSubmit,
   onDelete,
   hideUnitsPerFloor,
+  hideFloorsCount,
   children,
 }: {
   values: BuildingInput;
@@ -19,6 +20,7 @@ export function BuildingForm({
   onSubmit: () => void;
   onDelete?: () => void;
   hideUnitsPerFloor?: boolean;
+  hideFloorsCount?: boolean;
   children?: React.ReactNode;
 }) {
   const { t } = useLocale();
@@ -53,32 +55,38 @@ export function BuildingForm({
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.buildings.form.floorsCount}</span>
-          <input
-            type="number"
-            min="1"
-            value={values.floors_count}
-            onChange={(e) => update("floors_count", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
-        {!hideUnitsPerFloor && (
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">
-              {t.buildings.form.unitsPerFloor}
-            </span>
-            <input
-              type="number"
-              min="1"
-              value={values.units_per_floor}
-              onChange={(e) => update("units_per_floor", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
-            />
-          </label>
-        )}
-      </div>
+      {(!hideFloorsCount || !hideUnitsPerFloor) && (
+        <div className="grid grid-cols-2 gap-4">
+          {!hideFloorsCount && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">
+                {t.buildings.form.floorsCount}
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={values.floors_count}
+                onChange={(e) => update("floors_count", e.target.value)}
+                className="rounded-md border border-slate-300 px-3 py-2"
+              />
+            </label>
+          )}
+          {!hideUnitsPerFloor && (
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">
+                {t.buildings.form.unitsPerFloor}
+              </span>
+              <input
+                type="number"
+                min="1"
+                value={values.units_per_floor}
+                onChange={(e) => update("units_per_floor", e.target.value)}
+                className="rounded-md border border-slate-300 px-3 py-2"
+              />
+            </label>
+          )}
+        </div>
+      )}
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.buildings.form.pricePerSqm}</span>

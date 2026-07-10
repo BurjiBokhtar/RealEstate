@@ -86,6 +86,12 @@ function FloorRow({
 
               <div className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-52 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg group-hover:visible">
                 <p className="mb-1 font-semibold text-slate-900">{unit.name}</p>
+                {unit.rooms != null && (
+                  <p className="flex justify-between text-slate-500">
+                    <span>{t.buildings.hover.rooms}</span>
+                    <span className="text-slate-700">{unit.rooms}</span>
+                  </p>
+                )}
                 <p className="flex justify-between text-slate-500">
                   <span>{t.buildings.hover.area}</span>
                   <span className="text-slate-700">{formatArea(unit.area)}</span>

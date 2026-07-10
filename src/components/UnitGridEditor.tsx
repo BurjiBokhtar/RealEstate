@@ -7,11 +7,9 @@ import { copyFloorPattern, type UnitDraft } from "@/lib/buildings/generateUnits"
 
 export function UnitGridEditor({
   drafts,
-  entranceCount,
   onChange,
 }: {
   drafts: UnitDraft[];
-  entranceCount: number;
   onChange: (drafts: UnitDraft[]) => void;
 }) {
   const { t } = useLocale();
@@ -20,16 +18,17 @@ export function UnitGridEditor({
   if (drafts.length === 0) return null;
 
   const floors = Array.from(new Set(drafts.map((d) => d.floor))).sort((a, b) => b - a);
+  const showGroups = new Set(drafts.map((d) => d.groupLabel)).size > 1;
 
   const updateDraft = (
     floor: number,
-    entrance: number,
+    groupLabel: string,
     position: number,
     patch: Partial<UnitDraft>
   ) => {
     onChange(
       drafts.map((d) =>
-        d.floor === floor && d.entrance === entrance && d.position === position
+        d.floor === floor && d.groupLabel === groupLabel && d.position === position
           ? { ...d, ...patch }
           : d
       )
@@ -48,9 +47,7 @@ export function UnitGridEditor({
     <div className="flex flex-col gap-3">
       {floors.map((floor) => {
         const floorUnits = drafts.filter((d) => d.floor === floor);
-        const entrances = Array.from(new Set(floorUnits.map((u) => u.entrance))).sort(
-          (a, b) => a - b
-        );
+        const groups = Array.from(new Set(floorUnits.map((u) => u.groupLabel)));
 
         return (
           <div key={floor} className="rounded-lg border border-slate-200 p-3">
@@ -90,16 +87,14 @@ export function UnitGridEditor({
             </div>
 
             <div className="flex flex-col gap-2">
-              {entrances.map((entrance) => (
-                <div key={entrance} className="flex flex-col gap-1.5">
-                  {entranceCount > 1 && (
-                    <p className="text-xs font-medium text-slate-500">
-                      {t.buildings.constructor.entranceLabel} {entrance}
-                    </p>
+              {groups.map((groupLabel) => (
+                <div key={groupLabel || "_"} className="flex flex-col gap-1.5">
+                  {showGroups && groupLabel && (
+                    <p className="text-xs font-medium text-slate-500">{groupLabel}</p>
                   )}
                   <div className="flex flex-wrap gap-2">
                     {floorUnits
-                      .filter((u) => u.entrance === entrance)
+                      .filter((u) => u.groupLabel === groupLabel)
                       .map((unit) => (
                         <div
                           key={unit.position}
@@ -109,7 +104,7 @@ export function UnitGridEditor({
                           <select
                             value={unit.type}
                             onChange={(e) =>
-                              updateDraft(floor, entrance, unit.position, {
+                              updateDraft(floor, groupLabel, unit.position, {
                                 type: e.target.value as ObjectType,
                               })
                             }
@@ -124,11 +119,23 @@ export function UnitGridEditor({
                           <input
                             type="number"
                             min="0"
+                            placeholder={t.buildings.constructor.rowRooms}
+                            value={unit.rooms}
+                            onChange={(e) =>
+                              updateDraft(floor, groupLabel, unit.position, {
+                                rooms: e.target.value,
+                              })
+                            }
+                            className="w-12 rounded border border-slate-300 px-1.5 py-1 text-xs"
+                          />
+                          <input
+                            type="number"
+                            min="0"
                             step="0.01"
                             placeholder={t.buildings.constructor.areaPlaceholder}
                             value={unit.area}
                             onChange={(e) =>
-                              updateDraft(floor, entrance, unit.position, {
+                              updateDraft(floor, groupLabel, unit.position, {
                                 area: e.target.value,
                               })
                             }

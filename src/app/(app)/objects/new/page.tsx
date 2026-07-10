@@ -27,6 +27,7 @@ export default function NewObjectPage() {
         address: values.address || null,
         type: values.type,
         status: values.status,
+        rooms: values.rooms ? Number(values.rooms) : null,
         area: values.area ? Number(values.area) : null,
         price: values.price ? Number(values.price) : null,
         currency: values.currency,

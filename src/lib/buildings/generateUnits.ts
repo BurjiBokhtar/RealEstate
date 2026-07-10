@@ -1,8 +1,12 @@
 import type { ObjectType, PropertyObject } from "@/lib/objects/types";
 
+// --- Simple flat rows: used by FloorUnitsBuilder to add a few extra units
+// to an already-built building (basement, a forgotten floor, etc). ---
+
 export type StructureRow = {
   block: string;
   floor: string;
+  rooms: string;
   type: ObjectType;
   count: string;
   area: string;
@@ -11,6 +15,7 @@ export type StructureRow = {
 export const emptyStructureRow: StructureRow = {
   block: "",
   floor: "",
+  rooms: "",
   type: "apartment",
   count: "",
   area: "",
@@ -29,6 +34,7 @@ export function buildUnitsFromRows(
     const floor = Number(row.floor);
     const count = Number(row.count);
     const area = row.area ? Number(row.area) : null;
+    const rooms = row.rooms ? Number(row.rooms) : null;
     const block = row.block.trim() || null;
     if (Number.isNaN(floor) || !count) continue;
 
@@ -56,6 +62,7 @@ export function buildUnitsFromRows(
         position_in_floor: position,
         area,
         price,
+        rooms,
       });
     }
     plannedByBlockFloor.set(key, startPosition + count - 1);
@@ -64,25 +71,116 @@ export function buildUnitsFromRows(
   return toCreate;
 }
 
+// --- Hierarchical constructor: Block -> Entrance -> room-type rows.
+// A room-type row describes one apartment layout repeated on every standard
+// floor of an entrance ("3 однокомнатных по 45 м²"). Special floors
+// (penthouse, parking, basement) are handled separately since they don't
+// follow the per-entrance/per-floor pattern. ---
+
+export type RoomRow = {
+  rooms: string;
+  type: ObjectType;
+  count: string;
+  area: string;
+};
+
+export const emptyRoomRow: RoomRow = { rooms: "", type: "apartment", count: "", area: "" };
+
+export type Entrance = {
+  name: string;
+  rows: RoomRow[];
+};
+
+export function makeEntrance(name: string): Entrance {
+  return { name, rows: [{ ...emptyRoomRow }] };
+}
+
+export type Block = {
+  name: string;
+  floorsCount: string;
+  entrances: Entrance[];
+};
+
+export function makeBlock(name: string, entranceName: string): Block {
+  return { name, floorsCount: "", entrances: [makeEntrance(entranceName)] };
+}
+
+export type SpecialFloor = {
+  label: string;
+  floor: string;
+  rows: RoomRow[];
+};
+
+export function makeSpecialFloor(): SpecialFloor {
+  return { label: "", floor: "", rows: [{ ...emptyRoomRow }] };
+}
+
 export type UnitDraft = {
-  entrance: number;
+  groupLabel: string;
   floor: number;
   position: number;
+  rooms: string;
   type: ObjectType;
   area: string;
 };
 
-export function generateGrid(floorsCount: number, entranceCounts: string[]): UnitDraft[] {
+export function generateFromBlocks(blocks: Block[]): UnitDraft[] {
   const drafts: UnitDraft[] = [];
-  if (!floorsCount || floorsCount < 1) return drafts;
+  const multiBlock = blocks.length > 1;
 
-  for (let floor = floorsCount; floor >= 1; floor--) {
-    entranceCounts.forEach((countStr, idx) => {
-      const count = Number(countStr) || 0;
-      for (let position = 1; position <= count; position++) {
-        drafts.push({ entrance: idx + 1, floor, position, type: "apartment", area: "" });
+  for (const block of blocks) {
+    const floorsCount = Number(block.floorsCount) || 0;
+    if (!floorsCount) continue;
+    const multiEntrance = block.entrances.length > 1;
+
+    for (const entrance of block.entrances) {
+      const labelParts: string[] = [];
+      if (multiBlock && block.name.trim()) labelParts.push(block.name.trim());
+      if (multiEntrance && entrance.name.trim()) labelParts.push(entrance.name.trim());
+      const groupLabel = labelParts.join(", ");
+
+      for (let floor = 1; floor <= floorsCount; floor++) {
+        let position = 1;
+        for (const row of entrance.rows) {
+          const count = Number(row.count) || 0;
+          for (let i = 0; i < count; i++) {
+            drafts.push({
+              groupLabel,
+              floor,
+              position: position++,
+              rooms: row.rooms,
+              type: row.type,
+              area: row.area,
+            });
+          }
+        }
       }
-    });
+    }
+  }
+
+  return drafts;
+}
+
+export function generateSpecialFloors(specials: SpecialFloor[]): UnitDraft[] {
+  const drafts: UnitDraft[] = [];
+
+  for (const special of specials) {
+    const floor = Number(special.floor);
+    if (Number.isNaN(floor) || !special.floor.trim()) continue;
+    let position = 1;
+    for (const row of special.rows) {
+      const count = Number(row.count) || 0;
+      for (let i = 0; i < count; i++) {
+        drafts.push({
+          groupLabel: special.label.trim(),
+          floor,
+          position: position++,
+          rooms: row.rooms,
+          type: row.type,
+          area: row.area,
+        });
+      }
+    }
   }
 
   return drafts;
@@ -95,28 +193,27 @@ export function copyFloorPattern(
 ): UnitDraft[] {
   const sourceByKey = new Map<string, UnitDraft>();
   for (const d of drafts) {
-    if (d.floor === sourceFloor) sourceByKey.set(`${d.entrance}-${d.position}`, d);
+    if (d.floor === sourceFloor) sourceByKey.set(`${d.groupLabel}-${d.position}`, d);
   }
   const targetSet = new Set(targetFloors);
 
   return drafts.map((d) => {
     if (!targetSet.has(d.floor)) return d;
-    const source = sourceByKey.get(`${d.entrance}-${d.position}`);
+    const source = sourceByKey.get(`${d.groupLabel}-${d.position}`);
     if (!source) return d;
-    return { ...d, type: source.type, area: source.area };
+    return { ...d, type: source.type, area: source.area, rooms: source.rooms };
   });
 }
 
 export function unitDraftsToPayload(
   drafts: UnitDraft[],
   buildingId: string,
-  pricePerSqm: number | null,
-  entranceCount: number,
-  entranceLabel: string
+  pricePerSqm: number | null
 ): Array<Record<string, unknown>> {
   return drafts.map((d) => {
-    const block = entranceCount > 1 ? `${entranceLabel} ${d.entrance}` : null;
+    const block = d.groupLabel || null;
     const area = d.area ? Number(d.area) : null;
+    const rooms = d.rooms ? Number(d.rooms) : null;
     const price = area && pricePerSqm ? area * pricePerSqm : null;
     return {
       name: block ? `${block} №${d.floor}-${d.position}` : `№${d.floor}-${d.position}`,
@@ -128,6 +225,7 @@ export function unitDraftsToPayload(
       position_in_floor: d.position,
       area,
       price,
+      rooms,
     };
   });
 }
