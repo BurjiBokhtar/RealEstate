@@ -25,6 +25,9 @@ export type PropertyObject = {
   area: number | null;
   price: number | null;
   description: string | null;
+  building_id: string | null;
+  floor: number | null;
+  position_in_floor: number | null;
   created_at: string;
   updated_at: string;
 };

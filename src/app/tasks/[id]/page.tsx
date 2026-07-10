@@ -1,0 +1,98 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { SetupNotice } from "@/components/SetupNotice";
+import { TaskForm } from "@/components/TaskForm";
+import type { Task, TaskInput } from "@/lib/tasks/types";
+
+export default function TaskDetailPage() {
+  const { t } = useLocale();
+  const router = useRouter();
+  const params = useParams<{ id: string }>();
+  const configured = isSupabaseConfigured();
+
+  const [task, setTask] = useState<Task | null | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!configured) {
+      setTask(null);
+      return;
+    }
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .from("tasks")
+      .select("*")
+      .eq("id", params.id)
+      .maybeSingle()
+      .then(({ data }) => setTask((data as Task) ?? null));
+  }, [configured, params.id]);
+
+  const handleSubmit = async (values: TaskInput) => {
+    setSubmitting(true);
+    const supabase = createClient();
+    await supabase
+      .schema("crm")
+      .from("tasks")
+      .update({
+        title: values.title,
+        description: values.description || null,
+        due_date: values.due_date || null,
+        status: values.status,
+        assignee: values.assignee || null,
+        client_id: values.client_id || null,
+        object_id: values.object_id || null,
+      })
+      .eq("id", params.id);
+    setSubmitting(false);
+    router.push("/tasks");
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm(t.tasks.form.confirmDelete)) return;
+    const supabase = createClient();
+    await supabase.schema("crm").from("tasks").delete().eq("id", params.id);
+    router.push("/tasks");
+  };
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Link href="/tasks" className="w-fit text-sm text-slate-500 hover:text-slate-900">
+        ← {t.tasks.backToList}
+      </Link>
+
+      {!configured && <SetupNotice />}
+
+      {configured && task === undefined && (
+        <p className="text-slate-400">{t.common.loading}</p>
+      )}
+      {configured && task === null && <p className="text-slate-400">{t.tasks.notFound}</p>}
+
+      {task && (
+        <>
+          <h1 className="text-2xl font-semibold">{task.title}</h1>
+          <TaskForm
+            initial={{
+              title: task.title,
+              description: task.description ?? "",
+              due_date: task.due_date ?? "",
+              status: task.status,
+              assignee: task.assignee ?? "",
+              client_id: task.client_id ?? "",
+              object_id: task.object_id ?? "",
+            }}
+            submitting={submitting}
+            onSubmit={handleSubmit}
+            onDelete={handleDelete}
+          />
+        </>
+      )}
+    </div>
+  );
+}

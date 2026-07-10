@@ -8,6 +8,10 @@ import type { Locale } from "@/lib/i18n/dictionaries";
 const navItems = [
   { href: "/", key: "dashboard" as const },
   { href: "/objects", key: "objects" as const },
+  { href: "/clients", key: "clients" as const },
+  { href: "/tasks", key: "tasks" as const },
+  { href: "/contracts", key: "contracts" as const },
+  { href: "/buildings", key: "buildings" as const },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

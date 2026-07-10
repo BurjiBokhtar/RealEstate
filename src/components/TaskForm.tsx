@@ -1,0 +1,171 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { createClient } from "@/lib/supabase/client";
+import { TASK_STATUSES, type TaskInput } from "@/lib/tasks/types";
+import type { Client } from "@/lib/clients/types";
+import type { PropertyObject } from "@/lib/objects/types";
+
+const emptyInput: TaskInput = {
+  title: "",
+  description: "",
+  due_date: "",
+  status: "todo",
+  assignee: "",
+  client_id: "",
+  object_id: "",
+};
+
+export function TaskForm({
+  initial,
+  submitting,
+  onSubmit,
+  onDelete,
+}: {
+  initial?: Partial<TaskInput>;
+  submitting: boolean;
+  onSubmit: (values: TaskInput) => void;
+  onDelete?: () => void;
+}) {
+  const { t } = useLocale();
+  const [values, setValues] = useState<TaskInput>({ ...emptyInput, ...initial });
+  const [clients, setClients] = useState<Client[]>([]);
+  const [objects, setObjects] = useState<PropertyObject[]>([]);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .from("clients")
+      .select("*")
+      .order("name")
+      .then(({ data }) => setClients((data ?? []) as Client[]));
+    supabase
+      .schema("crm")
+      .from("objects")
+      .select("*")
+      .order("name")
+      .then(({ data }) => setObjects((data ?? []) as PropertyObject[]));
+  }, []);
+
+  const update = <K extends keyof TaskInput>(key: K, value: TaskInput[K]) =>
+    setValues((v) => ({ ...v, [key]: value }));
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(values);
+      }}
+      className="flex max-w-xl flex-col gap-4"
+    >
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">{t.tasks.form.title}</span>
+        <input
+          required
+          value={values.title}
+          onChange={(e) => update("title", e.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">{t.tasks.form.description}</span>
+        <textarea
+          value={values.description}
+          onChange={(e) => update("description", e.target.value)}
+          rows={3}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.dueDate}</span>
+          <input
+            type="date"
+            value={values.due_date}
+            onChange={(e) => update("due_date", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.status}</span>
+          <select
+            value={values.status}
+            onChange={(e) => update("status", e.target.value as TaskInput["status"])}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            {TASK_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {t.tasks.statuses[status]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">{t.tasks.form.assignee}</span>
+        <input
+          value={values.assignee}
+          onChange={(e) => update("assignee", e.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
+
+      <div className="grid grid-cols-2 gap-4">
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.client}</span>
+          <select
+            value={values.client_id}
+            onChange={(e) => update("client_id", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            <option value="">{t.tasks.form.noneOption}</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.tasks.form.object}</span>
+          <select
+            value={values.object_id}
+            onChange={(e) => update("object_id", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            <option value="">{t.tasks.form.noneOption}</option>
+            {objects.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+        >
+          {t.tasks.form.save}
+        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            {t.tasks.form.delete}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
