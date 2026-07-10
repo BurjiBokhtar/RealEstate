@@ -192,24 +192,18 @@ export function copyFloorPattern(
   });
 }
 
-// Sets rooms/area/type for one position (e.g. unit №1) across a range of
-// floors in a single action — filling "the same apartment on every floor"
-// without clicking into each floor's cell individually.
-export function fillPositionRange(
+// Takes one unit's current rooms/area/type and applies it to the same
+// position on every floor in its group — fill in one apartment, click once,
+// and it's set for the whole column instead of retyping it per floor.
+export function applyColumn(
   drafts: UnitDraft[],
   groupLabel: string,
   position: number,
-  fromFloor: number,
-  toFloor: number,
-  patch: { rooms?: string; area?: string; type?: ObjectType }
+  patch: { rooms: string; area: string; type: ObjectType }
 ): UnitDraft[] {
-  const lo = Math.min(fromFloor, toFloor);
-  const hi = Math.max(fromFloor, toFloor);
-  return drafts.map((d) => {
-    if (d.groupLabel !== groupLabel || d.position !== position) return d;
-    if (d.floor < lo || d.floor > hi) return d;
-    return { ...d, ...patch };
-  });
+  return drafts.map((d) =>
+    d.groupLabel === groupLabel && d.position === position ? { ...d, ...patch } : d
+  );
 }
 
 // Combines two adjacent units on the same floor into one (summed area),

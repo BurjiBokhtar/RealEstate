@@ -4,8 +4,8 @@ import { Fragment, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { OBJECT_TYPES, type ObjectType } from "@/lib/objects/types";
 import {
+  applyColumn,
   copyFloorPattern,
-  fillPositionRange,
   mergeAdjacentDrafts,
   type UnitDraft,
 } from "@/lib/buildings/generateUnits";
@@ -19,23 +19,11 @@ export function UnitGridEditor({
 }) {
   const { t } = useLocale();
   const [copyTargets, setCopyTargets] = useState<Record<number, string>>({});
-  const [bulk, setBulk] = useState({
-    group: "",
-    position: "",
-    fromFloor: "",
-    toFloor: "",
-    rooms: "",
-    area: "",
-  });
 
   if (drafts.length === 0) return null;
 
   const floors = Array.from(new Set(drafts.map((d) => d.floor))).sort((a, b) => b - a);
-  const groupOptions = Array.from(new Set(drafts.map((d) => d.groupLabel)));
-  const showGroups = groupOptions.length > 1;
-  const positionOptions = Array.from(new Set(drafts.map((d) => d.position))).sort(
-    (a, b) => a - b
-  );
+  const showGroups = new Set(drafts.map((d) => d.groupLabel)).size > 1;
 
   const updateDraft = (
     floor: number,
@@ -64,99 +52,21 @@ export function UnitGridEditor({
     onChange(mergeAdjacentDrafts(drafts, floor, groupLabel, posA, posB));
   };
 
-  const applyBulk = () => {
-    const position = Number(bulk.position);
-    const from = Number(bulk.fromFloor);
-    const to = Number(bulk.toFloor);
-    if (!position || !bulk.fromFloor || !bulk.toFloor) return;
-    const patch: { rooms?: string; area?: string } = {};
-    if (bulk.rooms) patch.rooms = bulk.rooms;
-    if (bulk.area) patch.area = bulk.area;
-    if (Object.keys(patch).length === 0) return;
-    onChange(fillPositionRange(drafts, showGroups ? bulk.group : "", position, from, to, patch));
+  const handleApplyColumn = (unit: UnitDraft) => {
+    onChange(
+      applyColumn(drafts, unit.groupLabel, unit.position, {
+        rooms: unit.rooms,
+        area: unit.area,
+        type: unit.type,
+      })
+    );
   };
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <p className="w-full text-xs font-semibold text-slate-600">
-          {t.buildings.constructor.bulkFillTitle}
-        </p>
-        {showGroups && (
-          <select
-            value={bulk.group}
-            onChange={(e) => setBulk((b) => ({ ...b, group: e.target.value }))}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          >
-            {groupOptions.map((g) => (
-              <option key={g || "_"} value={g}>
-                {g || "—"}
-              </option>
-            ))}
-          </select>
-        )}
-        <label className="flex flex-col gap-0.5 text-xs">
-          <span className="text-slate-500">{t.buildings.constructor.bulkPosition}</span>
-          <select
-            value={bulk.position}
-            onChange={(e) => setBulk((b) => ({ ...b, position: e.target.value }))}
-            className="rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          >
-            <option value="">—</option>
-            {positionOptions.map((p) => (
-              <option key={p} value={p}>
-                №{p}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          <span className="text-slate-500">{t.buildings.constructor.bulkFromFloor}</span>
-          <input
-            type="number"
-            value={bulk.fromFloor}
-            onChange={(e) => setBulk((b) => ({ ...b, fromFloor: e.target.value }))}
-            className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          />
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          <span className="text-slate-500">{t.buildings.constructor.bulkToFloor}</span>
-          <input
-            type="number"
-            value={bulk.toFloor}
-            onChange={(e) => setBulk((b) => ({ ...b, toFloor: e.target.value }))}
-            className="w-16 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          />
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          <span className="text-slate-500">{t.buildings.constructor.rowRooms}</span>
-          <input
-            type="number"
-            min="0"
-            value={bulk.rooms}
-            onChange={(e) => setBulk((b) => ({ ...b, rooms: e.target.value }))}
-            className="w-14 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          />
-        </label>
-        <label className="flex flex-col gap-0.5 text-xs">
-          <span className="text-slate-500">{t.buildings.constructor.areaPlaceholder}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={bulk.area}
-            onChange={(e) => setBulk((b) => ({ ...b, area: e.target.value }))}
-            className="w-20 rounded-md border border-slate-300 px-2 py-1.5 text-xs"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={applyBulk}
-          className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
-        >
-          {t.buildings.constructor.bulkApply}
-        </button>
-      </div>
+      {floors.length > 1 && (
+        <p className="text-xs text-slate-400">{t.buildings.constructor.applyColumnHint}</p>
+      )}
 
       {floors.map((floor) => {
         const floorUnits = drafts.filter((d) => d.floor === floor);
@@ -212,7 +122,7 @@ export function UnitGridEditor({
                     <div className="flex flex-wrap items-center gap-1">
                       {units.map((unit, idx) => (
                         <Fragment key={unit.position}>
-                          <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
+                          <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
                             <span className="text-xs text-slate-500">№{unit.position}</span>
                             <select
                               value={unit.type}
@@ -254,6 +164,17 @@ export function UnitGridEditor({
                               }
                               className="w-20 rounded border border-slate-300 px-1.5 py-1 text-xs"
                             />
+                            {floors.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleApplyColumn(unit)}
+                                disabled={!unit.rooms && !unit.area}
+                                title={t.buildings.constructor.applyColumnTitle}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30"
+                              >
+                                ↓
+                              </button>
+                            )}
                           </div>
                           {idx < units.length - 1 &&
                             units[idx + 1].position === unit.position + 1 && (
