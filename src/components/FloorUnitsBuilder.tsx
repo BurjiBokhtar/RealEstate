@@ -6,13 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 import { OBJECT_TYPES, type ObjectType, type PropertyObject } from "@/lib/objects/types";
 
 type Row = {
+  block: string;
   floor: string;
   type: ObjectType;
   count: string;
   area: string;
 };
 
-const emptyRow: Row = { floor: "", type: "apartment", count: "", area: "" };
+const emptyRow: Row = { block: "", floor: "", type: "apartment", count: "", area: "" };
 
 export function FloorUnitsBuilder({
   buildingId,
@@ -39,35 +40,42 @@ export function FloorUnitsBuilder({
 
   const handleGenerate = async () => {
     const toCreate: Array<Record<string, unknown>> = [];
+    const plannedByBlockFloor = new Map<string, number>();
 
     for (const row of rows) {
       const floor = Number(row.floor);
       const count = Number(row.count);
       const area = row.area ? Number(row.area) : null;
+      const block = row.block.trim() || null;
       if (Number.isNaN(floor) || !count) continue;
 
-      const existingOnFloor = existingUnits.filter((u) => (u.floor ?? 0) === floor);
-      const startPosition =
-        existingOnFloor.reduce(
-          (max, u) => Math.max(max, (u.position_in_floor ?? 0) + (u.span || 1)),
-          0
-        ) + 1;
+      const key = `${block ?? ""}-${floor}`;
+      const existingOnFloor = existingUnits.filter(
+        (u) => (u.floor ?? 0) === floor && (u.block ?? null) === block
+      );
+      const existingMax = existingOnFloor.reduce(
+        (max, u) => Math.max(max, (u.position_in_floor ?? 0) + (u.span || 1)),
+        0
+      );
+      const startPosition = Math.max(existingMax, plannedByBlockFloor.get(key) ?? 0) + 1;
 
       const price = area && pricePerSqm ? area * pricePerSqm : null;
 
       for (let i = 0; i < count; i++) {
         const position = startPosition + i;
         toCreate.push({
-          name: `№${floor}-${position}`,
+          name: block ? `${block} №${floor}-${position}` : `№${floor}-${position}`,
           type: row.type,
           status: "available",
           building_id: buildingId,
+          block,
           floor,
           position_in_floor: position,
           area,
           price,
         });
       }
+      plannedByBlockFloor.set(key, startPosition + count - 1);
     }
 
     if (toCreate.length === 0) return;
@@ -87,7 +95,19 @@ export function FloorUnitsBuilder({
 
       <div className="flex flex-col gap-2">
         {rows.map((row, index) => (
-          <div key={index} className="grid grid-cols-[1fr_1.5fr_1fr_1fr_auto] items-end gap-2">
+          <div
+            key={index}
+            className="grid grid-cols-[1fr_1fr_1.3fr_1fr_1fr_auto] items-end gap-2"
+          >
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="font-medium text-slate-700">{t.buildings.floorBuilder.block}</span>
+              <input
+                value={row.block}
+                onChange={(e) => updateRow(index, "block", e.target.value)}
+                placeholder={t.buildings.floorBuilder.blockPlaceholder}
+                className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+              />
+            </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="font-medium text-slate-700">{t.buildings.floorBuilder.floor}</span>
               <input

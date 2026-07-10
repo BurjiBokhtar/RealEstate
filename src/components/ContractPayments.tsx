@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/currency";
@@ -96,6 +97,7 @@ export function ContractPayments({ contract }: { contract: Contract }) {
               <th className="py-2 font-medium">{t.contracts.payments.dueDate}</th>
               <th className="py-2 font-medium">{t.contracts.payments.amount}</th>
               <th className="py-2 font-medium">{t.contracts.payments.paid}</th>
+              <th className="py-2 font-medium"></th>
             </tr>
           </thead>
           <tbody>
@@ -115,6 +117,14 @@ export function ContractPayments({ contract }: { contract: Contract }) {
                   >
                     {p.paid ? t.contracts.payments.markUnpaid : t.contracts.payments.markPaid}
                   </button>
+                </td>
+                <td className="py-2">
+                  <Link
+                    href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
+                    className="text-xs text-slate-500 hover:underline"
+                  >
+                    {t.contracts.receipt.print}
+                  </Link>
                 </td>
               </tr>
             ))}

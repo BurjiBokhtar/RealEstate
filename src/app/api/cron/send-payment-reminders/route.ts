@@ -1,7 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { renderContractTemplate } from "@/lib/contracts/renderTemplate";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_PAYMENT_TEMPLATE =
+  "{{client_name}}, напоминаем: оплата {{amount}} {{currency}} по договору №{{contract_number}} до {{due_date}}.";
 
 type DuePayment = {
   id: string;
@@ -9,6 +13,7 @@ type DuePayment = {
   amount: number;
   contract: {
     number: string | null;
+    currency: string;
     client: { name: string; phone: string | null } | null;
   } | null;
 };
@@ -42,7 +47,9 @@ export async function GET(request: Request) {
 
   const { data: payments, error } = await supabase
     .from("contract_payments")
-    .select("id, due_date, amount, contract:contracts(number, client:clients(name, phone))")
+    .select(
+      "id, due_date, amount, contract:contracts(number, currency, client:clients(name, phone))"
+    )
     .eq("paid", false)
     .is("reminder_sent_at", null)
     .lte("due_date", targetDateStr);
@@ -59,7 +66,16 @@ export async function GET(request: Request) {
     const phone = payment.contract?.client?.phone;
     if (!phone) continue;
 
-    const text = `Уважаемый(ая) ${payment.contract?.client?.name ?? ""}, напоминаем: оплата ${payment.amount} TJS по договору №${payment.contract?.number ?? ""} до ${payment.due_date}.`;
+    const text = renderContractTemplate(
+      settings.sms_payment_template || DEFAULT_PAYMENT_TEMPLATE,
+      {
+        client_name: payment.contract?.client?.name ?? "",
+        amount: new Intl.NumberFormat("ru-RU").format(payment.amount),
+        currency: payment.contract?.currency ?? "TJS",
+        contract_number: payment.contract?.number ?? "",
+        due_date: payment.due_date,
+      }
+    );
 
     try {
       const res = await fetch("https://gateway.payom.tj/api/message", {

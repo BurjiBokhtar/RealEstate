@@ -30,6 +30,7 @@ export type PropertyObject = {
   currency: Currency;
   description: string | null;
   building_id: string | null;
+  block: string | null;
   floor: number | null;
   position_in_floor: number | null;
   plan_url: string | null;

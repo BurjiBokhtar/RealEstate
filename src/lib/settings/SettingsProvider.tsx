@@ -10,10 +10,13 @@ const DEFAULT_SETTINGS: Settings = {
   sms_api_key: null,
   sms_sender_name: null,
   sms_reminder_days: 3,
+  sms_payment_template: null,
+  sms_task_template: null,
   company_name: null,
   company_director: null,
   company_address: null,
   company_bank_details: null,
+  company_logo_url: null,
   contract_template: null,
   updated_at: new Date(0).toISOString(),
 };

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { FileUploadField } from "@/components/FileUploadField";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import type { SettingsInput } from "@/lib/settings/types";
 
@@ -26,6 +27,16 @@ const PLACEHOLDERS = [
   "company_bank_details",
 ];
 
+const PAYMENT_SMS_PLACEHOLDERS = [
+  "client_name",
+  "amount",
+  "currency",
+  "contract_number",
+  "due_date",
+];
+
+const TASK_SMS_PLACEHOLDERS = ["assignee", "title", "due_date"];
+
 export default function SettingsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
@@ -35,10 +46,13 @@ export default function SettingsPage() {
     sms_api_key: "",
     sms_sender_name: "",
     sms_reminder_days: "",
+    sms_payment_template: "",
+    sms_task_template: "",
     company_name: "",
     company_director: "",
     company_address: "",
     company_bank_details: "",
+    company_logo_url: "",
     contract_template: "",
   });
   const [saving, setSaving] = useState(false);
@@ -49,10 +63,13 @@ export default function SettingsPage() {
       sms_api_key: settings.sms_api_key ?? "",
       sms_sender_name: settings.sms_sender_name ?? "",
       sms_reminder_days: settings.sms_reminder_days.toString(),
+      sms_payment_template: settings.sms_payment_template ?? "",
+      sms_task_template: settings.sms_task_template ?? "",
       company_name: settings.company_name ?? "",
       company_director: settings.company_director ?? "",
       company_address: settings.company_address ?? "",
       company_bank_details: settings.company_bank_details ?? "",
+      company_logo_url: settings.company_logo_url ?? "",
       contract_template: settings.contract_template ?? "",
     });
   }, [settings]);
@@ -72,10 +89,13 @@ export default function SettingsPage() {
         sms_api_key: values.sms_api_key || null,
         sms_sender_name: values.sms_sender_name || null,
         sms_reminder_days: values.sms_reminder_days ? Number(values.sms_reminder_days) : 3,
+        sms_payment_template: values.sms_payment_template || null,
+        sms_task_template: values.sms_task_template || null,
         company_name: values.company_name || null,
         company_director: values.company_director || null,
         company_address: values.company_address || null,
         company_bank_details: values.company_bank_details || null,
+        company_logo_url: values.company_logo_url || null,
         contract_template: values.contract_template || null,
       })
       .eq("id", true);
@@ -93,6 +113,14 @@ export default function SettingsPage() {
       <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-700">{t.settings.company.title}</p>
         <span className="text-xs text-slate-400">{t.settings.company.hint}</span>
+        <FileUploadField
+          label={t.settings.company.logo}
+          value={values.company_logo_url}
+          onChange={(url) => update("company_logo_url", url)}
+          folder="company-logo"
+          uploadLabel={t.objects.form.upload}
+          uploadingLabel={t.objects.form.uploading}
+        />
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.settings.company.name}</span>
           <input
@@ -195,6 +223,48 @@ export default function SettingsPage() {
             onChange={(e) => update("sms_reminder_days", e.target.value)}
             className="rounded-md border border-slate-300 px-3 py-2"
           />
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">
+            {t.settings.sms.paymentTemplate}
+          </span>
+          <textarea
+            value={values.sms_payment_template}
+            onChange={(e) => update("sms_payment_template", e.target.value)}
+            rows={3}
+            className="rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {PAYMENT_SMS_PLACEHOLDERS.map((p) => (
+              <code
+                key={p}
+                className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
+              >
+                {`{{${p}}}`}
+              </code>
+            ))}
+          </div>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.settings.sms.taskTemplate}</span>
+          <textarea
+            value={values.sms_task_template}
+            onChange={(e) => update("sms_task_template", e.target.value)}
+            rows={2}
+            className="rounded-md border border-slate-300 px-3 py-2 font-mono text-xs"
+          />
+          <div className="flex flex-wrap gap-1.5">
+            {TASK_SMS_PLACEHOLDERS.map((p) => (
+              <code
+                key={p}
+                className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
+              >
+                {`{{${p}}}`}
+              </code>
+            ))}
+          </div>
         </label>
       </div>
 

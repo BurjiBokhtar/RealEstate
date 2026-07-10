@@ -181,21 +181,30 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.dashboard.title}</h1>
-        <label className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">{t.dashboard.filterBuilding}</span>
-          <select
-            value={selectedBuildingId}
-            onChange={(e) => setSelectedBuildingId(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+        <div className="flex items-center gap-3 print:hidden">
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-slate-500">{t.dashboard.filterBuilding}</span>
+            <select
+              value={selectedBuildingId}
+              onChange={(e) => setSelectedBuildingId(e.target.value)}
+              className="rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="all">{t.dashboard.allBuildings}</option>
+              {buildings.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            <option value="all">{t.dashboard.allBuildings}</option>
-            {buildings.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            {t.dashboard.printReport}
+          </button>
+        </div>
       </div>
 
       {!configured && <SetupNotice />}
@@ -210,13 +219,6 @@ export default function DashboardPage() {
           </div>
         ))}
       </div>
-
-      <Link
-        href="/objects"
-        className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-      >
-        {t.nav.objects} →
-      </Link>
 
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <p className="mb-4 text-sm font-semibold text-slate-700">

@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { renderContractTemplate } from "@/lib/contracts/renderTemplate";
 
 export const dynamic = "force-dynamic";
+
+const DEFAULT_TASK_TEMPLATE = '{{assignee}}, напоминаем: задача "{{title}}" — срок {{due_date}}.';
 
 type DueTask = {
   id: string;
@@ -58,7 +61,11 @@ export async function GET(request: Request) {
   for (const task of dueList) {
     if (!task.assignee_phone) continue;
 
-    const text = `${task.assignee ?? ""}, напоминаем: задача "${task.title}" — срок ${task.due_date}.`;
+    const text = renderContractTemplate(settings.sms_task_template || DEFAULT_TASK_TEMPLATE, {
+      assignee: task.assignee ?? "",
+      title: task.title,
+      due_date: task.due_date,
+    });
 
     try {
       const res = await fetch("https://gateway.payom.tj/api/message", {

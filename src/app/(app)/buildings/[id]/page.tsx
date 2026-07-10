@@ -122,7 +122,9 @@ export default function BuildingDetailPage() {
       .schema("crm")
       .from("objects")
       .update({
-        name: `№${unitA.floor}-${unitA.position_in_floor}-${unitB.position_in_floor}`,
+        name: unitA.block
+          ? `${unitA.block} №${unitA.floor}-${unitA.position_in_floor}-${unitB.position_in_floor}`
+          : `№${unitA.floor}-${unitA.position_in_floor}-${unitB.position_in_floor}`,
         area: combinedArea,
         price: combinedPrice,
         span: (unitA.span || 1) + (unitB.span || 1),
