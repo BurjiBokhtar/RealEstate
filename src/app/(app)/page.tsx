@@ -37,7 +37,18 @@ type ObjectRow = {
   id: string;
   status: ObjectStatus;
   building_id: string | null;
+  price: number | null;
+  currency: Currency;
 };
+
+type MoneyPair = { tjs: number; usd: number };
+
+function formatPair(v: MoneyPair) {
+  const parts: string[] = [];
+  if (v.tjs > 0) parts.push(formatCurrency(v.tjs, "TJS"));
+  if (v.usd > 0) parts.push(formatCurrency(v.usd, "USD"));
+  return parts.length ? parts.join(" + ") : "—";
+}
 
 type ContractRow = {
   object_id: string;
@@ -66,7 +77,10 @@ export default function DashboardPage() {
     const supabase = createClient();
 
     Promise.all([
-      supabase.schema("crm").from("objects").select("id, status, building_id"),
+      supabase
+        .schema("crm")
+        .from("objects")
+        .select("id, status, building_id, price, currency"),
       supabase
         .schema("crm")
         .from("contracts")
@@ -170,6 +184,64 @@ export default function DashboardPage() {
       .slice(0, 5);
   }, [contracts]);
 
+  const paidRevenue: MoneyPair = useMemo(() => {
+    const v: MoneyPair = { tjs: 0, usd: 0 };
+    contracts
+      .filter((c) => c.status !== "cancelled")
+      .forEach((c) => {
+        if (c.currency === "USD") v.usd += c.paid_amount;
+        else v.tjs += c.paid_amount;
+      });
+    return v;
+  }, [contracts]);
+
+  const totalDebt: MoneyPair = useMemo(() => {
+    const v: MoneyPair = { tjs: 0, usd: 0 };
+    contracts
+      .filter((c) => c.status !== "cancelled")
+      .forEach((c) => {
+        const remaining = c.amount - c.paid_amount;
+        if (remaining <= 0) return;
+        if (c.currency === "USD") v.usd += remaining;
+        else v.tjs += remaining;
+      });
+    return v;
+  }, [contracts]);
+
+  const potentialRevenue: MoneyPair = useMemo(() => {
+    const v: MoneyPair = { tjs: 0, usd: 0 };
+    objects
+      .filter((o) => o.status === "available" && o.price)
+      .forEach((o) => {
+        if (o.currency === "USD") v.usd += o.price!;
+        else v.tjs += o.price!;
+      });
+    return v;
+  }, [objects]);
+
+  const revenueByBuilding = useMemo(() => {
+    const objectToBuilding = new Map(allObjects.map((o) => [o.id, o.building_id]));
+    const map = new Map<string, MoneyPair>();
+    contracts
+      .filter((c) => c.status !== "cancelled")
+      .forEach((c) => {
+        const buildingId = objectToBuilding.get(c.object_id);
+        if (!buildingId) return;
+        const entry = map.get(buildingId) ?? { tjs: 0, usd: 0 };
+        if (c.currency === "USD") entry.usd += c.amount;
+        else entry.tjs += c.amount;
+        map.set(buildingId, entry);
+      });
+    const relevantBuildings =
+      selectedBuildingId === "all"
+        ? buildings
+        : buildings.filter((b) => b.id === selectedBuildingId);
+    return relevantBuildings
+      .map((b) => ({ id: b.id, name: b.name, ...(map.get(b.id) ?? { tjs: 0, usd: 0 }) }))
+      .filter((b) => b.tjs > 0 || b.usd > 0)
+      .sort((a, b) => b.tjs + b.usd - (a.tjs + a.usd));
+  }, [allObjects, contracts, buildings, selectedBuildingId]);
+
   const cards = [
     { label: t.dashboard.totalObjects, value: counts.total },
     { label: t.dashboard.available, value: counts.available },
@@ -220,6 +292,27 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="text-sm text-slate-500">{t.dashboard.paidRevenue}</div>
+          <div className="mt-1 text-xl font-semibold text-emerald-600">
+            {loading ? "…" : formatPair(paidRevenue)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="text-sm text-slate-500">{t.dashboard.totalDebt}</div>
+          <div className="mt-1 text-xl font-semibold text-rose-600">
+            {loading ? "…" : formatPair(totalDebt)}
+          </div>
+        </div>
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <div className="text-sm text-slate-500">{t.dashboard.potentialRevenue}</div>
+          <div className="mt-1 text-xl font-semibold text-slate-700">
+            {loading ? "…" : formatPair(potentialRevenue)}
+          </div>
+        </div>
+      </div>
+
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.revenueByMonth}
@@ -263,6 +356,38 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
+        ) : (
+          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+        )}
+      </div>
+
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <p className="mb-4 text-sm font-semibold text-slate-700">
+          {t.dashboard.revenueByBuilding}
+        </p>
+        {revenueByBuilding.length > 0 ? (
+          <table className="w-full text-left text-sm">
+            <thead className="border-b border-slate-200 text-slate-500">
+              <tr>
+                <th className="pb-2 font-medium">{t.buildings.title}</th>
+                <th className="pb-2 font-medium">{t.dashboard.revenueByMonth}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {revenueByBuilding.map((b) => (
+                <tr key={b.id} className="border-b border-slate-100 last:border-0">
+                  <td className="py-2">
+                    <Link href={`/buildings/${b.id}`} className="hover:underline">
+                      {b.name}
+                    </Link>
+                  </td>
+                  <td className="py-2 font-medium text-slate-700">
+                    {formatPair({ tjs: b.tjs, usd: b.usd })}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}

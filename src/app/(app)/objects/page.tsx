@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { AddMenu } from "@/components/AddMenu";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency } from "@/lib/currency";
 import {
@@ -81,20 +82,13 @@ export default function ObjectsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.objects.title}</h1>
-        <div className="flex gap-2">
-          <Link
-            href="/buildings/new"
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            + {t.objects.newBuilding}
-          </Link>
-          <Link
-            href="/objects/new"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            + {t.objects.newObject}
-          </Link>
-        </div>
+        <AddMenu
+          label={t.objects.add}
+          items={[
+            { href: "/objects/new", label: t.objects.newObject },
+            { href: "/buildings/new", label: t.objects.newBuilding },
+          ]}
+        />
       </div>
 
       {!configured && <SetupNotice />}

@@ -8,7 +8,20 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ClientForm } from "@/components/ClientForm";
+import { formatCurrency, type Currency } from "@/lib/currency";
 import type { Client, ClientInput } from "@/lib/clients/types";
+import type { ContractStatus } from "@/lib/contracts/types";
+
+type ClientContract = {
+  id: string;
+  number: string | null;
+  amount: number;
+  paid_amount: number;
+  currency: Currency;
+  status: ContractStatus;
+  signed_date: string | null;
+  object: { name: string; building: { name: string } | null } | null;
+};
 
 export default function ClientDetailPage() {
   const { t } = useLocale();
@@ -17,7 +30,9 @@ export default function ClientDetailPage() {
   const configured = isSupabaseConfigured();
 
   const [client, setClient] = useState<Client | null | undefined>(undefined);
+  const [contracts, setContracts] = useState<ClientContract[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured) {
@@ -32,6 +47,15 @@ export default function ClientDetailPage() {
       .eq("id", params.id)
       .maybeSingle()
       .then(({ data }) => setClient((data as Client) ?? null));
+    supabase
+      .schema("crm")
+      .from("contracts")
+      .select(
+        "id, number, amount, paid_amount, currency, status, signed_date, object:objects(name, building:buildings(name))"
+      )
+      .eq("client_id", params.id)
+      .order("signed_date", { ascending: false })
+      .then(({ data }) => setContracts((data ?? []) as unknown as ClientContract[]));
   }, [configured, params.id]);
 
   const handleSubmit = async (values: ClientInput) => {
@@ -60,10 +84,20 @@ export default function ClientDetailPage() {
 
   const handleDelete = async () => {
     if (!window.confirm(t.clients.form.confirmDelete)) return;
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.schema("crm").from("clients").delete().eq("id", params.id);
+    const { error } = await supabase.schema("crm").from("clients").delete().eq("id", params.id);
+    if (error) {
+      setDeleteError(t.clients.form.deleteBlocked);
+      return;
+    }
     router.push("/clients");
   };
+
+  const totalDebt = contracts.reduce((sum, c) => {
+    if (c.status === "cancelled") return sum;
+    return sum + Math.max(0, c.amount - c.paid_amount);
+  }, 0);
 
   return (
     <div className="flex flex-col gap-5">
@@ -101,6 +135,61 @@ export default function ClientDetailPage() {
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+
+          <div className="flex max-w-2xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-slate-700">{t.clients.purchases.title}</p>
+              {totalDebt > 0 && (
+                <span className="text-sm font-medium text-rose-600">
+                  {t.clients.purchases.totalDebt}:{" "}
+                  {formatCurrency(totalDebt, contracts[0]?.currency ?? "TJS")}
+                </span>
+              )}
+            </div>
+            {contracts.length === 0 ? (
+              <p className="text-sm text-slate-400">{t.clients.purchases.empty}</p>
+            ) : (
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-slate-200 text-slate-500">
+                  <tr>
+                    <th className="py-2 font-medium">{t.clients.purchases.object}</th>
+                    <th className="py-2 font-medium">{t.contracts.form.amount}</th>
+                    <th className="py-2 font-medium">{t.contracts.form.paidAmount}</th>
+                    <th className="py-2 font-medium">{t.buildings.hover.remaining}</th>
+                    <th className="py-2 font-medium">{t.contracts.form.status}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contracts.map((c) => {
+                    const remaining = c.amount - c.paid_amount;
+                    return (
+                      <tr key={c.id} className="border-b border-slate-100 last:border-0">
+                        <td className="py-2">
+                          <Link href={`/contracts/${c.id}`} className="hover:underline">
+                            {c.object?.name ?? "—"}
+                          </Link>
+                          {c.object?.building && (
+                            <span className="block text-xs text-slate-400">
+                              {c.object.building.name}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2">{formatCurrency(c.amount, c.currency)}</td>
+                        <td className="py-2 text-emerald-600">
+                          {formatCurrency(c.paid_amount, c.currency)}
+                        </td>
+                        <td className="py-2 text-rose-600">
+                          {remaining > 0 ? formatCurrency(remaining, c.currency) : "—"}
+                        </td>
+                        <td className="py-2">{t.contracts.statuses[c.status]}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
         </>
       )}
     </div>

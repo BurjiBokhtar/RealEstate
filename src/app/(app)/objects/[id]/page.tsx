@@ -18,6 +18,7 @@ export default function ObjectDetailPage() {
 
   const [object, setObject] = useState<PropertyObject | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured) {
@@ -59,8 +60,13 @@ export default function ObjectDetailPage() {
 
   const handleDelete = async () => {
     if (!window.confirm(t.objects.form.confirmDelete)) return;
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.schema("crm").from("objects").delete().eq("id", params.id);
+    const { error } = await supabase.schema("crm").from("objects").delete().eq("id", params.id);
+    if (error) {
+      setDeleteError(t.objects.form.deleteBlocked);
+      return;
+    }
     router.push("/objects");
   };
 
@@ -99,6 +105,7 @@ export default function ObjectDetailPage() {
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
         </>
       )}
     </div>
