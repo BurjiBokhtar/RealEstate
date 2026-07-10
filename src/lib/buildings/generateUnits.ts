@@ -71,28 +71,19 @@ export function buildUnitsFromRows(
   return toCreate;
 }
 
-// --- Hierarchical constructor: Block -> Entrance -> room-type rows.
-// A room-type row describes one apartment layout repeated on every standard
-// floor of an entrance ("3 однокомнатных по 45 м²"). Special floors
-// (penthouse, parking, basement) are handled separately since they don't
-// follow the per-entrance/per-floor pattern. ---
-
-export type RoomRow = {
-  rooms: string;
-  type: ObjectType;
-  count: string;
-  area: string;
-};
-
-export const emptyRoomRow: RoomRow = { rooms: "", type: "apartment", count: "", area: "" };
+// --- Hierarchical constructor: Block -> Entrance. Pick floors + units per
+// floor and the grid is generated instantly with blank area/rooms — those
+// get filled in afterward directly in the review grid (per unit, per floor
+// range, or by merging two adjacent units), not configured up front. ---
 
 export type Entrance = {
   name: string;
-  rows: RoomRow[];
+  unitsPerFloor: string;
+  type: ObjectType;
 };
 
 export function makeEntrance(name: string): Entrance {
-  return { name, rows: [{ ...emptyRoomRow }] };
+  return { name, unitsPerFloor: "", type: "apartment" };
 }
 
 export type Block = {
@@ -108,11 +99,12 @@ export function makeBlock(name: string, entranceName: string): Block {
 export type SpecialFloor = {
   label: string;
   floor: string;
-  rows: RoomRow[];
+  count: string;
+  type: ObjectType;
 };
 
 export function makeSpecialFloor(): SpecialFloor {
-  return { label: "", floor: "", rows: [{ ...emptyRoomRow }] };
+  return { label: "", floor: "", count: "", type: "apartment" };
 }
 
 export type UnitDraft = {
@@ -138,21 +130,19 @@ export function generateFromBlocks(blocks: Block[]): UnitDraft[] {
       if (multiBlock && block.name.trim()) labelParts.push(block.name.trim());
       if (multiEntrance && entrance.name.trim()) labelParts.push(entrance.name.trim());
       const groupLabel = labelParts.join(", ");
+      const count = Number(entrance.unitsPerFloor) || 0;
+      if (!count) continue;
 
       for (let floor = 1; floor <= floorsCount; floor++) {
-        let position = 1;
-        for (const row of entrance.rows) {
-          const count = Number(row.count) || 0;
-          for (let i = 0; i < count; i++) {
-            drafts.push({
-              groupLabel,
-              floor,
-              position: position++,
-              rooms: row.rooms,
-              type: row.type,
-              area: row.area,
-            });
-          }
+        for (let position = 1; position <= count; position++) {
+          drafts.push({
+            groupLabel,
+            floor,
+            position,
+            rooms: "",
+            type: entrance.type,
+            area: "",
+          });
         }
       }
     }
@@ -167,19 +157,16 @@ export function generateSpecialFloors(specials: SpecialFloor[]): UnitDraft[] {
   for (const special of specials) {
     const floor = Number(special.floor);
     if (Number.isNaN(floor) || !special.floor.trim()) continue;
-    let position = 1;
-    for (const row of special.rows) {
-      const count = Number(row.count) || 0;
-      for (let i = 0; i < count; i++) {
-        drafts.push({
-          groupLabel: special.label.trim(),
-          floor,
-          position: position++,
-          rooms: row.rooms,
-          type: row.type,
-          area: row.area,
-        });
-      }
+    const count = Number(special.count) || 0;
+    for (let position = 1; position <= count; position++) {
+      drafts.push({
+        groupLabel: special.label.trim(),
+        floor,
+        position,
+        rooms: "",
+        type: special.type,
+        area: "",
+      });
     }
   }
 
@@ -203,6 +190,53 @@ export function copyFloorPattern(
     if (!source) return d;
     return { ...d, type: source.type, area: source.area, rooms: source.rooms };
   });
+}
+
+// Sets rooms/area/type for one position (e.g. unit №1) across a range of
+// floors in a single action — filling "the same apartment on every floor"
+// without clicking into each floor's cell individually.
+export function fillPositionRange(
+  drafts: UnitDraft[],
+  groupLabel: string,
+  position: number,
+  fromFloor: number,
+  toFloor: number,
+  patch: { rooms?: string; area?: string; type?: ObjectType }
+): UnitDraft[] {
+  const lo = Math.min(fromFloor, toFloor);
+  const hi = Math.max(fromFloor, toFloor);
+  return drafts.map((d) => {
+    if (d.groupLabel !== groupLabel || d.position !== position) return d;
+    if (d.floor < lo || d.floor > hi) return d;
+    return { ...d, ...patch };
+  });
+}
+
+// Combines two adjacent units on the same floor into one (summed area),
+// mirroring the merge tool already available on the live shakhmatka grid.
+export function mergeAdjacentDrafts(
+  drafts: UnitDraft[],
+  floor: number,
+  groupLabel: string,
+  positionA: number,
+  positionB: number
+): UnitDraft[] {
+  const a = drafts.find(
+    (d) => d.floor === floor && d.groupLabel === groupLabel && d.position === positionA
+  );
+  const b = drafts.find(
+    (d) => d.floor === floor && d.groupLabel === groupLabel && d.position === positionB
+  );
+  if (!a || !b) return drafts;
+  const combinedArea = (Number(a.area) || 0) + (Number(b.area) || 0);
+
+  return drafts
+    .map((d) =>
+      d === a
+        ? { ...d, area: combinedArea ? String(combinedArea) : "", rooms: "" }
+        : d
+    )
+    .filter((d) => d !== b);
 }
 
 export function unitDraftsToPayload(

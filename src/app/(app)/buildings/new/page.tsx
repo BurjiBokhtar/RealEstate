@@ -8,8 +8,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { BuildingForm } from "@/components/BuildingForm";
-import { RoomRowsEditor } from "@/components/RoomRowsEditor";
 import { UnitGridEditor } from "@/components/UnitGridEditor";
+import { OBJECT_TYPES, type ObjectType } from "@/lib/objects/types";
 import {
   generateFromBlocks,
   generateSpecialFloors,
@@ -73,27 +73,15 @@ export default function NewBuildingPage() {
       )
     );
 
-  const updateEntranceRows = (
+  const updateEntrance = (
     blockIdx: number,
     entranceIdx: number,
-    rows: Block["entrances"][number]["rows"]
+    patch: Partial<Block["entrances"][number]>
   ) =>
     setBlocks((prev) =>
       prev.map((b, i) =>
         i === blockIdx
-          ? {
-              ...b,
-              entrances: b.entrances.map((e, j) => (j === entranceIdx ? { ...e, rows } : e)),
-            }
-          : b
-      )
-    );
-
-  const updateEntranceName = (blockIdx: number, entranceIdx: number, name: string) =>
-    setBlocks((prev) =>
-      prev.map((b, i) =>
-        i === blockIdx
-          ? { ...b, entrances: b.entrances.map((e, j) => (j === entranceIdx ? { ...e, name } : e)) }
+          ? { ...b, entrances: b.entrances.map((e, j) => (j === entranceIdx ? { ...e, ...patch } : e)) }
           : b
       )
     );
@@ -213,35 +201,68 @@ export default function NewBuildingPage() {
 
                 <div className="flex flex-col gap-3">
                   {block.entrances.map((entrance, entranceIdx) => (
-                    <div key={entranceIdx} className="rounded-md bg-slate-50 p-3">
-                      <div className="mb-2 flex items-end justify-between gap-3">
-                        <label className="flex flex-1 flex-col gap-1 text-xs">
-                          <span className="font-medium text-slate-700">
-                            {t.buildings.constructor.entranceName}
-                          </span>
-                          <input
-                            value={entrance.name}
-                            onChange={(e) =>
-                              updateEntranceName(blockIdx, entranceIdx, e.target.value)
-                            }
-                            placeholder={`${t.buildings.constructor.entranceLabel} ${entranceIdx + 1}`}
-                            className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                          />
-                        </label>
-                        {block.entrances.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeEntrance(blockIdx, entranceIdx)}
-                            className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
-                          >
-                            {t.buildings.constructor.removeEntrance}
-                          </button>
-                        )}
-                      </div>
-                      <RoomRowsEditor
-                        rows={entrance.rows}
-                        onChange={(rows) => updateEntranceRows(blockIdx, entranceIdx, rows)}
-                      />
+                    <div
+                      key={entranceIdx}
+                      className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-end gap-2 rounded-md bg-slate-50 p-3"
+                    >
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="font-medium text-slate-700">
+                          {t.buildings.constructor.entranceName}
+                        </span>
+                        <input
+                          value={entrance.name}
+                          onChange={(e) =>
+                            updateEntrance(blockIdx, entranceIdx, { name: e.target.value })
+                          }
+                          placeholder={`${t.buildings.constructor.entranceLabel} ${entranceIdx + 1}`}
+                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="font-medium text-slate-700">
+                          {t.buildings.constructor.unitsPerFloor}
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={entrance.unitsPerFloor}
+                          onChange={(e) =>
+                            updateEntrance(blockIdx, entranceIdx, {
+                              unitsPerFloor: e.target.value,
+                            })
+                          }
+                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-xs">
+                        <span className="font-medium text-slate-700">
+                          {t.buildings.floorBuilder.type}
+                        </span>
+                        <select
+                          value={entrance.type}
+                          onChange={(e) =>
+                            updateEntrance(blockIdx, entranceIdx, {
+                              type: e.target.value as ObjectType,
+                            })
+                          }
+                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                        >
+                          {OBJECT_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {t.objects.types[type]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {block.entrances.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeEntrance(blockIdx, entranceIdx)}
+                          className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                        >
+                          {t.buildings.constructor.removeEntrance}
+                        </button>
+                      )}
                     </div>
                   ))}
                   <button
@@ -269,44 +290,69 @@ export default function NewBuildingPage() {
             </p>
             <p className="text-xs text-slate-500">{t.buildings.constructor.specialFloorsHint}</p>
             {specialFloors.map((special, idx) => (
-              <div key={idx} className="rounded-md bg-slate-50 p-3">
-                <div className="mb-2 flex items-end justify-between gap-3">
-                  <div className="grid flex-1 grid-cols-2 gap-3">
-                    <label className="flex flex-col gap-1 text-xs">
-                      <span className="font-medium text-slate-700">
-                        {t.buildings.constructor.specialFloorLabel}
-                      </span>
-                      <input
-                        value={special.label}
-                        onChange={(e) => updateSpecialFloor(idx, { label: e.target.value })}
-                        placeholder={t.buildings.constructor.specialFloorLabelPlaceholder}
-                        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-xs">
-                      <span className="font-medium text-slate-700">
-                        {t.buildings.constructor.specialFloorNumber}
-                      </span>
-                      <input
-                        type="number"
-                        value={special.floor}
-                        onChange={(e) => updateSpecialFloor(idx, { floor: e.target.value })}
-                        className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
-                      />
-                    </label>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeSpecialFloor(idx)}
-                    className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+              <div
+                key={idx}
+                className="grid grid-cols-[1.3fr_1fr_1fr_1fr_auto] items-end gap-2 rounded-md bg-slate-50 p-3"
+              >
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="font-medium text-slate-700">
+                    {t.buildings.constructor.specialFloorLabel}
+                  </span>
+                  <input
+                    value={special.label}
+                    onChange={(e) => updateSpecialFloor(idx, { label: e.target.value })}
+                    placeholder={t.buildings.constructor.specialFloorLabelPlaceholder}
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="font-medium text-slate-700">
+                    {t.buildings.constructor.specialFloorNumber}
+                  </span>
+                  <input
+                    type="number"
+                    value={special.floor}
+                    onChange={(e) => updateSpecialFloor(idx, { floor: e.target.value })}
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="font-medium text-slate-700">
+                    {t.buildings.floorBuilder.count}
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={special.count}
+                    onChange={(e) => updateSpecialFloor(idx, { count: e.target.value })}
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs">
+                  <span className="font-medium text-slate-700">
+                    {t.buildings.floorBuilder.type}
+                  </span>
+                  <select
+                    value={special.type}
+                    onChange={(e) =>
+                      updateSpecialFloor(idx, { type: e.target.value as ObjectType })
+                    }
+                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
                   >
-                    {t.buildings.constructor.removeSpecialFloor}
-                  </button>
-                </div>
-                <RoomRowsEditor
-                  rows={special.rows}
-                  onChange={(rows) => updateSpecialFloor(idx, { rows })}
-                />
+                    {OBJECT_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {t.objects.types[type]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => removeSpecialFloor(idx)}
+                  className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                >
+                  {t.buildings.constructor.removeSpecialFloor}
+                </button>
               </div>
             ))}
             <button
