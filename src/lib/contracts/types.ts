@@ -1,3 +1,5 @@
+import type { Currency } from "@/lib/currency";
+
 export const CONTRACT_STATUSES = [
   "draft",
   "active",
@@ -16,6 +18,8 @@ export type Contract = {
   object_id: string;
   amount: number;
   paid_amount: number;
+  currency: Currency;
+  amount_words: string | null;
   status: ContractStatus;
   signed_date: string | null;
   notes: string | null;
@@ -32,6 +36,8 @@ export type ContractInput = {
   object_id: string;
   amount: string;
   paid_amount: string;
+  currency: Currency;
+  amount_words: string;
   status: ContractStatus;
   signed_date: string;
   notes: string;

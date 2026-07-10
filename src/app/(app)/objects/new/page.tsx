@@ -29,6 +29,7 @@ export default function NewObjectPage() {
         status: values.status,
         area: values.area ? Number(values.area) : null,
         price: values.price ? Number(values.price) : null,
+        currency: values.currency,
         description: values.description || null,
         plan_url: values.plan_url || null,
       })

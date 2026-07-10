@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { BuildingForm } from "@/components/BuildingForm";
 import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
+import { FloorUnitsBuilder } from "@/components/FloorUnitsBuilder";
 import { Modal } from "@/components/Modal";
 import { ContractForm } from "@/components/ContractForm";
 import type { Building, BuildingInput } from "@/lib/buildings/types";
@@ -27,10 +28,6 @@ export default function BuildingDetailPage() {
     {}
   );
   const [submitting, setSubmitting] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [genFloors, setGenFloors] = useState("");
-  const [genUnitsPerFloor, setGenUnitsPerFloor] = useState("");
-  const [genArea, setGenArea] = useState("");
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
@@ -48,7 +45,7 @@ export default function BuildingDetailPage() {
       const { data: contracts } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("object_id, amount, paid_amount, client:clients(name)")
+        .select("object_id, amount, paid_amount, currency, client:clients(name)")
         .in(
           "object_id",
           unitRows.map((u) => u.id)
@@ -58,11 +55,13 @@ export default function BuildingDetailPage() {
         object_id: string;
         amount: number;
         paid_amount: number;
+        currency: UnitContractInfo["currency"];
         client: { name: string } | null;
       }>) {
         map[c.object_id] = {
           clientName: c.client?.name ?? "—",
           remaining: c.amount - c.paid_amount,
+          currency: c.currency,
         };
       }
       setContractsByUnit(map);
@@ -81,14 +80,7 @@ export default function BuildingDetailPage() {
       .select("*")
       .eq("id", params.id)
       .maybeSingle()
-      .then(({ data }) => {
-        const b = (data as Building) ?? null;
-        setBuilding(b);
-        if (b) {
-          setGenFloors(b.floors_count?.toString() ?? "");
-          setGenUnitsPerFloor(b.units_per_floor?.toString() ?? "");
-        }
-      });
+      .then(({ data }) => setBuilding((data as Building) ?? null));
     loadUnits();
   }, [configured, params.id, loadUnits]);
 
@@ -117,40 +109,6 @@ export default function BuildingDetailPage() {
     const supabase = createClient();
     await supabase.schema("crm").from("buildings").delete().eq("id", params.id);
     router.push("/buildings");
-  };
-
-  const handleGenerate = async () => {
-    const floors = Number(genFloors);
-    const perFloor = Number(genUnitsPerFloor);
-    if (!floors || !perFloor) return;
-
-    setGenerating(true);
-    const area = genArea ? Number(genArea) : null;
-    const price = area && building?.price_per_sqm ? area * building.price_per_sqm : null;
-    const occupied = new Set(units.map((u) => `${u.floor}-${u.position_in_floor}`));
-    const toCreate: Array<Record<string, unknown>> = [];
-    for (let floor = 1; floor <= floors; floor++) {
-      for (let position = 1; position <= perFloor; position++) {
-        if (occupied.has(`${floor}-${position}`)) continue;
-        toCreate.push({
-          name: `№${floor}-${position}`,
-          type: "apartment",
-          status: "available",
-          building_id: params.id,
-          floor,
-          position_in_floor: position,
-          area,
-          price,
-        });
-      }
-    }
-
-    if (toCreate.length > 0) {
-      const supabase = createClient();
-      await supabase.schema("crm").from("objects").insert(toCreate);
-      await loadUnits();
-    }
-    setGenerating(false);
   };
 
   const handleMergeUnits = async (unitA: PropertyObject, unitB: PropertyObject) => {
@@ -187,6 +145,8 @@ export default function BuildingDetailPage() {
         object_id: values.object_id,
         amount: values.amount ? Number(values.amount) : 0,
         paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
+        currency: values.currency,
+        amount_words: values.amount_words || null,
         status: values.status,
         signed_date: values.signed_date || null,
         notes: values.notes || null,
@@ -244,56 +204,12 @@ export default function BuildingDetailPage() {
             onDelete={handleDelete}
           />
 
-          <div className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
-            <p className="text-sm text-slate-500">{t.buildings.generateMatrixHint}</p>
-            <div className="grid grid-cols-2 gap-4">
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-700">
-                  {t.buildings.form.floorsCount}
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  value={genFloors}
-                  onChange={(e) => setGenFloors(e.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-700">
-                  {t.buildings.form.unitsPerFloor}
-                </span>
-                <input
-                  type="number"
-                  min="1"
-                  value={genUnitsPerFloor}
-                  onChange={(e) => setGenUnitsPerFloor(e.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2"
-                />
-              </label>
-              <label className="flex flex-col gap-1 text-sm">
-                <span className="font-medium text-slate-700">
-                  {t.buildings.defaultArea}
-                </span>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={genArea}
-                  onChange={(e) => setGenArea(e.target.value)}
-                  className="rounded-md border border-slate-300 px-3 py-2"
-                />
-              </label>
-            </div>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={generating}
-              className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-            >
-              {t.buildings.generate}
-            </button>
-          </div>
+          <FloorUnitsBuilder
+            buildingId={building.id}
+            pricePerSqm={building.price_per_sqm}
+            existingUnits={units}
+            onGenerated={loadUnits}
+          />
 
           <ShakhmatkaGrid
             units={units}
@@ -308,6 +224,7 @@ export default function BuildingDetailPage() {
                 initial={{
                   object_id: bookingUnit.id,
                   amount: bookingUnit.price?.toString() ?? "",
+                  currency: bookingUnit.currency,
                 }}
                 submitting={bookingSubmitting}
                 onSubmit={handleBookingSubmit}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { FileUploadField } from "@/components/FileUploadField";
+import { CURRENCIES } from "@/lib/currency";
 import {
   OBJECT_STATUSES,
   OBJECT_TYPES,
@@ -16,6 +17,7 @@ const emptyInput: PropertyObjectInput = {
   status: "available",
   area: "",
   price: "",
+  currency: "TJS",
   description: "",
   plan_url: "",
 };
@@ -120,14 +122,29 @@ export function ObjectForm({
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.objects.form.price}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={values.price}
-            onChange={(e) => update("price", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={values.price}
+              onChange={(e) => update("price", e.target.value)}
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+            />
+            <select
+              value={values.currency}
+              onChange={(e) =>
+                update("currency", e.target.value as PropertyObjectInput["currency"])
+              }
+              className="rounded-md border border-slate-300 px-2 py-2"
+            >
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
         </label>
       </div>
 

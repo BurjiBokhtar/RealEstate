@@ -12,6 +12,7 @@ export type Client = {
   name: string;
   phone: string | null;
   email: string | null;
+  passport: string | null;
   source: string | null;
   status: LeadStatus;
   interested_object_id: string | null;
@@ -24,6 +25,7 @@ export type ClientInput = {
   name: string;
   phone: string;
   email: string;
+  passport: string;
   source: string;
   status: LeadStatus;
   interested_object_id: string;

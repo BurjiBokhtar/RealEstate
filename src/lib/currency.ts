@@ -1,8 +1,7 @@
-export function formatDualCurrency(amount: number | null, usdRate: number): string {
+export const CURRENCIES = ["TJS", "USD"] as const;
+export type Currency = (typeof CURRENCIES)[number];
+
+export function formatCurrency(amount: number | null, currency: Currency): string {
   if (amount === null) return "—";
-  const tjs = new Intl.NumberFormat("ru-RU").format(amount) + " TJS";
-  if (!usdRate) return tjs;
-  const usd = amount / usdRate;
-  const usdFormatted = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(usd);
-  return `${tjs} · $${usdFormatted}`;
+  return new Intl.NumberFormat("ru-RU").format(amount) + " " + currency;
 }

@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { useSettings } from "@/lib/settings/SettingsProvider";
-import { formatDualCurrency } from "@/lib/currency";
+import { formatCurrency } from "@/lib/currency";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 function addMonths(dateStr: string, months: number) {
@@ -15,7 +14,6 @@ function addMonths(dateStr: string, months: number) {
 
 export function ContractPayments({ contract }: { contract: Contract }) {
   const { t } = useLocale();
-  const { settings } = useSettings();
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [generating, setGenerating] = useState(false);
 
@@ -104,7 +102,7 @@ export function ContractPayments({ contract }: { contract: Contract }) {
             {payments.map((p) => (
               <tr key={p.id} className="border-b border-slate-100 last:border-0">
                 <td className="py-2">{p.due_date}</td>
-                <td className="py-2">{formatDualCurrency(p.amount, settings.usd_rate)}</td>
+                <td className="py-2">{formatCurrency(p.amount, contract.currency)}</td>
                 <td className="py-2">
                   <button
                     type="button"

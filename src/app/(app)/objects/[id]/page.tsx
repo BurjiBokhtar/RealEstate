@@ -47,6 +47,7 @@ export default function ObjectDetailPage() {
         status: values.status,
         area: values.area ? Number(values.area) : null,
         price: values.price ? Number(values.price) : null,
+        currency: values.currency,
         description: values.description || null,
         plan_url: values.plan_url || null,
       })
@@ -88,6 +89,7 @@ export default function ObjectDetailPage() {
               status: object.status,
               area: object.area?.toString() ?? "",
               price: object.price?.toString() ?? "",
+              currency: object.currency,
               description: object.description ?? "",
               plan_url: object.plan_url ?? "",
             }}

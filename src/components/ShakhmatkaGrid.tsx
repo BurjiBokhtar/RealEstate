@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
-import { formatDualCurrency } from "@/lib/currency";
-import { useSettings } from "@/lib/settings/SettingsProvider";
+import { formatCurrency, type Currency } from "@/lib/currency";
 import type { PropertyObject } from "@/lib/objects/types";
 
 export type UnitContractInfo = {
   clientName: string;
   remaining: number;
+  currency: Currency;
 };
 
 const CELL = 64;
@@ -27,7 +27,6 @@ export function ShakhmatkaGrid({
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
 }) {
   const { t } = useLocale();
-  const { settings } = useSettings();
   const router = useRouter();
 
   if (units.length === 0) {
@@ -110,7 +109,7 @@ export function ShakhmatkaGrid({
                         <p className="flex justify-between text-slate-500">
                           <span>{t.buildings.hover.price}</span>
                           <span className="text-slate-700">
-                            {formatDualCurrency(unit.price, settings.usd_rate)}
+                            {formatCurrency(unit.price, unit.currency)}
                           </span>
                         </p>
                         {contractInfo && (
@@ -124,7 +123,7 @@ export function ShakhmatkaGrid({
                             <p className="flex justify-between text-slate-500">
                               <span>{t.buildings.hover.remaining}</span>
                               <span className="text-slate-700">
-                                {formatDualCurrency(contractInfo.remaining, settings.usd_rate)}
+                                {formatCurrency(contractInfo.remaining, contractInfo.currency)}
                               </span>
                             </p>
                           </>

@@ -8,26 +8,52 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import type { SettingsInput } from "@/lib/settings/types";
 
+const PLACEHOLDERS = [
+  "contract_number",
+  "signed_date",
+  "client_name",
+  "client_passport",
+  "object_name",
+  "object_area",
+  "building_address",
+  "price_per_sqm",
+  "amount",
+  "amount_words",
+  "currency",
+  "company_name",
+  "company_director",
+  "company_address",
+  "company_bank_details",
+];
+
 export default function SettingsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const { settings, refresh } = useSettings();
 
   const [values, setValues] = useState<SettingsInput>({
-    usd_rate: "",
     sms_api_key: "",
     sms_sender_name: "",
     sms_reminder_days: "",
+    company_name: "",
+    company_director: "",
+    company_address: "",
+    company_bank_details: "",
+    contract_template: "",
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     setValues({
-      usd_rate: settings.usd_rate.toString(),
       sms_api_key: settings.sms_api_key ?? "",
       sms_sender_name: settings.sms_sender_name ?? "",
       sms_reminder_days: settings.sms_reminder_days.toString(),
+      company_name: settings.company_name ?? "",
+      company_director: settings.company_director ?? "",
+      company_address: settings.company_address ?? "",
+      company_bank_details: settings.company_bank_details ?? "",
+      contract_template: settings.contract_template ?? "",
     });
   }, [settings]);
 
@@ -43,10 +69,14 @@ export default function SettingsPage() {
       .schema("crm")
       .from("settings")
       .update({
-        usd_rate: values.usd_rate ? Number(values.usd_rate) : 0,
         sms_api_key: values.sms_api_key || null,
         sms_sender_name: values.sms_sender_name || null,
         sms_reminder_days: values.sms_reminder_days ? Number(values.sms_reminder_days) : 3,
+        company_name: values.company_name || null,
+        company_director: values.company_director || null,
+        company_address: values.company_address || null,
+        company_bank_details: values.company_bank_details || null,
+        contract_template: values.contract_template || null,
       })
       .eq("id", true);
     await refresh();
@@ -55,25 +85,76 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex max-w-xl flex-col gap-6">
+    <div className="flex max-w-2xl flex-col gap-6">
       <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
 
       {!configured && <SetupNotice />}
 
       <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">
-        <p className="text-sm font-semibold text-slate-700">{t.settings.currency.title}</p>
+        <p className="text-sm font-semibold text-slate-700">{t.settings.company.title}</p>
+        <span className="text-xs text-slate-400">{t.settings.company.hint}</span>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.settings.currency.usdRate}</span>
+          <span className="font-medium text-slate-700">{t.settings.company.name}</span>
           <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={values.usd_rate}
-            onChange={(e) => update("usd_rate", e.target.value)}
+            value={values.company_name}
+            onChange={(e) => update("company_name", e.target.value)}
             className="rounded-md border border-slate-300 px-3 py-2"
           />
-          <span className="text-xs text-slate-400">{t.settings.currency.hint}</span>
         </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.settings.company.director}</span>
+          <input
+            value={values.company_director}
+            onChange={(e) => update("company_director", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.settings.company.address}</span>
+          <input
+            value={values.company_address}
+            onChange={(e) => update("company_address", e.target.value)}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">
+            {t.settings.company.bankDetails}
+          </span>
+          <textarea
+            value={values.company_bank_details}
+            onChange={(e) => update("company_bank_details", e.target.value)}
+            placeholder={t.settings.company.bankDetailsPlaceholder}
+            rows={3}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          />
+        </label>
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">
+        <p className="text-sm font-semibold text-slate-700">{t.settings.template.title}</p>
+        <span className="text-xs text-slate-400">{t.settings.template.hint}</span>
+        <textarea
+          value={values.contract_template}
+          onChange={(e) => update("contract_template", e.target.value)}
+          rows={18}
+          className="rounded-md border border-slate-300 px-3 py-2 font-mono text-xs leading-relaxed"
+        />
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">
+            {t.settings.template.placeholders}
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {PLACEHOLDERS.map((p) => (
+              <code
+                key={p}
+                className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
+              >
+                {`{{${p}}}`}
+              </code>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">

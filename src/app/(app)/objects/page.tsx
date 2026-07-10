@@ -7,8 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
-import { formatDualCurrency } from "@/lib/currency";
-import { useSettings } from "@/lib/settings/SettingsProvider";
+import { formatCurrency } from "@/lib/currency";
 import {
   OBJECT_STATUSES,
   OBJECT_TYPES,
@@ -20,7 +19,6 @@ import type { Building } from "@/lib/buildings/types";
 
 export default function ObjectsPage() {
   const { t } = useLocale();
-  const { settings } = useSettings();
   const configured = isSupabaseConfigured();
 
   const [objects, setObjects] = useState<PropertyObject[]>([]);
@@ -173,7 +171,7 @@ export default function ObjectsPage() {
                 <td className="px-4 py-3 text-slate-600">—</td>
                 <td className="px-4 py-3 text-slate-600">
                   {building.price_per_sqm
-                    ? `${formatDualCurrency(building.price_per_sqm, settings.usd_rate)}/м²`
+                    ? `${formatCurrency(building.price_per_sqm, "TJS")}/м²`
                     : "—"}
                 </td>
               </tr>
@@ -199,7 +197,7 @@ export default function ObjectsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-600">{formatArea(obj.area)}</td>
                 <td className="px-4 py-3 text-slate-600">
-                  {formatDualCurrency(obj.price, settings.usd_rate)}
+                  {formatCurrency(obj.price, obj.currency)}
                 </td>
               </tr>
             ))}

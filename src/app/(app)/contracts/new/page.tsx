@@ -28,6 +28,8 @@ export default function NewContractPage() {
         object_id: values.object_id,
         amount: values.amount ? Number(values.amount) : 0,
         paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
+        currency: values.currency,
+        amount_words: values.amount_words || null,
         status: values.status,
         signed_date: values.signed_date || null,
         notes: values.notes || null,

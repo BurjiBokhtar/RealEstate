@@ -26,6 +26,7 @@ export default function NewClientPage() {
         name: values.name,
         phone: values.phone || null,
         email: values.email || null,
+        passport: values.passport || null,
         source: values.source || null,
         status: values.status,
         interested_object_id: values.interested_object_id || null,

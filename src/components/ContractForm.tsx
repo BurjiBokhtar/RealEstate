@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
-import { useSettings } from "@/lib/settings/SettingsProvider";
-import { formatDualCurrency } from "@/lib/currency";
+import { formatCurrency, CURRENCIES } from "@/lib/currency";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -15,6 +14,8 @@ const emptyInput: ContractInput = {
   object_id: "",
   amount: "",
   paid_amount: "",
+  currency: "TJS",
+  amount_words: "",
   status: "draft",
   signed_date: "",
   notes: "",
@@ -35,7 +36,6 @@ export function ContractForm({
   onDelete?: () => void;
 }) {
   const { t } = useLocale();
-  const { settings } = useSettings();
   const [values, setValues] = useState<ContractInput>({ ...emptyInput, ...initial });
   const [clients, setClients] = useState<Client[]>([]);
   const [objects, setObjects] = useState<PropertyObject[]>([]);
@@ -108,7 +108,16 @@ export function ContractForm({
           <select
             required
             value={values.object_id}
-            onChange={(e) => update("object_id", e.target.value)}
+            onChange={(e) => {
+              const objectId = e.target.value;
+              const selected = objects.find((o) => o.id === objectId);
+              setValues((v) => ({
+                ...v,
+                object_id: objectId,
+                amount: v.amount || selected?.price?.toString() || v.amount,
+                currency: selected?.currency ?? v.currency,
+              }));
+            }}
             className="rounded-md border border-slate-300 px-3 py-2"
           >
             <option value="">{t.contracts.form.selectObject}</option>
@@ -121,7 +130,7 @@ export function ContractForm({
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-[2fr_2fr_1fr] gap-4">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.amount}</span>
           <input
@@ -144,13 +153,27 @@ export function ContractForm({
             className="rounded-md border border-slate-300 px-3 py-2"
           />
         </label>
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.contracts.form.currency}</span>
+          <select
+            value={values.currency}
+            onChange={(e) => update("currency", e.target.value as ContractInput["currency"])}
+            className="rounded-md border border-slate-300 px-3 py-2"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {amountNum > 0 && (
         <div className="flex items-center gap-3 text-sm">
           <span className="text-slate-500">
             {pct.toFixed(1)}% {t.contracts.form.percentOfAmount} ·{" "}
-            {formatDualCurrency(paidNum, settings.usd_rate)}
+            {formatCurrency(paidNum, values.currency)}
           </span>
           <label className="flex items-center gap-2">
             <span className="text-xs text-slate-500">{t.contracts.form.enterPercent}</span>
@@ -239,6 +262,16 @@ export function ContractForm({
           />
         </label>
       )}
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">{t.contracts.form.amountWords}</span>
+        <input
+          value={values.amount_words}
+          onChange={(e) => update("amount_words", e.target.value)}
+          placeholder={t.contracts.form.amountWordsPlaceholder}
+          className="rounded-md border border-slate-300 px-3 py-2"
+        />
+      </label>
 
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.contracts.form.notes}</span>

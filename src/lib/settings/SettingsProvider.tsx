@@ -7,10 +7,14 @@ import type { Settings } from "./types";
 
 const DEFAULT_SETTINGS: Settings = {
   id: true,
-  usd_rate: 10.5,
   sms_api_key: null,
   sms_sender_name: null,
   sms_reminder_days: 3,
+  company_name: null,
+  company_director: null,
+  company_address: null,
+  company_bank_details: null,
+  contract_template: null,
   updated_at: new Date(0).toISOString(),
 };
 

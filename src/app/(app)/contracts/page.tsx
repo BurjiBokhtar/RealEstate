@@ -7,8 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
-import { formatDualCurrency } from "@/lib/currency";
-import { useSettings } from "@/lib/settings/SettingsProvider";
+import { formatCurrency } from "@/lib/currency";
 import {
   CONTRACT_STATUSES,
   type Contract,
@@ -22,7 +21,6 @@ type ContractRow = Contract & {
 
 export default function ContractsPage() {
   const { t } = useLocale();
-  const { settings } = useSettings();
   const configured = isSupabaseConfigured();
 
   const [contracts, setContracts] = useState<ContractRow[]>([]);
@@ -119,10 +117,10 @@ export default function ContractsPage() {
                 <td className="px-4 py-3 text-slate-600">{contract.client?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{contract.object?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">
-                  {formatDualCurrency(contract.amount, settings.usd_rate)}
+                  {formatCurrency(contract.amount, contract.currency)}
                 </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {formatDualCurrency(contract.paid_amount, settings.usd_rate)}
+                  {formatCurrency(contract.paid_amount, contract.currency)}
                 </td>
                 <td className="px-4 py-3">
                   <span

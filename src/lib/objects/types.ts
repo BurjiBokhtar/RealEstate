@@ -1,9 +1,12 @@
+import type { Currency } from "@/lib/currency";
+
 export const OBJECT_TYPES = [
   "apartment",
   "house",
   "commercial",
   "land",
   "construction_site",
+  "parking",
 ] as const;
 export type ObjectType = (typeof OBJECT_TYPES)[number];
 
@@ -24,6 +27,7 @@ export type PropertyObject = {
   status: ObjectStatus;
   area: number | null;
   price: number | null;
+  currency: Currency;
   description: string | null;
   building_id: string | null;
   floor: number | null;
@@ -41,6 +45,7 @@ export type PropertyObjectInput = {
   status: ObjectStatus;
   area: string;
   price: string;
+  currency: Currency;
   description: string;
   plan_url: string;
 };
