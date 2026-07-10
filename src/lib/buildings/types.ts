@@ -23,6 +23,16 @@ export type BuildingInput = {
   plan_url: string;
 };
 
+export const emptyBuildingInput: BuildingInput = {
+  name: "",
+  address: "",
+  floors_count: "",
+  units_per_floor: "",
+  price_per_sqm: "",
+  facade_url: "",
+  plan_url: "",
+};
+
 export type BuildingUnit = {
   id: string;
   name: string;

@@ -13,6 +13,7 @@ import { FloorUnitsBuilder } from "@/components/FloorUnitsBuilder";
 import { Modal } from "@/components/Modal";
 import { ContractForm } from "@/components/ContractForm";
 import type { Building, BuildingInput } from "@/lib/buildings/types";
+import { emptyBuildingInput } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { ContractInput } from "@/lib/contracts/types";
 
@@ -23,11 +24,13 @@ export default function BuildingDetailPage() {
   const configured = isSupabaseConfigured();
 
   const [building, setBuilding] = useState<Building | null | undefined>(undefined);
+  const [values, setValues] = useState<BuildingInput>(emptyBuildingInput);
   const [units, setUnits] = useState<PropertyObject[]>([]);
   const [contractsByUnit, setContractsByUnit] = useState<Record<string, UnitContractInfo>>(
     {}
   );
   const [submitting, setSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
@@ -80,11 +83,25 @@ export default function BuildingDetailPage() {
       .select("*")
       .eq("id", params.id)
       .maybeSingle()
-      .then(({ data }) => setBuilding((data as Building) ?? null));
+      .then(({ data }) => {
+        const b = (data as Building) ?? null;
+        setBuilding(b);
+        if (b) {
+          setValues({
+            name: b.name,
+            address: b.address ?? "",
+            floors_count: b.floors_count?.toString() ?? "",
+            units_per_floor: b.units_per_floor?.toString() ?? "",
+            price_per_sqm: b.price_per_sqm?.toString() ?? "",
+            facade_url: b.facade_url ?? "",
+            plan_url: b.plan_url ?? "",
+          });
+        }
+      });
     loadUnits();
   }, [configured, params.id, loadUnits]);
 
-  const handleSubmit = async (values: BuildingInput) => {
+  const handleSubmit = async () => {
     setSubmitting(true);
     const supabase = createClient();
     await supabase
@@ -106,8 +123,13 @@ export default function BuildingDetailPage() {
 
   const handleDelete = async () => {
     if (!window.confirm(t.buildings.form.confirmDelete)) return;
+    setDeleteError(null);
     const supabase = createClient();
-    await supabase.schema("crm").from("buildings").delete().eq("id", params.id);
+    const { error } = await supabase.schema("crm").from("buildings").delete().eq("id", params.id);
+    if (error) {
+      setDeleteError(t.buildings.form.deleteBlocked);
+      return;
+    }
     router.push("/buildings");
   };
 
@@ -192,19 +214,13 @@ export default function BuildingDetailPage() {
         <>
           <h1 className="text-2xl font-semibold">{building.name}</h1>
           <BuildingForm
-            initial={{
-              name: building.name,
-              address: building.address ?? "",
-              floors_count: building.floors_count?.toString() ?? "",
-              units_per_floor: building.units_per_floor?.toString() ?? "",
-              price_per_sqm: building.price_per_sqm?.toString() ?? "",
-              facade_url: building.facade_url ?? "",
-              plan_url: building.plan_url ?? "",
-            }}
+            values={values}
+            onChange={setValues}
             submitting={submitting}
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
 
           <FloorUnitsBuilder
             buildingId={building.id}

@@ -63,3 +63,71 @@ export function buildUnitsFromRows(
 
   return toCreate;
 }
+
+export type UnitDraft = {
+  entrance: number;
+  floor: number;
+  position: number;
+  type: ObjectType;
+  area: string;
+};
+
+export function generateGrid(floorsCount: number, entranceCounts: string[]): UnitDraft[] {
+  const drafts: UnitDraft[] = [];
+  if (!floorsCount || floorsCount < 1) return drafts;
+
+  for (let floor = floorsCount; floor >= 1; floor--) {
+    entranceCounts.forEach((countStr, idx) => {
+      const count = Number(countStr) || 0;
+      for (let position = 1; position <= count; position++) {
+        drafts.push({ entrance: idx + 1, floor, position, type: "apartment", area: "" });
+      }
+    });
+  }
+
+  return drafts;
+}
+
+export function copyFloorPattern(
+  drafts: UnitDraft[],
+  sourceFloor: number,
+  targetFloors: number[]
+): UnitDraft[] {
+  const sourceByKey = new Map<string, UnitDraft>();
+  for (const d of drafts) {
+    if (d.floor === sourceFloor) sourceByKey.set(`${d.entrance}-${d.position}`, d);
+  }
+  const targetSet = new Set(targetFloors);
+
+  return drafts.map((d) => {
+    if (!targetSet.has(d.floor)) return d;
+    const source = sourceByKey.get(`${d.entrance}-${d.position}`);
+    if (!source) return d;
+    return { ...d, type: source.type, area: source.area };
+  });
+}
+
+export function unitDraftsToPayload(
+  drafts: UnitDraft[],
+  buildingId: string,
+  pricePerSqm: number | null,
+  entranceCount: number,
+  entranceLabel: string
+): Array<Record<string, unknown>> {
+  return drafts.map((d) => {
+    const block = entranceCount > 1 ? `${entranceLabel} ${d.entrance}` : null;
+    const area = d.area ? Number(d.area) : null;
+    const price = area && pricePerSqm ? area * pricePerSqm : null;
+    return {
+      name: block ? `${block} №${d.floor}-${d.position}` : `№${d.floor}-${d.position}`,
+      type: d.type,
+      status: "available",
+      building_id: buildingId,
+      block,
+      floor: d.floor,
+      position_in_floor: d.position,
+      area,
+      price,
+    };
+  });
+}
