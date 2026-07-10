@@ -41,19 +41,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen w-full">
       <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white sm:flex sm:flex-col print:hidden">
-        <div className="flex items-center gap-2 px-5 py-5">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-80"
+        >
           {settings.company_logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={settings.company_logo_url}
               alt=""
-              className="h-8 w-8 rounded object-contain"
+              className="h-9 w-9 shrink-0 rounded object-contain"
             />
           )}
-          <span className="truncate text-lg font-semibold tracking-tight text-slate-900">
+          <span className="line-clamp-2 text-base font-semibold leading-tight tracking-tight text-slate-900">
             {brandName}
           </span>
-        </div>
+        </Link>
         <nav className="flex flex-col gap-1 px-3">
           {navItems.map((item) => {
             const active =
@@ -87,9 +90,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3 sm:justify-end print:hidden">
-          <span className="text-lg font-semibold sm:hidden">{brandName}</span>
-          <div className="flex items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
+        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:justify-end print:hidden">
+          <Link
+            href="/"
+            className="flex min-w-0 flex-1 items-center gap-2 transition-opacity hover:opacity-80 sm:hidden"
+          >
+            {settings.company_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.company_logo_url}
+                alt=""
+                className="h-7 w-7 shrink-0 rounded object-contain"
+              />
+            )}
+            <span className="line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
+              {brandName}
+            </span>
+          </Link>
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
             {(["ru", "tj"] as Locale[]).map((l) => (
               <button
                 key={l}
