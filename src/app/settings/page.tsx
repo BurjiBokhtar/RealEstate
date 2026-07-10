@@ -80,6 +80,14 @@ export default function SettingsPage() {
         <p className="text-sm font-semibold text-slate-700">{t.settings.sms.title}</p>
         <span className="text-xs text-slate-400">{t.settings.sms.hint}</span>
         <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.settings.sms.provider}</span>
+          <input
+            readOnly
+            value="Payom.tj"
+            className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.settings.sms.apiKey}</span>
           <input
             type="password"
@@ -93,6 +101,7 @@ export default function SettingsPage() {
           <input
             value={values.sms_sender_name}
             onChange={(e) => update("sms_sender_name", e.target.value)}
+            placeholder={t.settings.sms.senderNamePlaceholder}
             className="rounded-md border border-slate-300 px-3 py-2"
           />
         </label>
@@ -104,14 +113,6 @@ export default function SettingsPage() {
             value={values.sms_reminder_days}
             onChange={(e) => update("sms_reminder_days", e.target.value)}
             className="rounded-md border border-slate-300 px-3 py-2"
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.settings.sms.endpoint}</span>
-          <input
-            readOnly
-            value="https://gateway.payom.tj/api/message"
-            className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 font-mono text-slate-400"
           />
         </label>
       </div>

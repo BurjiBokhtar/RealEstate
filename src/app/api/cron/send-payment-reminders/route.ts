@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   });
 
   const { data: settings } = await supabase.from("settings").select("*").maybeSingle();
-  if (!settings?.sms_api_key) {
+  if (!settings?.sms_api_key || !settings?.sms_sender_name) {
     return NextResponse.json({ message: "SMS not configured, skipping" });
   }
 
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
         body: JSON.stringify({
           telephone: phone,
           text,
-          senderName: settings.sms_sender_name || "BurjiBohtar",
+          senderName: settings.sms_sender_name,
           type: "SMS",
         }),
       });

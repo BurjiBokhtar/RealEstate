@@ -16,6 +16,7 @@ import {
   type ObjectType,
   type PropertyObject,
 } from "@/lib/objects/types";
+import type { Building } from "@/lib/buildings/types";
 
 export default function ObjectsPage() {
   const { t } = useLocale();
@@ -23,6 +24,7 @@ export default function ObjectsPage() {
   const configured = isSupabaseConfigured();
 
   const [objects, setObjects] = useState<PropertyObject[]>([]);
+  const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ObjectType | "all">("all");
@@ -34,15 +36,23 @@ export default function ObjectsPage() {
       return;
     }
     const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("objects")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setObjects((data ?? []) as PropertyObject[]);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase
+        .schema("crm")
+        .from("objects")
+        .select("*")
+        .is("building_id", null)
+        .order("created_at", { ascending: false }),
+      supabase
+        .schema("crm")
+        .from("buildings")
+        .select("*")
+        .order("created_at", { ascending: false }),
+    ]).then(([objectsRes, buildingsRes]) => {
+      setObjects((objectsRes.data ?? []) as PropertyObject[]);
+      setBuildings((buildingsRes.data ?? []) as Building[]);
+      setLoading(false);
+    });
   }, [configured]);
 
   const filtered = useMemo(() => {
@@ -57,6 +67,17 @@ export default function ObjectsPage() {
       return true;
     });
   }, [objects, typeFilter, statusFilter, search]);
+
+  const filteredBuildings = useMemo(() => {
+    if (typeFilter !== "all" || statusFilter !== "all") return [];
+    return buildings.filter((b) => {
+      if (!search.trim()) return true;
+      const q = search.trim().toLowerCase();
+      return `${b.name} ${b.address ?? ""}`.toLowerCase().includes(q);
+    });
+  }, [buildings, typeFilter, statusFilter, search]);
+
+  const empty = !loading && filtered.length === 0 && filteredBuildings.length === 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -125,13 +146,38 @@ export default function ObjectsPage() {
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {empty && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   {t.objects.empty}
                 </td>
               </tr>
             )}
+            {filteredBuildings.map((building) => (
+              <tr
+                key={`building-${building.id}`}
+                className="cursor-pointer border-b border-slate-100 bg-slate-50/60 last:border-0 hover:bg-slate-100"
+              >
+                <td className="px-4 py-3 font-medium text-slate-900">
+                  <Link href={`/buildings/${building.id}`} className="block">
+                    {building.name}
+                  </Link>
+                </td>
+                <td className="px-4 py-3 text-slate-600">{building.address || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{t.objects.buildingRowType}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {building.floors_count && building.units_per_floor
+                    ? `${building.floors_count} × ${building.units_per_floor}`
+                    : "—"}
+                </td>
+                <td className="px-4 py-3 text-slate-600">—</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {building.price_per_sqm
+                    ? `${formatDualCurrency(building.price_per_sqm, settings.usd_rate)}/м²`
+                    : "—"}
+                </td>
+              </tr>
+            ))}
             {filtered.map((obj) => (
               <tr
                 key={obj.id}

@@ -102,6 +102,7 @@ export function BuildingForm({
           value={values.facade_url}
           onChange={(url) => update("facade_url", url)}
           folder="building-facades"
+          uploadLabel={t.buildings.form.upload}
           uploadingLabel={t.buildings.form.uploading}
         />
         <FileUploadField
@@ -109,6 +110,7 @@ export function BuildingForm({
           value={values.plan_url}
           onChange={(url) => update("plan_url", url)}
           folder="building-plans"
+          uploadLabel={t.buildings.form.upload}
           uploadingLabel={t.buildings.form.uploading}
         />
       </div>

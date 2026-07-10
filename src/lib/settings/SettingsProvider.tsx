@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS: Settings = {
   id: true,
   usd_rate: 10.5,
   sms_api_key: null,
-  sms_sender_name: "BurjiBohtar",
+  sms_sender_name: null,
   sms_reminder_days: 3,
   updated_at: new Date(0).toISOString(),
 };

@@ -29,6 +29,7 @@ export type PropertyObject = {
   floor: number | null;
   position_in_floor: number | null;
   plan_url: string | null;
+  span: number;
   created_at: string;
   updated_at: string;
 };

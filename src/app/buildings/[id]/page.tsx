@@ -8,9 +8,12 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { BuildingForm } from "@/components/BuildingForm";
-import { ShakhmatkaGrid } from "@/components/ShakhmatkaGrid";
+import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
+import { Modal } from "@/components/Modal";
+import { ContractForm } from "@/components/ContractForm";
 import type { Building, BuildingInput } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
+import type { ContractInput } from "@/lib/contracts/types";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
@@ -20,11 +23,16 @@ export default function BuildingDetailPage() {
 
   const [building, setBuilding] = useState<Building | null | undefined>(undefined);
   const [units, setUnits] = useState<PropertyObject[]>([]);
+  const [contractsByUnit, setContractsByUnit] = useState<Record<string, UnitContractInfo>>(
+    {}
+  );
   const [submitting, setSubmitting] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [genFloors, setGenFloors] = useState("");
   const [genUnitsPerFloor, setGenUnitsPerFloor] = useState("");
   const [genArea, setGenArea] = useState("");
+  const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -33,7 +41,32 @@ export default function BuildingDetailPage() {
       .from("objects")
       .select("*")
       .eq("building_id", params.id);
-    setUnits((data ?? []) as PropertyObject[]);
+    const unitRows = (data ?? []) as PropertyObject[];
+    setUnits(unitRows);
+
+    if (unitRows.length > 0) {
+      const { data: contracts } = await supabase
+        .schema("crm")
+        .from("contracts")
+        .select("object_id, amount, paid_amount, client:clients(name)")
+        .in(
+          "object_id",
+          unitRows.map((u) => u.id)
+        );
+      const map: Record<string, UnitContractInfo> = {};
+      for (const c of (contracts ?? []) as unknown as Array<{
+        object_id: string;
+        amount: number;
+        paid_amount: number;
+        client: { name: string } | null;
+      }>) {
+        map[c.object_id] = {
+          clientName: c.client?.name ?? "—",
+          remaining: c.amount - c.paid_amount,
+        };
+      }
+      setContractsByUnit(map);
+    }
   }, [params.id]);
 
   useEffect(() => {
@@ -120,6 +153,64 @@ export default function BuildingDetailPage() {
     setGenerating(false);
   };
 
+  const handleMergeUnits = async (unitA: PropertyObject, unitB: PropertyObject) => {
+    const combinedArea = (unitA.area ?? 0) + (unitB.area ?? 0) || null;
+    const combinedPrice =
+      combinedArea && building?.price_per_sqm
+        ? combinedArea * building.price_per_sqm
+        : (unitA.price ?? 0) + (unitB.price ?? 0) || null;
+    const supabase = createClient();
+    await supabase
+      .schema("crm")
+      .from("objects")
+      .update({
+        name: `№${unitA.floor}-${unitA.position_in_floor}-${unitB.position_in_floor}`,
+        area: combinedArea,
+        price: combinedPrice,
+        span: (unitA.span || 1) + (unitB.span || 1),
+      })
+      .eq("id", unitA.id);
+    await supabase.schema("crm").from("objects").delete().eq("id", unitB.id);
+    await loadUnits();
+  };
+
+  const handleBookingSubmit = async (values: ContractInput) => {
+    if (!bookingUnit) return;
+    setBookingSubmitting(true);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .insert({
+        number: values.number || null,
+        client_id: values.client_id,
+        object_id: values.object_id,
+        amount: values.amount ? Number(values.amount) : 0,
+        paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
+        status: values.status,
+        signed_date: values.signed_date || null,
+        notes: values.notes || null,
+        payment_type: values.payment_type,
+        installment_months: values.installment_months
+          ? Number(values.installment_months)
+          : null,
+        barter_details: values.barter_details || null,
+      })
+      .select("id")
+      .single();
+
+    if (!error && data) {
+      await supabase
+        .schema("crm")
+        .from("objects")
+        .update({ status: "reserved" })
+        .eq("id", values.object_id);
+      router.push(`/contracts/${data.id}`);
+      return;
+    }
+    setBookingSubmitting(false);
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <Link href="/buildings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
@@ -204,7 +295,25 @@ export default function BuildingDetailPage() {
             </button>
           </div>
 
-          <ShakhmatkaGrid units={units} />
+          <ShakhmatkaGrid
+            units={units}
+            contractsByUnit={contractsByUnit}
+            onBookUnit={setBookingUnit}
+            onMergeUnits={handleMergeUnits}
+          />
+
+          {bookingUnit && (
+            <Modal title={t.buildings.bookUnit} onClose={() => setBookingUnit(null)}>
+              <ContractForm
+                initial={{
+                  object_id: bookingUnit.id,
+                  amount: bookingUnit.price?.toString() ?? "",
+                }}
+                submitting={bookingSubmitting}
+                onSubmit={handleBookingSubmit}
+              />
+            </Modal>
+          )}
         </>
       )}
     </div>

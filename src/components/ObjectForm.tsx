@@ -146,6 +146,7 @@ export function ObjectForm({
         value={values.plan_url}
         onChange={(url) => update("plan_url", url)}
         folder="unit-plans"
+        uploadLabel={t.objects.form.upload}
         uploadingLabel={t.objects.form.uploading}
       />
 

@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
+import { useSettings } from "@/lib/settings/SettingsProvider";
+import { formatDualCurrency } from "@/lib/currency";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -33,9 +35,20 @@ export function ContractForm({
   onDelete?: () => void;
 }) {
   const { t } = useLocale();
+  const { settings } = useSettings();
   const [values, setValues] = useState<ContractInput>({ ...emptyInput, ...initial });
   const [clients, setClients] = useState<Client[]>([]);
   const [objects, setObjects] = useState<PropertyObject[]>([]);
+
+  const amountNum = Number(values.amount) || 0;
+  const paidNum = Number(values.paid_amount) || 0;
+  const pct = amountNum > 0 ? (paidNum / amountNum) * 100 : 0;
+
+  const handlePercentChange = (pctValue: string) => {
+    const p = Number(pctValue) || 0;
+    const newPaid = amountNum > 0 ? Math.round(((amountNum * p) / 100) * 100) / 100 : 0;
+    update("paid_amount", newPaid.toString());
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -132,6 +145,27 @@ export function ContractForm({
           />
         </label>
       </div>
+
+      {amountNum > 0 && (
+        <div className="flex items-center gap-3 text-sm">
+          <span className="text-slate-500">
+            {pct.toFixed(1)}% {t.contracts.form.percentOfAmount} ·{" "}
+            {formatDualCurrency(paidNum, settings.usd_rate)}
+          </span>
+          <label className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">{t.contracts.form.enterPercent}</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={pct ? Math.round(pct * 10) / 10 : ""}
+              onChange={(e) => handlePercentChange(e.target.value)}
+              className="w-20 rounded-md border border-slate-300 px-2 py-1"
+            />
+          </label>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
