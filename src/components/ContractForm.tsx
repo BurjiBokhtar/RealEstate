@@ -92,6 +92,20 @@ export function ContractForm({
   const pct = amountNum > 0 ? (paidNum / amountNum) * 100 : 0;
   const lastAutoWords = useRef("");
 
+  const installmentMonthsNum = Number(values.installment_months) || 0;
+  const installmentRemaining = Math.max(amountNum - paidNum, 0);
+  // Same split ContractPayments uses when it actually generates the
+  // schedule: equal monthly amounts, with the last month absorbing
+  // whatever a few cents of rounding leaves over.
+  const monthlyBase =
+    installmentMonthsNum > 0
+      ? Math.floor((installmentRemaining / installmentMonthsNum) * 100) / 100
+      : 0;
+  const monthlyLast =
+    installmentMonthsNum > 0
+      ? Math.round((installmentRemaining - monthlyBase * (installmentMonthsNum - 1)) * 100) / 100
+      : 0;
+
   const handlePercentChange = (pctValue: string) => {
     const p = Number(pctValue) || 0;
     const newPaid = amountNum > 0 ? Math.round(((amountNum * p) / 100) * 100) / 100 : 0;
@@ -324,21 +338,23 @@ export function ContractForm({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.contracts.form.status}</span>
-          <select
-            value={values.status}
-            onChange={(e) => update("status", e.target.value as ContractInput["status"])}
-            className={FIELD_CLASS}
-          >
-            {CONTRACT_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {t.contracts.statuses[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className={`grid gap-4 ${lockedObject ? "grid-cols-1" : "grid-cols-2"}`}>
+        {!lockedObject && (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">{t.contracts.form.status}</span>
+            <select
+              value={values.status}
+              onChange={(e) => update("status", e.target.value as ContractInput["status"])}
+              className={FIELD_CLASS}
+            >
+              {CONTRACT_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {t.contracts.statuses[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.signedDate}</span>
           <input
@@ -382,6 +398,34 @@ export function ContractForm({
           </label>
         )}
       </div>
+
+      {values.payment_type === "installment" && installmentMonthsNum > 0 && (
+        <div className="flex flex-col gap-1.5 rounded-lg bg-slate-50 p-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-slate-500">{t.contracts.form.downPayment}</span>
+            <span className="font-medium text-slate-900">
+              {formatCurrency(paidNum, values.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-slate-500">{t.contracts.form.installmentRemaining}</span>
+            <span className="font-medium text-slate-900">
+              {formatCurrency(installmentRemaining, values.currency)}
+            </span>
+          </div>
+          <div className="flex justify-between border-t border-slate-200 pt-1.5">
+            <span className="font-medium text-slate-700">{t.contracts.form.monthlyPayment}</span>
+            <span className="font-semibold text-slate-900">
+              {formatCurrency(monthlyBase, values.currency)} × {installmentMonthsNum}
+              {monthlyLast !== monthlyBase && (
+                <span className="ml-1 font-normal text-slate-400">
+                  ({formatCurrency(monthlyLast, values.currency)} {t.contracts.form.lastMonth})
+                </span>
+              )}
+            </span>
+          </div>
+        </div>
+      )}
 
       {values.payment_type === "barter" && (
         <label className="flex flex-col gap-1 text-sm">

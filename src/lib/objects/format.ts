@@ -8,7 +8,7 @@ export function formatArea(area: number | null) {
 export const STATUS_COLORS: Record<ObjectStatus, string> = {
   available: "bg-emerald-100 text-emerald-700",
   reserved: "bg-amber-100 text-amber-700",
-  sold: "bg-slate-200 text-slate-600",
+  sold: "bg-rose-100 text-rose-700",
   rented: "bg-sky-100 text-sky-700",
   in_progress: "bg-violet-100 text-violet-700",
 };

@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency, type Currency } from "@/lib/currency";
-import type { PropertyObject } from "@/lib/objects/types";
+import type { ObjectStatus, PropertyObject } from "@/lib/objects/types";
 
 export type UnitContractInfo = {
   id: string;
@@ -49,6 +50,7 @@ function UnitCell({
   onMergeUnits,
   canEditSold,
   onViewUnit,
+  statusFilter,
 }: {
   unit: PropertyObject;
   apartmentNumber: number | undefined;
@@ -60,6 +62,7 @@ function UnitCell({
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
   onViewUnit: (unit: PropertyObject) => void;
+  statusFilter: ObjectStatus | null;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -70,6 +73,7 @@ function UnitCell({
     (u) => u.position_in_floor === (unit.position_in_floor ?? 0) + span
   );
   const canMerge = unit.status === "available" && nextUnit && nextUnit.status === "available";
+  const dimmed = statusFilter !== null && unit.status !== statusFilter;
 
   // Left click: available -> open the full contract-drafting dialog.
   // Already booked/sold -> a client paying their installment is routine
@@ -106,9 +110,9 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-transform hover:scale-105 ${
+        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 ${
           isPending ? "animate-pulse opacity-60" : ""
-        } ${STATUS_COLORS[unit.status]}`}
+        } ${dimmed ? "opacity-20 saturate-0" : ""} ${STATUS_COLORS[unit.status]}`}
       >
         <span>{apartmentNumber ?? "—"}</span>
       </button>
@@ -198,10 +202,18 @@ export function ShakhmatkaGrid({
   onViewUnit: (unit: PropertyObject) => void;
 }) {
   const { t } = useLocale();
+  const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
 
   if (units.length === 0) {
     return <p className="text-slate-400">{t.buildings.noUnits}</p>;
   }
+
+  // Only show legend entries for statuses that actually occur here --
+  // most complexes never use "rented"/"in_progress", so always showing
+  // all five was mostly clutter.
+  const presentStatuses = (
+    Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>
+  ).filter((status) => units.some((u) => u.status === status));
 
   const blocks = Array.from(new Set(units.map((u) => u.block ?? ""))).sort();
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
@@ -225,14 +237,35 @@ export function ShakhmatkaGrid({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-3 text-xs">
-        {(Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>).map(
-          (status) => (
-            <span key={status} className="flex items-center gap-1.5">
-              <span className={`h-3 w-3 rounded ${STATUS_COLORS[status].split(" ")[0]}`} />
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        {presentStatuses.map((status) => {
+          const active = statusFilter === status;
+          return (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
+              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all ${
+                active
+                  ? "border-slate-900 bg-slate-900 text-white"
+                  : "border-transparent text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              <span
+                className={`h-2.5 w-2.5 rounded-full ${STATUS_COLORS[status].split(" ")[0]}`}
+              />
               {t.buildings.legend[status]}
-            </span>
-          )
+            </button>
+          );
+        })}
+        {statusFilter && (
+          <button
+            type="button"
+            onClick={() => setStatusFilter(null)}
+            className="text-slate-400 hover:text-slate-600"
+          >
+            × {t.buildings.clearFilter}
+          </button>
         )}
       </div>
 
@@ -287,6 +320,7 @@ export function ShakhmatkaGrid({
                           onMergeUnits={onMergeUnits}
                           canEditSold={canEditSold}
                           onViewUnit={onViewUnit}
+                          statusFilter={statusFilter}
                         />
                       ))}
                     </div>
