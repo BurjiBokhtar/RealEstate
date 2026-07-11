@@ -90,6 +90,15 @@
     animation: modal-panel-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  @keyframes toast-countdown {
+    from {
+      transform: scaleX(1);
+    }
+    to {
+      transform: scaleX(0);
+    }
+  }
+
   /* Buttons and button-styled links get a light press/lift interaction
      everywhere in the app by default, so the whole product feels tactile
      without hand-adding transition classes to every one of them. */
