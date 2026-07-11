@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ClientForm } from "@/components/ClientForm";
+import { ClientQuickPayment } from "@/components/ClientQuickPayment";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
@@ -37,6 +38,19 @@ export default function ClientDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const loadContracts = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .select(
+        "id, number, amount, paid_amount, currency, status, signed_date, object:objects(name, building:buildings(name))"
+      )
+      .eq("client_id", params.id)
+      .order("signed_date", { ascending: false });
+    setContracts((data ?? []) as unknown as ClientContract[]);
+  }, [params.id]);
+
   useEffect(() => {
     if (!configured) {
       setClient(null);
@@ -50,16 +64,8 @@ export default function ClientDetailPage() {
       .eq("id", params.id)
       .maybeSingle()
       .then(({ data }) => setClient((data as Client) ?? null));
-    supabase
-      .schema("crm")
-      .from("contracts")
-      .select(
-        "id, number, amount, paid_amount, currency, status, signed_date, object:objects(name, building:buildings(name))"
-      )
-      .eq("client_id", params.id)
-      .order("signed_date", { ascending: false })
-      .then(({ data }) => setContracts((data ?? []) as unknown as ClientContract[]));
-  }, [configured, params.id]);
+    loadContracts();
+  }, [configured, params.id, loadContracts]);
 
   useEffect(() => {
     if (contracts.length === 0) {
@@ -146,25 +152,32 @@ export default function ClientDetailPage() {
       {client && (
         <>
           <h1 className="text-2xl font-semibold">{client.name}</h1>
-          <ClientForm
-            initial={{
-              name: client.name,
-              phone: client.phone ?? "",
-              email: client.email ?? "",
-              passport: client.passport ?? "",
-              passport_issued_by: client.passport_issued_by ?? "",
-              birth_date: client.birth_date ?? "",
-              address: client.address ?? "",
-              source: client.source ?? "",
-              status: client.status,
-              interested_object_id: client.interested_object_id ?? "",
-              notes: client.notes ?? "",
-            }}
-            submitting={submitting}
-            onSubmit={handleSubmit}
-            onDelete={handleDelete}
-          />
-          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+            <div className="flex flex-col gap-3">
+              <ClientForm
+                initial={{
+                  name: client.name,
+                  phone: client.phone ?? "",
+                  email: client.email ?? "",
+                  passport: client.passport ?? "",
+                  passport_issued_by: client.passport_issued_by ?? "",
+                  birth_date: client.birth_date ?? "",
+                  address: client.address ?? "",
+                  source: client.source ?? "",
+                  status: client.status,
+                  interested_object_id: client.interested_object_id ?? "",
+                  notes: client.notes ?? "",
+                }}
+                submitting={submitting}
+                onSubmit={handleSubmit}
+                onDelete={handleDelete}
+              />
+              {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+            </div>
+
+            <ClientQuickPayment contracts={contracts} onRecorded={loadContracts} />
+          </div>
 
           <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
