@@ -219,12 +219,16 @@ export function ShakhmatkaGrid({
     return <p className="text-slate-400">{t.buildings.noUnits}</p>;
   }
 
-  // Only show legend entries for statuses that actually occur here --
-  // most complexes never use "rented"/"in_progress", so always showing
-  // all five was mostly clutter.
+  // The three statuses core to selling units are always in the legend, so
+  // it never looks like "Продано" or "Забронировано" quietly disappeared
+  // just because nothing currently has that status. Only the two rarer,
+  // non-sales statuses ("rented"/"in_progress") are hidden when unused.
+  const CORE_STATUSES: ObjectStatus[] = ["available", "reserved", "sold"];
   const presentStatuses = (
     Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>
-  ).filter((status) => units.some((u) => u.status === status));
+  ).filter(
+    (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
+  );
 
   const blocks = Array.from(new Set(units.map((u) => u.block ?? ""))).sort();
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
