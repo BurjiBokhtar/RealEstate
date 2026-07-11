@@ -15,17 +15,30 @@ export type UnitContractInfo = {
 const CELL = 64;
 const GAP = 8;
 
-// Unit names are generated as "{block} №{floor}-{position}" (or
-// "№{floor}-{positionA}-{positionB}" once merged) -- the part after "№" is
-// the actual apartment number, which is what should show on the cell itself
-// rather than the raw column index.
-function unitLabel(unit: PropertyObject) {
-  const idx = unit.name.indexOf("№");
-  return idx >= 0 ? unit.name.slice(idx + 1) : unit.name;
+// Apartment numbers run sequentially through the whole entrance, floor by
+// floor from the ground up (floor 1 ends on 7, floor 2 starts on 8, ...) --
+// not the per-floor position index and not the floor-position pair encoded
+// in the unit's name. Each block/entrance numbers its own units starting
+// from 1, since that's how real shakhmatki are numbered.
+function computeApartmentNumbers(units: PropertyObject[]): Map<string, number> {
+  const numbers = new Map<string, number>();
+  const blocks = Array.from(new Set(units.map((u) => u.block ?? "")));
+  for (const block of blocks) {
+    const blockUnits = units
+      .filter((u) => (u.block ?? "") === block)
+      .sort((a, b) => {
+        const floorDiff = (a.floor ?? 0) - (b.floor ?? 0);
+        if (floorDiff !== 0) return floorDiff;
+        return (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0);
+      });
+    blockUnits.forEach((u, i) => numbers.set(u.id, i + 1));
+  }
+  return numbers;
 }
 
 function UnitCell({
   unit,
+  apartmentNumber,
   floorUnits,
   contractInfo,
   onBookUnit,
@@ -34,6 +47,7 @@ function UnitCell({
   onViewUnit,
 }: {
   unit: PropertyObject;
+  apartmentNumber: number | undefined;
   floorUnits: PropertyObject[];
   contractInfo: UnitContractInfo | undefined;
   onBookUnit: (unit: PropertyObject) => void;
@@ -73,7 +87,7 @@ function UnitCell({
         style={{ width }}
         className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-transform hover:scale-105 ${STATUS_COLORS[unit.status]}`}
       >
-        <span>{unitLabel(unit)}</span>
+        <span>{apartmentNumber ?? "—"}</span>
       </button>
 
       {canMerge && (
@@ -91,7 +105,9 @@ function UnitCell({
       )}
 
       <div className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-52 -translate-x-1/2 rounded-md border border-slate-200 bg-white p-3 text-xs shadow-lg group-hover:visible">
-        <p className="mb-1 font-semibold text-slate-900">{unit.name}</p>
+        <p className="mb-1 font-semibold text-slate-900">
+          {apartmentNumber != null ? `№${apartmentNumber} · ${unit.name}` : unit.name}
+        </p>
         {unit.rooms != null && (
           <p className="flex justify-between text-slate-500">
             <span>{t.buildings.hover.rooms}</span>
@@ -149,6 +165,7 @@ export function ShakhmatkaGrid({
   const blocks = Array.from(new Set(units.map((u) => u.block ?? ""))).sort();
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
   const floors = Array.from(new Set(units.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
+  const apartmentNumbers = computeApartmentNumbers(units);
 
   // Header labels and each floor's cell group live in separate flex rows, so
   // without a shared width per block column their gaps drift out of sync --
@@ -220,6 +237,7 @@ export function ShakhmatkaGrid({
                         <UnitCell
                           key={unit.id}
                           unit={unit}
+                          apartmentNumber={apartmentNumbers.get(unit.id)}
                           floorUnits={cellUnits}
                           contractInfo={contractsByUnit[unit.id]}
                           onBookUnit={onBookUnit}
