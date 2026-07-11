@@ -314,13 +314,6 @@ export default function DashboardPage() {
   const occupancyPct =
     counts.total > 0 ? Math.round(((counts.total - counts.available) / counts.total) * 100) : 0;
 
-  const cards = [
-    { label: t.dashboard.totalObjects, value: counts.total },
-    { label: t.dashboard.available, value: counts.available },
-    { label: t.dashboard.sold, value: counts.sold },
-    { label: t.dashboard.inProgress, value: counts.in_progress },
-  ];
-
   return (
     <div className="flex flex-col gap-5">
       <DashboardHero
@@ -333,66 +326,23 @@ export default function DashboardPage() {
         reservedCount={counts.reserved}
         soldCount={counts.sold}
         paidRevenueLabel={formatPair(paidRevenue)}
+        buildings={buildings}
+        selectedBuildingId={selectedBuildingId}
+        onBuildingChange={setSelectedBuildingId}
+        periodFilter={periodFilter}
+        onPeriodChange={setPeriodFilter}
       />
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-700">{t.dashboard.title}</h2>
-        <div className="flex items-center gap-3 print:hidden">
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-slate-500">{t.dashboard.filterBuilding}</span>
-            <select
-              value={selectedBuildingId}
-              onChange={(e) => setSelectedBuildingId(e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
-            >
-              <option value="all">{t.dashboard.allBuildings}</option>
-              {buildings.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <span className="text-slate-500">{t.dashboard.filterPeriod}</span>
-            <select
-              value={periodFilter}
-              onChange={(e) =>
-                setPeriodFilter(e.target.value as "all" | "today" | "month" | "year")
-              }
-              className="rounded-md border border-slate-300 px-3 py-2"
-            >
-              <option value="all">{t.dashboard.periodAll}</option>
-              <option value="today">{t.dashboard.periodToday}</option>
-              <option value="month">{t.dashboard.periodMonth}</option>
-              <option value="year">{t.dashboard.periodYear}</option>
-            </select>
-          </label>
-        </div>
-      </div>
 
       {!configured && <SetupNotice />}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {cards.map((card, i) => (
-          <div
-            key={card.label}
-            style={{ animationDelay: `${i * 40}ms` }}
-            className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
-          >
-            <div className="text-sm text-slate-500">{card.label}</div>
-            <div className="mt-1 text-2xl font-semibold">
-              {loading ? "…" : card.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
+      {/* Only what the hero doesn't already say: total/available/sold and
+          paid revenue live up there now, so this row carries just the
+          three numbers that don't. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-          <div className="text-sm text-slate-500">{t.dashboard.paidRevenue}</div>
-          <div className="mt-1 text-xl font-semibold text-emerald-600">
-            {loading ? "…" : formatPair(paidRevenue)}
+          <div className="text-sm text-slate-500">{t.dashboard.inProgress}</div>
+          <div className="mt-1 text-2xl font-semibold">
+            {loading ? "…" : counts.in_progress}
           </div>
         </div>
         <div
@@ -400,7 +350,7 @@ export default function DashboardPage() {
           className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
         >
           <div className="text-sm text-slate-500">{t.dashboard.totalDebt}</div>
-          <div className="mt-1 text-xl font-semibold text-rose-600">
+          <div className="mt-1 text-2xl font-semibold text-rose-600">
             {loading ? "…" : formatPair(totalDebt)}
           </div>
         </div>
@@ -409,7 +359,7 @@ export default function DashboardPage() {
           className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
         >
           <div className="text-sm text-slate-500">{t.dashboard.potentialRevenue}</div>
-          <div className="mt-1 text-xl font-semibold text-slate-700">
+          <div className="mt-1 text-2xl font-semibold text-slate-700">
             {loading ? "…" : formatPair(potentialRevenue)}
           </div>
         </div>
