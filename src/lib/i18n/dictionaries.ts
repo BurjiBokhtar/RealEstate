@@ -160,6 +160,7 @@ export const dictionaries = {
         totalDebt: "Общий долг",
         paymentsCount: "Платежей",
         pay: "Оплата / квитанция",
+        interestedIn: "Клиент интересуется:",
         empty: "Пока нет договоров с этим клиентом.",
       },
       paymentHistory: {
@@ -382,10 +383,12 @@ export const dictionaries = {
         paymentsCount: "Платежей внесено",
         clickHint: "ЛКМ — оформить договор · ПКМ — быстрая бронь",
         clickHintBooked: "ЛКМ — оплата и квитанции",
+        clickHintQuickBooked: "ЛКМ — оплата и квитанции · ПКМ ещё раз — отменить бронь",
       },
       merge: "Объединить со следующей",
       bookUnit: "Оформление брони / договора",
       quickBooked: "Квартира забронирована",
+      quickBookCancelled: "Бронь отменена",
       viewOnlyHint: "Только просмотр — изменить данные этой квартиры может администратор.",
       configure: "Настроить здание",
       floorBuilder: {
@@ -660,6 +663,7 @@ export const dictionaries = {
         totalDebt: "Қарзи умумӣ",
         paymentsCount: "Пардохтҳо",
         pay: "Пардохт / квитансия",
+        interestedIn: "Мизоҷ таваҷҷуҳ дорад:",
         empty: "Ҳоло бо ин мизоҷ шартнома нест.",
       },
       paymentHistory: {
@@ -882,10 +886,13 @@ export const dictionaries = {
         paymentsCount: "Пардохтҳои гузаронидашуда",
         clickHint: "Тугмаи чап — шартнома бастан · Тугмаи рост — брони тез",
         clickHintBooked: "Тугмаи чап — пардохт ва квитансия",
+        clickHintQuickBooked:
+          "Тугмаи чап — пардохт ва квитансия · Тугмаи рост боз — бекор кардани брон",
       },
       merge: "Бо хонаи навбатӣ як кардан",
       bookUnit: "Брон / шартнома бастан",
       quickBooked: "Хона брон карда шуд",
+      quickBookCancelled: "Брон бекор карда шуд",
       viewOnlyHint: "Танҳо дидан — маълумоти ин хонаро танҳо администратор тағир дода метавонад.",
       configure: "Танзими бино",
       floorBuilder: {

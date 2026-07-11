@@ -50,7 +50,7 @@ export default function BuildingDetailPage() {
       const { data: contracts } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("id, object_id, amount, paid_amount, currency, client:clients(name)")
+        .select("id, object_id, amount, paid_amount, currency, client:clients(name, source)")
         .in(
           "object_id",
           unitRows.map((u) => u.id)
@@ -61,7 +61,7 @@ export default function BuildingDetailPage() {
         amount: number;
         paid_amount: number;
         currency: UnitContractInfo["currency"];
-        client: { name: string } | null;
+        client: { name: string; source: string | null } | null;
       }>;
 
       const paymentsCountByContract: Record<string, number> = {};
@@ -89,6 +89,7 @@ export default function BuildingDetailPage() {
           remaining: c.amount - c.paid_amount,
           currency: c.currency,
           paymentsCount: paymentsCountByContract[c.id] ?? 0,
+          isQuickBooking: c.client?.source === "quick_booking" && c.paid_amount === 0,
         };
       }
       setContractsByUnit(map);
@@ -210,9 +211,51 @@ export default function BuildingDetailPage() {
           remaining: unit.price ?? 0,
           currency: unit.currency,
           paymentsCount: 0,
+          isQuickBooking: true,
         },
       }));
       setToast({ message: t.buildings.quickBooked, type: "success" });
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : t.common.error,
+        type: "error",
+      });
+    } finally {
+      setPendingQuickBook((prev) => {
+        const next = new Set(prev);
+        next.delete(unit.id);
+        return next;
+      });
+    }
+  };
+
+  // Right-click again on a unit that was quick-booked (and still has
+  // nothing paid on it) undoes it -- deletes that placeholder contract and
+  // frees the unit back up. Only ever targets the shared placeholder
+  // client's own untouched bookings (guarded by isQuickBooking above), so
+  // this can never silently delete a real buyer's contract or one with a
+  // payment already recorded against it.
+  const handleCancelQuickBook = async (unit: PropertyObject, contractId: string) => {
+    if (pendingQuickBook.has(unit.id)) return;
+    setPendingQuickBook((prev) => new Set(prev).add(unit.id));
+    const supabase = createClient();
+    try {
+      const { error } = await supabase
+        .schema("crm")
+        .from("contracts")
+        .delete()
+        .eq("id", contractId);
+      if (error) throw new Error(error.message);
+
+      setUnits((prev) =>
+        prev.map((u) => (u.id === unit.id ? { ...u, status: "available" } : u))
+      );
+      setContractsByUnit((prev) => {
+        const next = { ...prev };
+        delete next[unit.id];
+        return next;
+      });
+      setToast({ message: t.buildings.quickBookCancelled, type: "success" });
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : t.common.error,
@@ -264,6 +307,7 @@ export default function BuildingDetailPage() {
             contractsByUnit={contractsByUnit}
             onBookUnit={setBookingUnit}
             onQuickBook={handleQuickBook}
+            onCancelQuickBook={handleCancelQuickBook}
             pendingUnitIds={pendingQuickBook}
             onMergeUnits={handleMergeUnits}
             canEditSold={role === "admin"}

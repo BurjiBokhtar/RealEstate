@@ -13,6 +13,7 @@ export type UnitContractInfo = {
   remaining: number;
   currency: Currency;
   paymentsCount: number;
+  isQuickBooking: boolean;
 };
 
 const CELL = 64;
@@ -46,6 +47,7 @@ function UnitCell({
   contractInfo,
   onBookUnit,
   onQuickBook,
+  onCancelQuickBook,
   isPending,
   onMergeUnits,
   canEditSold,
@@ -58,6 +60,7 @@ function UnitCell({
   contractInfo: UnitContractInfo | undefined;
   onBookUnit: (unit: PropertyObject) => void;
   onQuickBook: (unit: PropertyObject) => void;
+  onCancelQuickBook: (unit: PropertyObject, contractId: string) => void;
   isPending: boolean;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
@@ -101,12 +104,16 @@ function UnitCell({
         onClick={handlePrimaryAction}
         onContextMenu={(e) => {
           e.preventDefault();
+          if (isPending) return;
           // Right click: instantly reserve an available unit, no dialog.
-          // Guarded against double-firing while the previous click is
-          // still being saved -- without this, clicking again before the
-          // cell visibly changes color used to silently create a second
-          // (or third, or fourth) duplicate booking.
-          if (unit.status === "available" && !isPending) onQuickBook(unit);
+          if (unit.status === "available") {
+            onQuickBook(unit);
+          } else if (unit.status === "reserved" && contractInfo?.isQuickBooking) {
+            // Right click again on a unit booked this same way undoes it --
+            // only ever applies to that untouched placeholder booking, never
+            // to a unit with a real buyer or any payment on it.
+            onCancelQuickBook(unit, contractInfo.id);
+          }
         }}
         disabled={isPending}
         style={{ width }}
@@ -174,7 +181,9 @@ function UnitCell({
         )}
         {contractInfo && (
           <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
-            {t.buildings.hover.clickHintBooked}
+            {contractInfo.isQuickBooking
+              ? t.buildings.hover.clickHintQuickBooked
+              : t.buildings.hover.clickHintBooked}
           </p>
         )}
       </div>
@@ -187,6 +196,7 @@ export function ShakhmatkaGrid({
   contractsByUnit,
   onBookUnit,
   onQuickBook,
+  onCancelQuickBook,
   pendingUnitIds,
   onMergeUnits,
   canEditSold,
@@ -196,6 +206,7 @@ export function ShakhmatkaGrid({
   contractsByUnit: Record<string, UnitContractInfo>;
   onBookUnit: (unit: PropertyObject) => void;
   onQuickBook: (unit: PropertyObject) => void;
+  onCancelQuickBook: (unit: PropertyObject, contractId: string) => void;
   pendingUnitIds: Set<string>;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
@@ -316,6 +327,7 @@ export function ShakhmatkaGrid({
                           contractInfo={contractsByUnit[unit.id]}
                           onBookUnit={onBookUnit}
                           onQuickBook={onQuickBook}
+                          onCancelQuickBook={onCancelQuickBook}
                           isPending={pendingUnitIds.has(unit.id)}
                           onMergeUnits={onMergeUnits}
                           canEditSold={canEditSold}
