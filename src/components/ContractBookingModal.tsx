@@ -19,11 +19,13 @@ type PreviewContract = ContractDocumentData & { id: string };
 export function ContractBookingModal({
   unit,
   buildingName,
+  apartmentNumber,
   onClose,
   onBooked,
 }: {
   unit: PropertyObject;
   buildingName: string | null;
+  apartmentNumber: number | undefined;
   onClose: () => void;
   onBooked: () => void;
 }) {
@@ -126,7 +128,8 @@ export function ContractBookingModal({
             }}
             lockedObject={{
               id: unit.id,
-              label: unit.name,
+              label: apartmentNumber != null ? `№${apartmentNumber}` : unit.name,
+              secondaryLabel: apartmentNumber != null ? unit.name : null,
               buildingName,
               positionInFloor: unit.position_in_floor,
             }}

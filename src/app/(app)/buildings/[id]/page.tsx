@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -11,6 +11,7 @@ import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGr
 import { Modal } from "@/components/Modal";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { Toast, type ToastType } from "@/components/Toast";
+import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
 import { useRole } from "@/lib/auth/useRole";
@@ -35,6 +36,8 @@ export default function BuildingDetailPage() {
     type: "success",
   });
   const { role } = useRole();
+
+  const apartmentNumbers = useMemo(() => computeApartmentNumbers(units), [units]);
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -318,6 +321,7 @@ export default function BuildingDetailPage() {
             <ContractBookingModal
               unit={bookingUnit}
               buildingName={building.name}
+              apartmentNumber={apartmentNumbers.get(bookingUnit.id)}
               onClose={() => setBookingUnit(null)}
               onBooked={loadUnits}
             />

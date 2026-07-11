@@ -22,6 +22,7 @@ type ObjectWithBuilding = PropertyObject & { building: { name: string } | null }
 export type LockedObject = {
   id: string;
   label: string;
+  secondaryLabel: string | null;
   buildingName: string | null;
   positionInFloor: number | null;
 };
@@ -142,7 +143,7 @@ export function ContractForm({
       update(
         "number",
         computeContractNumber({
-          name: lockedObject.label,
+          name: lockedObject.secondaryLabel || lockedObject.label,
           positionInFloor: lockedObject.positionInFloor,
           buildingName: lockedObject.buildingName,
         })
@@ -235,6 +236,11 @@ export function ContractForm({
             <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
             <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
               <span className="font-semibold text-slate-900">{lockedObject.label}</span>
+              {lockedObject.secondaryLabel && (
+                <span className="truncate text-xs text-slate-400">
+                  · {lockedObject.secondaryLabel}
+                </span>
+              )}
               {lockedObject.buildingName && (
                 <span className="truncate text-xs text-slate-400">
                   · {lockedObject.buildingName}
