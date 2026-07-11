@@ -45,6 +45,7 @@ function UnitCell({
   contractInfo,
   onBookUnit,
   onQuickBook,
+  isPending,
   onMergeUnits,
   canEditSold,
   onViewUnit,
@@ -55,6 +56,7 @@ function UnitCell({
   contractInfo: UnitContractInfo | undefined;
   onBookUnit: (unit: PropertyObject) => void;
   onQuickBook: (unit: PropertyObject) => void;
+  isPending: boolean;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -76,6 +78,7 @@ function UnitCell({
   // fallback (a unit marked busy with no contract at all) is gated to
   // admins, since that means editing the raw unit record.
   const handlePrimaryAction = () => {
+    if (isPending) return;
     if (unit.status === "available") {
       onBookUnit(unit);
     } else if (contractInfo) {
@@ -95,10 +98,17 @@ function UnitCell({
         onContextMenu={(e) => {
           e.preventDefault();
           // Right click: instantly reserve an available unit, no dialog.
-          if (unit.status === "available") onQuickBook(unit);
+          // Guarded against double-firing while the previous click is
+          // still being saved -- without this, clicking again before the
+          // cell visibly changes color used to silently create a second
+          // (or third, or fourth) duplicate booking.
+          if (unit.status === "available" && !isPending) onQuickBook(unit);
         }}
+        disabled={isPending}
         style={{ width }}
-        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-transform hover:scale-105 ${STATUS_COLORS[unit.status]}`}
+        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-transform hover:scale-105 ${
+          isPending ? "animate-pulse opacity-60" : ""
+        } ${STATUS_COLORS[unit.status]}`}
       >
         <span>{apartmentNumber ?? "—"}</span>
       </button>
@@ -173,6 +183,7 @@ export function ShakhmatkaGrid({
   contractsByUnit,
   onBookUnit,
   onQuickBook,
+  pendingUnitIds,
   onMergeUnits,
   canEditSold,
   onViewUnit,
@@ -181,6 +192,7 @@ export function ShakhmatkaGrid({
   contractsByUnit: Record<string, UnitContractInfo>;
   onBookUnit: (unit: PropertyObject) => void;
   onQuickBook: (unit: PropertyObject) => void;
+  pendingUnitIds: Set<string>;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -271,6 +283,7 @@ export function ShakhmatkaGrid({
                           contractInfo={contractsByUnit[unit.id]}
                           onBookUnit={onBookUnit}
                           onQuickBook={onQuickBook}
+                          isPending={pendingUnitIds.has(unit.id)}
                           onMergeUnits={onMergeUnits}
                           canEditSold={canEditSold}
                           onViewUnit={onViewUnit}

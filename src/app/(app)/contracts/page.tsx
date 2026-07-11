@@ -18,7 +18,7 @@ import {
 const PAGE_SIZE = 25;
 
 type ContractRow = Contract & {
-  client: { name: string } | null;
+  client: { name: string; source: string | null } | null;
   object: { name: string } | null;
 };
 
@@ -31,10 +31,11 @@ export default function ContractsPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
+  const [showQuickBookings, setShowQuickBookings] = useState(false);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter]);
+  }, [statusFilter, showQuickBookings]);
 
   useEffect(() => {
     if (!configured) {
@@ -44,11 +45,20 @@ export default function ContractsPage() {
     const supabase = createClient();
     setLoading(true);
 
+    // "!inner" forces the client join to actually filter parent rows (a
+    // plain embedded select only filters the embedded object, not which
+    // contracts come back) -- needed to hide the placeholder "quick
+    // booking" contracts by default so a front-desk quick reservation
+    // doesn't look like clutter in the main contracts list before anyone's
+    // filled in the real buyer.
     let query = supabase
       .schema("crm")
       .from("contracts")
-      .select("*, client:clients(name), object:objects(name)", { count: "exact" });
+      .select("*, client:clients!inner(name, source), object:objects(name)", {
+        count: "exact",
+      });
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    if (!showQuickBookings) query = query.neq("client.source", "quick_booking");
     const from = (page - 1) * PAGE_SIZE;
     query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
 
@@ -57,7 +67,7 @@ export default function ContractsPage() {
       setTotalCount(count ?? 0);
       setLoading(false);
     });
-  }, [configured, page, statusFilter]);
+  }, [configured, page, statusFilter, showQuickBookings]);
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -75,7 +85,7 @@ export default function ContractsPage() {
 
       {!configured && <SetupNotice />}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ContractStatus | "all")}
@@ -88,6 +98,15 @@ export default function ContractsPage() {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={showQuickBookings}
+            onChange={(e) => setShowQuickBookings(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-300"
+          />
+          {t.contracts.filters.showQuickBookings}
+        </label>
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -127,7 +146,17 @@ export default function ContractsPage() {
                     {contract.number || "—"}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{contract.client?.name ?? "—"}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {contract.client?.source === "quick_booking" ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                        {t.contracts.badges.quickBooking}
+                      </span>
+                    </span>
+                  ) : (
+                    contract.client?.name ?? "—"
+                  )}
+                </td>
                 <td className="px-4 py-3 text-slate-600">{contract.object?.name ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {formatCurrency(contract.amount, contract.currency)}

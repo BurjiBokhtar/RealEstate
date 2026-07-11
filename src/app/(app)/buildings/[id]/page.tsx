@@ -29,6 +29,7 @@ export default function BuildingDetailPage() {
   );
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [viewingUnit, setViewingUnit] = useState<PropertyObject | null>(null);
+  const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
@@ -165,25 +166,63 @@ export default function BuildingDetailPage() {
   };
 
   const handleQuickBook = async (unit: PropertyObject) => {
+    // Belt and suspenders against duplicate bookings: ignore a second
+    // right-click on the same cell while the first is still in flight, and
+    // re-check the freshest known status right before writing (in case the
+    // click queued up before an earlier state update landed).
+    if (pendingQuickBook.has(unit.id)) return;
+    const freshUnit = units.find((u) => u.id === unit.id) ?? unit;
+    if (freshUnit.status !== "available") return;
+
+    setPendingQuickBook((prev) => new Set(prev).add(unit.id));
     const supabase = createClient();
     try {
       const clientId = await getOrCreateQuickBookingClient(supabase);
-      const { error } = await supabase.schema("crm").from("contracts").insert({
-        client_id: clientId,
-        object_id: unit.id,
-        amount: unit.price ?? 0,
-        paid_amount: 0,
-        currency: unit.currency,
-        status: "draft",
-        payment_type: "full",
-      });
-      if (error) throw new Error(error.message);
-      await loadUnits();
+      const { data, error } = await supabase
+        .schema("crm")
+        .from("contracts")
+        .insert({
+          client_id: clientId,
+          object_id: unit.id,
+          amount: unit.price ?? 0,
+          paid_amount: 0,
+          currency: unit.currency,
+          status: "draft",
+          payment_type: "full",
+        })
+        .select("id")
+        .single();
+      if (error || !data) throw new Error(error?.message ?? t.common.error);
+
+      // Flip the cell to "reserved" immediately in local state -- don't
+      // wait on (or depend on) the DB-side status trigger to see it, so the
+      // click always gives instant feedback even if that trigger is ever
+      // missing or slow. A background reload still reconciles with the
+      // server shortly after.
+      setUnits((prev) =>
+        prev.map((u) => (u.id === unit.id ? { ...u, status: "reserved" } : u))
+      );
+      setContractsByUnit((prev) => ({
+        ...prev,
+        [unit.id]: {
+          id: data.id,
+          clientName: "Без клиента (быстрая бронь)",
+          remaining: unit.price ?? 0,
+          currency: unit.currency,
+          paymentsCount: 0,
+        },
+      }));
       setToast({ message: t.buildings.quickBooked, type: "success" });
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : t.common.error,
         type: "error",
+      });
+    } finally {
+      setPendingQuickBook((prev) => {
+        const next = new Set(prev);
+        next.delete(unit.id);
+        return next;
       });
     }
   };
@@ -225,6 +264,7 @@ export default function BuildingDetailPage() {
             contractsByUnit={contractsByUnit}
             onBookUnit={setBookingUnit}
             onQuickBook={handleQuickBook}
+            pendingUnitIds={pendingQuickBook}
             onMergeUnits={handleMergeUnits}
             canEditSold={role === "admin"}
             onViewUnit={setViewingUnit}

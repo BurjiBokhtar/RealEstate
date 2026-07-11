@@ -220,6 +220,10 @@ export const dictionaries = {
       },
       filters: {
         allStatuses: "Все статусы",
+        showQuickBookings: "Показывать быстрые брони без клиента",
+      },
+      badges: {
+        quickBooking: "Быстрая бронь",
       },
       form: {
         number: "Номер договора",
@@ -695,6 +699,10 @@ export const dictionaries = {
       },
       filters: {
         allStatuses: "Ҳамаи ҳолатҳо",
+        showQuickBookings: "Нишон додани брони тез бе мизоҷ",
+      },
+      badges: {
+        quickBooking: "Брони тез",
       },
       form: {
         number: "Рақами шартнома",
