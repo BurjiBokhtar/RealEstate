@@ -128,6 +128,8 @@ export const dictionaries = {
         delete: "Удалить",
         confirmDelete: "Удалить этого клиента?",
         deleteBlocked: "Нельзя удалить: у клиента есть договоры. Сначала удалите или перенесите их.",
+        addNew: "+ Новый клиент",
+        backToSearch: "← Назад к поиску",
       },
       statuses: {
         new: "Новый",
@@ -212,6 +214,7 @@ export const dictionaries = {
         signedDate: "Дата подписания",
         notes: "Заметки",
         save: "Сохранить",
+        create: "Создать контракт",
         delete: "Удалить",
         confirmDelete: "Удалить этот договор?",
         selectClient: "Выберите клиента",
@@ -566,6 +569,8 @@ export const dictionaries = {
         delete: "Нест кардан",
         confirmDelete: "Ин мизоҷро нест кунам?",
         deleteBlocked: "Нест кардан имконнопазир аст: мизоҷ шартномаҳо дорад. Аввал онҳоро нест кунед ё гузаронед.",
+        addNew: "+ Мизоҷи нав",
+        backToSearch: "← Бозгашт ба ҷустуҷӯ",
       },
       statuses: {
         new: "Нав",
@@ -650,6 +655,7 @@ export const dictionaries = {
         signedDate: "Санаи имзо",
         notes: "Қайдҳо",
         save: "Захира кардан",
+        create: "Шартнома сохтан",
         delete: "Нест кардан",
         confirmDelete: "Ин шартномаро нест кунам?",
         selectClient: "Мизоҷро интихоб кунед",

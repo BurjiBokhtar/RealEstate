@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, CURRENCIES } from "@/lib/currency";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
 import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
 import { ClientAutocomplete } from "@/components/ClientAutocomplete";
-import type { Client } from "@/lib/clients/types";
+import type { Client, ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
 type ObjectWithBuilding = PropertyObject & { building: { name: string } | null };
@@ -57,6 +57,9 @@ export function ContractForm({
   const [values, setValues] = useState<ContractInput>({ ...emptyInput, ...initial });
   const [clients, setClients] = useState<Client[]>([]);
   const [objects, setObjects] = useState<ObjectWithBuilding[]>([]);
+  const [newClient, setNewClient] = useState<ClientInput | null>(null);
+  const [creatingClient, setCreatingClient] = useState(false);
+  const [clientError, setClientError] = useState<string | null>(null);
   const isExistingContract = Boolean(initial?.number);
 
   const amountNum = Number(values.amount) || 0;
@@ -111,14 +114,42 @@ export function ContractForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amountNum, values.currency]);
 
+  const handleFormSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!newClient) {
+      onSubmit(values);
+      return;
+    }
+    setCreatingClient(true);
+    setClientError(null);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .schema("crm")
+      .from("clients")
+      .insert({
+        name: newClient.name,
+        phone: newClient.phone || null,
+        email: newClient.email || null,
+        passport: newClient.passport || null,
+        passport_issued_by: newClient.passport_issued_by || null,
+        birth_date: newClient.birth_date || null,
+        address: newClient.address || null,
+        source: newClient.source || null,
+        status: newClient.status,
+        notes: newClient.notes || null,
+      })
+      .select("id")
+      .single();
+    setCreatingClient(false);
+    if (error || !data) {
+      setClientError(error?.message ?? t.common.error);
+      return;
+    }
+    onSubmit({ ...values, client_id: data.id });
+  };
+
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(values);
-      }}
-      className="flex max-w-xl flex-col gap-4"
-    >
+    <form onSubmit={handleFormSubmit} className="flex max-w-xl flex-col gap-4">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.contracts.form.number}</span>
         <input
@@ -137,6 +168,8 @@ export function ContractForm({
           clients={clients}
           value={values.client_id}
           onChange={(id) => update("client_id", id)}
+          newClient={newClient}
+          onNewClientChange={setNewClient}
         />
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
@@ -319,13 +352,15 @@ export function ContractForm({
         />
       </label>
 
+      {clientError && <p className="text-sm text-red-600">{clientError}</p>}
+
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || creatingClient}
           className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
         >
-          {t.contracts.form.save}
+          {isExistingContract ? t.contracts.form.save : t.contracts.form.create}
         </button>
         {onDelete && (
           <button
