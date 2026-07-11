@@ -94,47 +94,73 @@ export default function ContractPrintPage() {
       </button>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-        {/* Letterhead */}
-        <div className="relative bg-gradient-to-r from-slate-900 to-slate-700 px-8 py-8 text-white print:bg-slate-900">
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {settings.company_logo_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.company_logo_url}
-                  alt=""
-                  className="h-14 w-14 rounded-lg bg-white object-contain p-1.5"
-                />
-              )}
-              <div>
-                <p className="text-lg font-semibold tracking-tight">
-                  {settings.company_name || t.appName}
-                </p>
-                {settings.company_address && (
-                  <p className="text-xs text-slate-300">{settings.company_address}</p>
-                )}
-              </div>
-            </div>
-            <div className="text-right">
-              <p className="text-xs uppercase tracking-widest text-amber-300">
-                {t.contracts.print.title}
+        {/* Letterhead — dark text on white rather than white-on-dark, so it
+            still reads correctly when "background graphics" is off in the
+            print dialog (the default in most browsers), instead of printing
+            as invisible white text on a blank page. */}
+        <div className="flex items-center justify-between gap-4 border-b-4 border-slate-900 px-8 py-6">
+          <div className="flex items-center gap-3">
+            {settings.company_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.company_logo_url}
+                alt=""
+                className="h-14 w-14 rounded-lg border border-slate-200 object-contain p-1.5"
+              />
+            )}
+            <div>
+              <p className="text-lg font-semibold tracking-tight text-slate-900">
+                {settings.company_name || t.appName}
               </p>
-              <p className="text-2xl font-bold">№{contract.number || "—"}</p>
-              {contract.signed_date && (
-                <p className="text-xs text-slate-300">{contract.signed_date}</p>
+              {settings.company_address && (
+                <p className="text-xs text-slate-500">{settings.company_address}</p>
               )}
             </div>
+          </div>
+          <div className="text-right">
+            <p className="text-xs uppercase tracking-widest text-slate-400">
+              {t.contracts.print.title}
+            </p>
+            <p className="text-2xl font-bold text-slate-900">№{contract.number || "—"}</p>
+            {contract.signed_date && (
+              <p className="text-xs text-slate-500">{contract.signed_date}</p>
+            )}
           </div>
         </div>
 
         {/* Body */}
-        <div className="flex flex-col gap-4 whitespace-pre-wrap px-8 py-8 text-[13.5px] leading-[1.8] text-slate-800">
-          {renderedText.split("\n\n").map((paragraph, i) => (
-            <p key={i} className="text-justify">
-              {paragraph}
-            </p>
-          ))}
+        <div className="flex flex-col gap-4 px-8 py-8 text-[13.5px] leading-[1.8] text-slate-800">
+          {renderedText.split("\n\n").map((block, i) => {
+            const lines = block.split("\n");
+            return (
+              <div key={i} className="flex flex-col gap-1.5">
+                {lines.map((line, j) => {
+                  if (line.includes("\t")) {
+                    const [left, right] = line.split("\t");
+                    return (
+                      <div key={j} className="flex items-baseline justify-between gap-8">
+                        <span>{left}</span>
+                        <span>{right}</span>
+                      </div>
+                    );
+                  }
+                  const isHeader = j === 0 && (lines.length > 1 || line.trim().endsWith(":"));
+                  return (
+                    <p
+                      key={j}
+                      className={
+                        isHeader
+                          ? "font-semibold text-slate-900"
+                          : "text-left text-slate-700"
+                      }
+                    >
+                      {line}
+                    </p>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
 
         {/* Summary strip */}
@@ -197,7 +223,7 @@ export default function ContractPrintPage() {
           </section>
         )}
 
-        <div className="h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
+        <div className="border-t-4 border-slate-900" />
       </div>
     </div>
   );

@@ -1,9 +1,7 @@
 // Fixed contract wording, based on the sample cooperation/purchase agreement
 // provided by the company. This is intentionally not editable from the UI —
 // legal wording shouldn't drift between staff. To change it, edit this file.
-export const DEFAULT_CONTRACT_TEMPLATE = `ШАРТНОМАИ ҲАМКОРИ №{{contract_number}}
-
-{{signed_date}}                                                    {{company_address}}
+export const DEFAULT_CONTRACT_TEMPLATE = `{{signed_date}}\t{{company_address}}
 
 Тарафҳои аҳдкунанда
 Ҷамъияти дорои масъулияти маҳдуди «{{company_name}}» дар шахсияти роҳбари ҷамъият {{company_director}}, ки дар асоси Оинномаи ҷамъият амал мекунад, аз як тараф, минбаъд «Фурӯшанда» ва аз тарафи дигар шаҳрванди Ҷумҳурии Тоҷикистон {{client_name}}, таваллуди {{client_birth_date}}, суроғаи истиқомат: {{client_address}}, шиноснома {{client_passport}}, аз тарафи {{client_passport_issued_by}} дода шудааст, тел. {{client_phone}}, ки минбаъд «Харидор» номида мешавад, ҳамин шартномаро бо шартҳои зерин бастанд.
@@ -38,10 +36,10 @@ export const DEFAULT_CONTRACT_TEMPLATE = `ШАРТНОМАИ ҲАМКОРИ №{
 
 Суроғаи ҳуқуқӣ ва имзои тарафҳо:
 
-«Фурӯшанда»                                                    «Харидор»
-{{company_director}}                                           {{client_name}}
-Суроға: {{company_address}}                             Шиноснома: {{client_passport}}
-{{company_bank_details}}                                       Тел.: {{client_phone}}
+«Фурӯшанда»\t«Харидор»
+{{company_director}}\t{{client_name}}
+Суроға: {{company_address}}\tШиноснома: {{client_passport}}
+{{company_bank_details}}\tТел.: {{client_phone}}
 
-Имзо ___________________                              Имзо ___________________
-Санаи {{signed_date}}                                          Санаи {{signed_date}}`;
+Имзо ___________________\tИмзо ___________________
+Санаи {{signed_date}}\tСанаи {{signed_date}}`;

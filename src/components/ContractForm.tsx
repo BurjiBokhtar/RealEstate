@@ -10,6 +10,13 @@ import { ClientAutocomplete } from "@/components/ClientAutocomplete";
 import type { Client, ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
+const FIELD_CLASS =
+  "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+const FIELD_CLASS_SM =
+  "h-9 rounded-lg border border-slate-300 px-2.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+const TEXTAREA_CLASS =
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+
 type ObjectWithBuilding = PropertyObject & { building: { name: string } | null };
 
 // Contract numbers are system-generated, not typed by staff: building/object
@@ -157,9 +164,7 @@ export function ContractForm({
           onChange={(e) => update("number", e.target.value)}
           readOnly={!isExistingContract}
           placeholder={isExistingContract ? "" : t.contracts.form.numberAuto}
-          className={`rounded-md border border-slate-300 px-3 py-2 ${
-            isExistingContract ? "" : "bg-slate-50 text-slate-500"
-          }`}
+          className={`${FIELD_CLASS} ${isExistingContract ? "" : "bg-slate-50 text-slate-500"}`}
         />
       </label>
 
@@ -187,7 +192,7 @@ export function ContractForm({
                 number: isExistingContract ? v.number : computeContractNumber(selected),
               }));
             }}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           >
             <option value="">{t.contracts.form.selectObject}</option>
             {objects.map((o) => (
@@ -208,7 +213,7 @@ export function ContractForm({
             step="0.01"
             value={values.amount}
             onChange={(e) => update("amount", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -219,7 +224,7 @@ export function ContractForm({
             step="0.01"
             value={values.paid_amount}
             onChange={(e) => update("paid_amount", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -227,7 +232,7 @@ export function ContractForm({
           <select
             value={values.currency}
             onChange={(e) => update("currency", e.target.value as ContractInput["currency"])}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           >
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
@@ -253,7 +258,7 @@ export function ContractForm({
               step="0.1"
               value={pct ? Math.round(pct * 10) / 10 : ""}
               onChange={(e) => handlePercentChange(e.target.value)}
-              className="w-20 rounded-md border border-slate-300 px-2 py-1"
+              className={`w-20 ${FIELD_CLASS_SM}`}
             />
           </label>
         </div>
@@ -265,7 +270,7 @@ export function ContractForm({
           <select
             value={values.status}
             onChange={(e) => update("status", e.target.value as ContractInput["status"])}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           >
             {CONTRACT_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -280,7 +285,7 @@ export function ContractForm({
             type="date"
             value={values.signed_date}
             onChange={(e) => update("signed_date", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
       </div>
@@ -293,7 +298,7 @@ export function ContractForm({
             onChange={(e) =>
               update("payment_type", e.target.value as ContractInput["payment_type"])
             }
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           >
             {PAYMENT_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -312,7 +317,7 @@ export function ContractForm({
               min="1"
               value={values.installment_months}
               onChange={(e) => update("installment_months", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
         )}
@@ -327,7 +332,7 @@ export function ContractForm({
             value={values.barter_details}
             onChange={(e) => update("barter_details", e.target.value)}
             rows={2}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={TEXTAREA_CLASS}
           />
         </label>
       )}
@@ -338,7 +343,7 @@ export function ContractForm({
           value={values.amount_words}
           onChange={(e) => update("amount_words", e.target.value)}
           placeholder={t.contracts.form.amountWordsPlaceholder}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -348,7 +353,7 @@ export function ContractForm({
           value={values.notes}
           onChange={(e) => update("notes", e.target.value)}
           rows={4}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={TEXTAREA_CLASS}
         />
       </label>
 
@@ -358,7 +363,7 @@ export function ContractForm({
         <button
           type="submit"
           disabled={submitting || creatingClient}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {isExistingContract ? t.contracts.form.save : t.contracts.form.create}
         </button>
@@ -366,7 +371,7 @@ export function ContractForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
           >
             {t.contracts.form.delete}
           </button>

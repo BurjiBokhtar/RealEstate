@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { LEAD_STATUSES, type ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
+const FIELD_CLASS =
+  "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+const TEXTAREA_CLASS =
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+
 const emptyInput: ClientInput = {
   name: "",
   phone: "",
@@ -54,7 +59,7 @@ export function ClientForm({
         e.preventDefault();
         onSubmit(values);
       }}
-      className="flex max-w-xl flex-col gap-4"
+      className="flex max-w-xl flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
     >
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.clients.form.name}</span>
@@ -62,7 +67,7 @@ export function ClientForm({
           required
           value={values.name}
           onChange={(e) => update("name", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -72,7 +77,7 @@ export function ClientForm({
           <input
             value={values.phone}
             onChange={(e) => update("phone", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -81,7 +86,7 @@ export function ClientForm({
             type="email"
             value={values.email}
             onChange={(e) => update("email", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
       </div>
@@ -93,7 +98,7 @@ export function ClientForm({
             value={values.passport}
             onChange={(e) => update("passport", e.target.value)}
             placeholder={t.clients.form.passportPlaceholder}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -103,7 +108,7 @@ export function ClientForm({
           <input
             value={values.passport_issued_by}
             onChange={(e) => update("passport_issued_by", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
       </div>
@@ -115,7 +120,7 @@ export function ClientForm({
             type="date"
             value={values.birth_date}
             onChange={(e) => update("birth_date", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -123,7 +128,7 @@ export function ClientForm({
           <input
             value={values.address}
             onChange={(e) => update("address", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
       </div>
@@ -134,7 +139,7 @@ export function ClientForm({
           <input
             value={values.source}
             onChange={(e) => update("source", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
@@ -142,7 +147,7 @@ export function ClientForm({
           <select
             value={values.status}
             onChange={(e) => update("status", e.target.value as ClientInput["status"])}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           >
             {LEAD_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -160,7 +165,7 @@ export function ClientForm({
         <select
           value={values.interested_object_id}
           onChange={(e) => update("interested_object_id", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         >
           <option value="">{t.clients.form.noneOption}</option>
           {objects.map((obj) => (
@@ -177,7 +182,7 @@ export function ClientForm({
           value={values.notes}
           onChange={(e) => update("notes", e.target.value)}
           rows={4}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={TEXTAREA_CLASS}
         />
       </label>
 
@@ -185,7 +190,7 @@ export function ClientForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {t.clients.form.save}
         </button>
@@ -193,7 +198,7 @@ export function ClientForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
           >
             {t.clients.form.delete}
           </button>

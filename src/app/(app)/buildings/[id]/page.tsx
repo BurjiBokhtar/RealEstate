@@ -139,12 +139,9 @@ export default function BuildingDetailPage() {
       .single();
 
     if (!error && data) {
-      await supabase
-        .schema("crm")
-        .from("objects")
-        .update({ status: "reserved" })
-        .eq("id", values.object_id);
-
+      // Object status (available/reserved/sold) is derived automatically by
+      // a DB trigger from the contract's paid_amount -- no manual update
+      // needed here, and setting it here would race with that trigger.
       const paidAmount = values.paid_amount ? Number(values.paid_amount) : 0;
       if (paidAmount > 0) {
         const paidDate = values.signed_date || new Date().toISOString().slice(0, 10);

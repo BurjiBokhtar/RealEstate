@@ -4,11 +4,8 @@ import { useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { FileUploadField } from "@/components/FileUploadField";
 import { CURRENCIES } from "@/lib/currency";
-import {
-  OBJECT_STATUSES,
-  OBJECT_TYPES,
-  type PropertyObjectInput,
-} from "@/lib/objects/types";
+import { STATUS_COLORS } from "@/lib/objects/format";
+import { OBJECT_TYPES, type PropertyObjectInput } from "@/lib/objects/types";
 
 const emptyInput: PropertyObjectInput = {
   name: "",
@@ -90,22 +87,16 @@ export function ObjectForm({
           </select>
         </label>
 
-        <label className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.objects.form.status}</span>
-          <select
-            value={values.status}
-            onChange={(e) =>
-              update("status", e.target.value as PropertyObjectInput["status"])
-            }
-            className="rounded-md border border-slate-300 px-3 py-2"
-          >
-            {OBJECT_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {t.objects.statuses[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-slate-600">
+            <span
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_COLORS[values.status].split(" ")[0]}`}
+            />
+            {t.objects.statuses[values.status]}
+          </div>
+          <span className="text-xs text-slate-400">{t.objects.form.statusAutoHint}</span>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">

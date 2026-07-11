@@ -78,15 +78,16 @@ export function ContractPayments({
 
   const togglePaid = async (payment: ContractPayment) => {
     const supabase = createClient();
-    await supabase
-      .schema("crm")
-      .from("contract_payments")
-      .update({
-        paid: !payment.paid,
-        paid_date: !payment.paid ? today() : null,
-      })
-      .eq("id", payment.id);
+    const { error } = await supabase.schema("crm").rpc("set_payment_paid", {
+      p_payment_id: payment.id,
+      p_paid: !payment.paid,
+    });
+    if (error) {
+      setRecordError(error.message);
+      return;
+    }
     await load();
+    onPaymentAdded?.();
   };
 
   const handleRecordPayment = async () => {

@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LEAD_STATUSES, type Client, type ClientInput } from "@/lib/clients/types";
 
+const FIELD_CLASS =
+  "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+
 const emptyNewClient: ClientInput = {
   name: "",
   phone: "",
@@ -65,13 +68,13 @@ export function ClientAutocomplete({
 
   if (newClient) {
     return (
-      <div className="flex flex-col gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-slate-700">{t.clients.form.addNew}</span>
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+          <span className="text-sm font-semibold text-slate-800">{t.clients.form.addNew}</span>
           <button
             type="button"
             onClick={() => onNewClientChange(null)}
-            className="text-xs text-slate-500 hover:text-slate-900 hover:underline"
+            className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             {t.clients.form.backToSearch}
           </button>
@@ -84,7 +87,7 @@ export function ClientAutocomplete({
             autoFocus
             value={newClient.name}
             onChange={(e) => updateNew("name", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={FIELD_CLASS}
           />
         </label>
 
@@ -94,7 +97,7 @@ export function ClientAutocomplete({
             <input
               value={newClient.phone}
               onChange={(e) => updateNew("phone", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -103,7 +106,7 @@ export function ClientAutocomplete({
               type="email"
               value={newClient.email}
               onChange={(e) => updateNew("email", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
         </div>
@@ -115,7 +118,7 @@ export function ClientAutocomplete({
               value={newClient.passport}
               onChange={(e) => updateNew("passport", e.target.value)}
               placeholder={t.clients.form.passportPlaceholder}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -125,7 +128,7 @@ export function ClientAutocomplete({
             <input
               value={newClient.passport_issued_by}
               onChange={(e) => updateNew("passport_issued_by", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
         </div>
@@ -137,7 +140,7 @@ export function ClientAutocomplete({
               type="date"
               value={newClient.birth_date}
               onChange={(e) => updateNew("birth_date", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -145,7 +148,7 @@ export function ClientAutocomplete({
             <input
               value={newClient.address}
               onChange={(e) => updateNew("address", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
         </div>
@@ -156,7 +159,7 @@ export function ClientAutocomplete({
             <input
               value={newClient.source}
               onChange={(e) => updateNew("source", e.target.value)}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
@@ -164,7 +167,7 @@ export function ClientAutocomplete({
             <select
               value={newClient.status}
               onChange={(e) => updateNew("status", e.target.value as ClientInput["status"])}
-              className="rounded-md border border-slate-300 px-3 py-2"
+              className={FIELD_CLASS}
             >
               {LEAD_STATUSES.map((status) => (
                 <option key={status} value={status}>
@@ -181,7 +184,7 @@ export function ClientAutocomplete({
             value={newClient.notes}
             onChange={(e) => updateNew("notes", e.target.value)}
             rows={2}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
           />
         </label>
       </div>
@@ -202,11 +205,11 @@ export function ClientAutocomplete({
         onFocus={() => setOpen(true)}
         placeholder={t.contracts.form.selectClient}
         autoComplete="off"
-        className="rounded-md border border-slate-300 px-3 py-2"
+        className={FIELD_CLASS}
       />
 
       {open && matches.length > 0 && (
-        <div className="absolute top-full z-20 mt-1 w-full rounded-md border border-slate-200 bg-white shadow-lg">
+        <div className="absolute top-full z-20 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
           {matches.map((c) => (
             <button
               key={c.id}
@@ -216,7 +219,7 @@ export function ClientAutocomplete({
                 setQuery(c.name);
                 setOpen(false);
               }}
-              className="flex w-full flex-col items-start px-3 py-2 text-left text-sm hover:bg-slate-50"
+              className="flex w-full flex-col items-start px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50"
             >
               <span className="font-medium text-slate-900">{c.name}</span>
               {c.phone && <span className="text-xs text-slate-500">{c.phone}</span>}
@@ -226,22 +229,39 @@ export function ClientAutocomplete({
       )}
 
       {selected && (
-        <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-slate-50 p-3 text-xs text-slate-600">
-          <span>
-            {t.clients.form.phone}: {selected.phone || "—"}
-          </span>
-          <span>
-            {t.clients.form.birthDate}: {selected.birth_date || "—"}
-          </span>
-          <span className="col-span-2">
-            {t.clients.form.address}: {selected.address || "—"}
-          </span>
-          <span>
-            {t.clients.form.passport}: {selected.passport || "—"}
-          </span>
-          <span>
-            {t.clients.form.passportIssuedBy}: {selected.passport_issued_by || "—"}
-          </span>
+        <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.clients.form.phone}
+            </span>
+            <span className="text-sm text-slate-700">{selected.phone || "—"}</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.clients.form.birthDate}
+            </span>
+            <span className="text-sm text-slate-700">{selected.birth_date || "—"}</span>
+          </div>
+          <div className="col-span-2 flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.clients.form.address}
+            </span>
+            <span className="text-sm text-slate-700">{selected.address || "—"}</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.clients.form.passport}
+            </span>
+            <span className="text-sm text-slate-700">{selected.passport || "—"}</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-slate-400">
+              {t.clients.form.passportIssuedBy}
+            </span>
+            <span className="text-sm text-slate-700">
+              {selected.passport_issued_by || "—"}
+            </span>
+          </div>
         </div>
       )}
 
@@ -249,7 +269,7 @@ export function ClientAutocomplete({
         <button
           type="button"
           onClick={() => onNewClientChange({ ...emptyNewClient, name: query.trim() })}
-          className="mt-1 w-fit text-xs text-slate-500 hover:text-slate-900 hover:underline"
+          className="mt-1 w-fit rounded-md px-1.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
         >
           {t.clients.form.addNew}
         </button>

@@ -70,29 +70,30 @@ export default function PaymentReceiptPage() {
       </button>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none">
-        {/* Header band */}
-        <div className="relative flex flex-col items-center gap-2 bg-gradient-to-br from-slate-900 to-slate-700 px-6 py-7 text-center text-white print:bg-slate-900">
-          <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
+        {/* Header band — dark text on white rather than white-on-dark, so it
+            still reads correctly when "background graphics" is off in the
+            print dialog (the default in most browsers). */}
+        <div className="flex flex-col items-center gap-2 border-b-4 border-slate-900 px-6 py-7 text-center">
           {settings.company_logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={settings.company_logo_url}
               alt=""
-              className="h-12 w-12 rounded-lg bg-white object-contain p-1"
+              className="h-12 w-12 rounded-lg border border-slate-200 object-contain p-1"
             />
           )}
-          <p className="text-sm font-medium text-slate-200">
+          <p className="text-sm font-medium text-slate-500">
             {settings.company_name || t.appName}
           </p>
-          <p className="text-lg font-semibold tracking-tight">
+          <p className="text-lg font-semibold tracking-tight text-slate-900">
             {t.contracts.receipt.title}
             {receiptNo ? ` №${receiptNo}` : ""}
           </p>
           <span
-            className={`rounded-full px-3 py-0.5 text-xs font-medium ${
+            className={`rounded-full border px-3 py-0.5 text-xs font-medium ${
               payment.paid
-                ? "bg-emerald-400/20 text-emerald-300"
-                : "bg-amber-400/20 text-amber-300"
+                ? "border-emerald-300 text-emerald-700"
+                : "border-amber-300 text-amber-700"
             }`}
           >
             {payment.paid ? t.contracts.receipt.statusPaid : t.contracts.receipt.statusUnpaid}
@@ -158,7 +159,7 @@ export default function PaymentReceiptPage() {
         <p className="px-6 py-4 text-center text-xs text-slate-400">
           {settings.company_name || t.appName}
         </p>
-        <div className="h-1.5 bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400" />
+        <div className="border-t-4 border-slate-900" />
       </div>
     </div>
   );
