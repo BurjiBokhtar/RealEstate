@@ -5,7 +5,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { STATUS_COLORS } from "@/lib/objects/format";
@@ -15,6 +17,7 @@ import type { Building } from "@/lib/buildings/types";
 type Counts = {
   total: number;
   available: number;
+  reserved: number;
   sold: number;
   in_progress: number;
 };
@@ -69,6 +72,8 @@ type PaymentRow = {
 
 export default function DashboardPage() {
   const { t } = useLocale();
+  const { settings } = useSettings();
+  const brandName = settings.company_name || t.appName;
   const [allObjects, setAllObjects] = useState<ObjectRow[]>([]);
   const [allContracts, setAllContracts] = useState<ContractRow[]>([]);
   const [allPayments, setAllPayments] = useState<PaymentRow[]>([]);
@@ -157,6 +162,7 @@ export default function DashboardPage() {
     () => ({
       total: objects.length,
       available: objects.filter((o) => o.status === "available").length,
+      reserved: objects.filter((o) => o.status === "reserved").length,
       sold: objects.filter((o) => o.status === "sold").length,
       in_progress: objects.filter((o) => o.status === "in_progress").length,
     }),
@@ -305,6 +311,9 @@ export default function DashboardPage() {
       .sort((a, b) => b.tjs + b.usd - (a.tjs + a.usd));
   }, [allObjects, periodContracts, buildings, selectedBuildingId]);
 
+  const occupancyPct =
+    counts.total > 0 ? Math.round(((counts.total - counts.available) / counts.total) * 100) : 0;
+
   const cards = [
     { label: t.dashboard.totalObjects, value: counts.total },
     { label: t.dashboard.available, value: counts.available },
@@ -314,8 +323,20 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <DashboardHero
+        t={t}
+        loading={loading}
+        brandName={brandName}
+        occupancyPct={occupancyPct}
+        totalUnits={counts.total}
+        availableCount={counts.available}
+        reservedCount={counts.reserved}
+        soldCount={counts.sold}
+        paidRevenueLabel={formatPair(paidRevenue)}
+      />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t.dashboard.title}</h1>
+        <h2 className="text-lg font-semibold text-slate-700">{t.dashboard.title}</h2>
         <div className="flex items-center gap-3 print:hidden">
           <label className="flex items-center gap-2 text-sm">
             <span className="text-slate-500">{t.dashboard.filterBuilding}</span>
@@ -353,8 +374,12 @@ export default function DashboardPage() {
       {!configured && <SetupNotice />}
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {cards.map((card) => (
-          <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4">
+        {cards.map((card, i) => (
+          <div
+            key={card.label}
+            style={{ animationDelay: `${i * 40}ms` }}
+            className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"
+          >
             <div className="text-sm text-slate-500">{card.label}</div>
             <div className="mt-1 text-2xl font-semibold">
               {loading ? "…" : card.value}
@@ -364,19 +389,25 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
           <div className="text-sm text-slate-500">{t.dashboard.paidRevenue}</div>
           <div className="mt-1 text-xl font-semibold text-emerald-600">
             {loading ? "…" : formatPair(paidRevenue)}
           </div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div
+          style={{ animationDelay: "40ms" }}
+          className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="text-sm text-slate-500">{t.dashboard.totalDebt}</div>
           <div className="mt-1 text-xl font-semibold text-rose-600">
             {loading ? "…" : formatPair(totalDebt)}
           </div>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div
+          style={{ animationDelay: "80ms" }}
+          className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+        >
           <div className="text-sm text-slate-500">{t.dashboard.potentialRevenue}</div>
           <div className="mt-1 text-xl font-semibold text-slate-700">
             {loading ? "…" : formatPair(potentialRevenue)}

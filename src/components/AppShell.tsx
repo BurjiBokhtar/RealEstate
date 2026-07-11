@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useSettings } from "@/lib/settings/SettingsProvider";
+import { QuickSearch } from "@/components/QuickSearch";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 const navItems = [
@@ -67,10 +68,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 ${
                   active
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
+                    ? "bg-slate-900 text-white shadow-sm"
+                    : "text-slate-600 hover:translate-x-0.5 hover:bg-slate-100"
                 }`}
               >
                 {t.nav[item.key]}
@@ -109,20 +110,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {brandName}
             </span>
           </Link>
-          <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
-            {(["ru", "tj"] as Locale[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLocale(l)}
-                className={`rounded-full px-3 py-1 font-medium transition-colors ${
-                  locale === l
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-500 hover:bg-slate-100"
-                }`}
-              >
-                {l === "ru" ? "RU" : "ТОҶ"}
-              </button>
-            ))}
+          <div className="flex shrink-0 items-center gap-2">
+            <QuickSearch />
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
+              {(["ru", "tj"] as Locale[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLocale(l)}
+                  className={`rounded-full px-3 py-1 font-medium transition-colors ${
+                    locale === l
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-500 hover:bg-slate-100"
+                  }`}
+                >
+                  {l === "ru" ? "RU" : "ТОҶ"}
+                </button>
+              ))}
+            </div>
           </div>
         </header>
 

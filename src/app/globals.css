@@ -24,3 +24,66 @@
     margin: 0;
   }
 }
+
+/* ---- Motion & the dashboard hero's signature gradient ----
+   Palette pulled from Tajik atlas/adras silk (ikat) weaving -- indigo
+   ground shot through with saffron and mulberry -- rather than a generic
+   purple-blue SaaS gradient. Used once, deliberately, for the hero; the
+   rest of the app stays on the quiet slate/emerald/rose system. */
+:root {
+  --atlas-indigo: #1c1a3a;
+  --atlas-plum: #5b3468;
+  --atlas-saffron: #e3a73b;
+  --atlas-apricot: #f0c47a;
+}
+
+.hero-gradient {
+  background: linear-gradient(
+    115deg,
+    var(--atlas-indigo) 0%,
+    var(--atlas-plum) 45%,
+    var(--atlas-saffron) 100%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  /* Buttons and button-styled links get a light press/lift interaction
+     everywhere in the app by default, so the whole product feels tactile
+     without hand-adding transition classes to every one of them. */
+  button:not(:disabled),
+  a[class*="rounded-"] {
+    transition:
+      transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1),
+      filter 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+  button:not(:disabled):active,
+  a[class*="rounded-"]:active {
+    transform: scale(0.96);
+  }
+  button.bg-slate-900:not(:disabled):hover,
+  a.bg-slate-900:hover {
+    filter: brightness(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    opacity: 1;
+  }
+}
