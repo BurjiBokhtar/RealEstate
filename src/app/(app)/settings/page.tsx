@@ -41,6 +41,7 @@ export default function SettingsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     setValues({
@@ -64,8 +65,10 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
+    setSaved(false);
     const supabase = createClient();
-    await supabase
+    const { error, data } = await supabase
       .schema("crm")
       .from("settings")
       .update({
@@ -80,9 +83,18 @@ export default function SettingsPage() {
         company_bank_details: values.company_bank_details || null,
         company_logo_url: values.company_logo_url || null,
       })
-      .eq("id", true);
-    await refresh();
+      .eq("id", true)
+      .select("id");
     setSaving(false);
+    if (error) {
+      setSaveError(error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setSaveError(t.settings.saveBlocked);
+      return;
+    }
+    await refresh();
     setSaved(true);
   };
 
@@ -249,6 +261,7 @@ export default function SettingsPage() {
           {t.settings.save}
         </button>
         {saved && <span className="text-sm text-emerald-600">{t.settings.saved}</span>}
+        {saveError && <span className="text-sm text-red-600">{saveError}</span>}
       </div>
     </div>
   );

@@ -29,7 +29,11 @@ export const dictionaries = {
       remaining: "Остаток",
       allBuildings: "Все ЖК",
       filterBuilding: "Фильтр по ЖК",
-      printReport: "Печать / Сохранить PDF",
+      filterPeriod: "Период",
+      periodAll: "Всё время",
+      periodToday: "Сегодня",
+      periodMonth: "Этот месяц",
+      periodYear: "Этот год",
       noData: "Пока нет данных",
     },
     objects: {
@@ -390,6 +394,7 @@ export const dictionaries = {
       },
       save: "Сохранить настройки",
       saved: "Настройки сохранены",
+      saveBlocked: "Не удалось сохранить — запись настроек не найдена или доступ ограничен.",
       usersLink: "Управление сотрудниками →",
     },
     users: {
@@ -453,7 +458,11 @@ export const dictionaries = {
       remaining: "Боқимонда",
       allBuildings: "Ҳамаи МИ",
       filterBuilding: "Филтр аз рӯи МИ",
-      printReport: "Чоп / Захира ҳамчун PDF",
+      filterPeriod: "Давра",
+      periodAll: "Тамоми вақт",
+      periodToday: "Имрӯз",
+      periodMonth: "Ин моҳ",
+      periodYear: "Ин сол",
       noData: "Ҳоло маълумот нест",
     },
     objects: {
@@ -814,6 +823,7 @@ export const dictionaries = {
       },
       save: "Танзимотро захира кардан",
       saved: "Танзимот захира шуд",
+      saveBlocked: "Захира нашуд — сабти танзимот ёфт нашуд ё дастрасӣ маҳдуд аст.",
       usersLink: "Идоракунии кормандон →",
     },
     users: {

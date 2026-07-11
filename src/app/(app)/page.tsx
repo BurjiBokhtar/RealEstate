@@ -66,6 +66,7 @@ export default function DashboardPage() {
   const [allContracts, setAllContracts] = useState<ContractRow[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
   const [loading, setLoading] = useState(true);
   const configured = isSupabaseConfigured();
 
@@ -112,6 +113,31 @@ export default function DashboardPage() {
     if (!scopedObjectIds) return allContracts;
     return allContracts.filter((c) => scopedObjectIds.has(c.object_id));
   }, [allContracts, scopedObjectIds]);
+
+  const periodBounds = useMemo(() => {
+    if (periodFilter === "all") return null;
+    const now = new Date();
+    const start = new Date();
+    if (periodFilter === "month") start.setDate(1);
+    if (periodFilter === "year") start.setMonth(0, 1);
+    // "today": start stays "now" — comparing date-only strings below means
+    // both start and end resolve to today's date.
+    return {
+      start: start.toISOString().slice(0, 10),
+      end: now.toISOString().slice(0, 10),
+    };
+  }, [periodFilter]);
+
+  // Only figures derived from dated events (revenue/debt/who-owes-what) are
+  // scoped by the period filter — inventory snapshots (counts, occupancy)
+  // and the monthly trend chart intentionally stay unfiltered.
+  const periodContracts = useMemo(() => {
+    if (!periodBounds) return contracts;
+    return contracts.filter(
+      (c) =>
+        c.signed_date && c.signed_date >= periodBounds.start && c.signed_date <= periodBounds.end
+    );
+  }, [contracts, periodBounds]);
 
   const counts: Counts = useMemo(
     () => ({
@@ -165,7 +191,7 @@ export default function DashboardPage() {
 
   const debtors: Debtor[] = useMemo(() => {
     const debtorMap = new Map<string, Debtor>();
-    contracts
+    periodContracts
       .filter((c) => c.status !== "cancelled" && c.client)
       .forEach((c) => {
         const remaining = c.amount - c.paid_amount;
@@ -182,22 +208,22 @@ export default function DashboardPage() {
     return Array.from(debtorMap.values())
       .sort((a, b) => b.remaining - a.remaining)
       .slice(0, 5);
-  }, [contracts]);
+  }, [periodContracts]);
 
   const paidRevenue: MoneyPair = useMemo(() => {
     const v: MoneyPair = { tjs: 0, usd: 0 };
-    contracts
+    periodContracts
       .filter((c) => c.status !== "cancelled")
       .forEach((c) => {
         if (c.currency === "USD") v.usd += c.paid_amount;
         else v.tjs += c.paid_amount;
       });
     return v;
-  }, [contracts]);
+  }, [periodContracts]);
 
   const totalDebt: MoneyPair = useMemo(() => {
     const v: MoneyPair = { tjs: 0, usd: 0 };
-    contracts
+    periodContracts
       .filter((c) => c.status !== "cancelled")
       .forEach((c) => {
         const remaining = c.amount - c.paid_amount;
@@ -206,7 +232,7 @@ export default function DashboardPage() {
         else v.tjs += remaining;
       });
     return v;
-  }, [contracts]);
+  }, [periodContracts]);
 
   const potentialRevenue: MoneyPair = useMemo(() => {
     const v: MoneyPair = { tjs: 0, usd: 0 };
@@ -222,7 +248,7 @@ export default function DashboardPage() {
   const revenueByBuilding = useMemo(() => {
     const objectToBuilding = new Map(allObjects.map((o) => [o.id, o.building_id]));
     const map = new Map<string, MoneyPair>();
-    contracts
+    periodContracts
       .filter((c) => c.status !== "cancelled")
       .forEach((c) => {
         const buildingId = objectToBuilding.get(c.object_id);
@@ -240,7 +266,7 @@ export default function DashboardPage() {
       .map((b) => ({ id: b.id, name: b.name, ...(map.get(b.id) ?? { tjs: 0, usd: 0 }) }))
       .filter((b) => b.tjs > 0 || b.usd > 0)
       .sort((a, b) => b.tjs + b.usd - (a.tjs + a.usd));
-  }, [allObjects, contracts, buildings, selectedBuildingId]);
+  }, [allObjects, periodContracts, buildings, selectedBuildingId]);
 
   const cards = [
     { label: t.dashboard.totalObjects, value: counts.total },
@@ -269,13 +295,21 @@ export default function DashboardPage() {
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            {t.dashboard.printReport}
-          </button>
+          <label className="flex items-center gap-2 text-sm">
+            <span className="text-slate-500">{t.dashboard.filterPeriod}</span>
+            <select
+              value={periodFilter}
+              onChange={(e) =>
+                setPeriodFilter(e.target.value as "all" | "today" | "month" | "year")
+              }
+              className="rounded-md border border-slate-300 px-3 py-2"
+            >
+              <option value="all">{t.dashboard.periodAll}</option>
+              <option value="today">{t.dashboard.periodToday}</option>
+              <option value="month">{t.dashboard.periodMonth}</option>
+              <option value="year">{t.dashboard.periodYear}</option>
+            </select>
+          </label>
         </div>
       </div>
 

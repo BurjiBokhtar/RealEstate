@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, CURRENCIES } from "@/lib/currency";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
+import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
 import { ClientAutocomplete } from "@/components/ClientAutocomplete";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -61,6 +62,7 @@ export function ContractForm({
   const amountNum = Number(values.amount) || 0;
   const paidNum = Number(values.paid_amount) || 0;
   const pct = amountNum > 0 ? (paidNum / amountNum) * 100 : 0;
+  const lastAutoWords = useRef("");
 
   const handlePercentChange = (pctValue: string) => {
     const p = Number(pctValue) || 0;
@@ -96,6 +98,18 @@ export function ContractForm({
     update("number", computeContractNumber(selected));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [objects, values.object_id]);
+
+  // Auto-suggest the Tajik amount-in-words whenever the amount/currency
+  // changes, but only while the field still matches our last suggestion —
+  // once staff edit it by hand, further amount changes leave it alone.
+  useEffect(() => {
+    if (!amountNum) return;
+    if (values.amount_words && values.amount_words !== lastAutoWords.current) return;
+    const generated = amountToWordsTj(amountNum, values.currency);
+    lastAutoWords.current = generated;
+    update("amount_words", generated);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [amountNum, values.currency]);
 
   return (
     <form
