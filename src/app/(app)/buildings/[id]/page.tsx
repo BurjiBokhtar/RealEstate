@@ -54,20 +54,40 @@ export default function BuildingDetailPage() {
           "object_id",
           unitRows.map((u) => u.id)
         );
-      const map: Record<string, UnitContractInfo> = {};
-      for (const c of (contracts ?? []) as unknown as Array<{
+      const contractRows = (contracts ?? []) as unknown as Array<{
         id: string;
         object_id: string;
         amount: number;
         paid_amount: number;
         currency: UnitContractInfo["currency"];
         client: { name: string } | null;
-      }>) {
+      }>;
+
+      const paymentsCountByContract: Record<string, number> = {};
+      if (contractRows.length > 0) {
+        const { data: paymentRows } = await supabase
+          .schema("crm")
+          .from("contract_payments")
+          .select("contract_id")
+          .eq("paid", true)
+          .in(
+            "contract_id",
+            contractRows.map((c) => c.id)
+          );
+        for (const p of (paymentRows ?? []) as Array<{ contract_id: string }>) {
+          paymentsCountByContract[p.contract_id] =
+            (paymentsCountByContract[p.contract_id] ?? 0) + 1;
+        }
+      }
+
+      const map: Record<string, UnitContractInfo> = {};
+      for (const c of contractRows) {
         map[c.object_id] = {
           id: c.id,
           clientName: c.client?.name ?? "—",
           remaining: c.amount - c.paid_amount,
           currency: c.currency,
+          paymentsCount: paymentsCountByContract[c.id] ?? 0,
         };
       }
       setContractsByUnit(map);

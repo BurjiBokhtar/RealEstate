@@ -143,6 +143,8 @@ export const dictionaries = {
         title: "Приобретённые квартиры",
         object: "Квартира",
         totalDebt: "Общий долг",
+        paymentsCount: "Платежей",
+        pay: "Оплата / квитанция",
         empty: "Пока нет договоров с этим клиентом.",
       },
       paymentHistory: {
@@ -257,6 +259,12 @@ export const dictionaries = {
       },
       backToList: "К списку договоров",
       notFound: "Договор не найден",
+      cashier: {
+        title: "Оплата и квитанции",
+        subtitle: "Приём платежа и выдача квитанции — без открытия полной карточки договора.",
+        paymentsMade: "Платежей внесено",
+        editFull: "Полная карточка договора",
+      },
       print: {
         button: "Печать / Сохранить как PDF",
         title: "Договор купли-продажи",
@@ -331,7 +339,9 @@ export const dictionaries = {
         price: "Цена",
         owner: "Клиент",
         remaining: "Остаток к оплате",
+        paymentsCount: "Платежей внесено",
         clickHint: "ЛКМ — оформить договор · ПКМ — быстрая бронь",
+        clickHintBooked: "ЛКМ — оплата и квитанции",
       },
       merge: "Объединить со следующей",
       bookUnit: "Оформление брони / договора",
@@ -593,6 +603,8 @@ export const dictionaries = {
         title: "Хонаҳои харидашуда",
         object: "Хона",
         totalDebt: "Қарзи умумӣ",
+        paymentsCount: "Пардохтҳо",
+        pay: "Пардохт / квитансия",
         empty: "Ҳоло бо ин мизоҷ шартнома нест.",
       },
       paymentHistory: {
@@ -707,6 +719,12 @@ export const dictionaries = {
       },
       backToList: "Ба рӯйхати шартномаҳо",
       notFound: "Шартнома ёфт нашуд",
+      cashier: {
+        title: "Пардохт ва квитансия",
+        subtitle: "Қабули пардохт ва додани квитансия — бе кушодани корти пурраи шартнома.",
+        paymentsMade: "Пардохтҳои гузаронидашуда",
+        editFull: "Корти пурраи шартнома",
+      },
       print: {
         button: "Чоп / Захира ҳамчун PDF",
         title: "Шартномаи хариду фурӯш",
@@ -781,7 +799,9 @@ export const dictionaries = {
         price: "Нарх",
         owner: "Мизоҷ",
         remaining: "Боқимонда барои пардохт",
+        paymentsCount: "Пардохтҳои гузаронидашуда",
         clickHint: "Тугмаи чап — шартнома бастан · Тугмаи рост — брони тез",
+        clickHintBooked: "Тугмаи чап — пардохт ва квитансия",
       },
       merge: "Бо хонаи навбатӣ як кардан",
       bookUnit: "Брон / шартнома бастан",

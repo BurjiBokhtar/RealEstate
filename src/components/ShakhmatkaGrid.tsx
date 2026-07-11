@@ -11,6 +11,7 @@ export type UnitContractInfo = {
   clientName: string;
   remaining: number;
   currency: Currency;
+  paymentsCount: number;
 };
 
 const CELL = 64;
@@ -68,19 +69,19 @@ function UnitCell({
   );
   const canMerge = unit.status === "available" && nextUnit && nextUnit.status === "available";
 
-  // Left click: available -> open the full contract-drafting dialog; already
-  // booked/sold -> jump straight to that unit's contract (so staff can see
-  // the buyer and finish paperwork) if one exists, otherwise fall back to
-  // editing the unit itself.
+  // Left click: available -> open the full contract-drafting dialog.
+  // Already booked/sold -> a client paying their installment is routine
+  // front-desk work, not admin-only, so anyone jumps straight to that
+  // unit's payments/receipt screen if a contract exists; only the
+  // fallback (a unit marked busy with no contract at all) is gated to
+  // admins, since that means editing the raw unit record.
   const handlePrimaryAction = () => {
     if (unit.status === "available") {
       onBookUnit(unit);
+    } else if (contractInfo) {
+      router.push(`/contracts/${contractInfo.id}/payments`);
     } else if (canEditSold) {
-      if (contractInfo) {
-        router.push(`/contracts/${contractInfo.id}`);
-      } else {
-        router.push(`/objects/${unit.id}`);
-      }
+      router.push(`/objects/${unit.id}`);
     } else {
       onViewUnit(unit);
     }
@@ -146,11 +147,20 @@ function UnitCell({
                 {formatCurrency(contractInfo.remaining, contractInfo.currency)}
               </span>
             </p>
+            <p className="flex justify-between text-slate-500">
+              <span>{t.buildings.hover.paymentsCount}</span>
+              <span className="text-slate-700">{contractInfo.paymentsCount}</span>
+            </p>
           </>
         )}
         {unit.status === "available" && (
           <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
             {t.buildings.hover.clickHint}
+          </p>
+        )}
+        {contractInfo && (
+          <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
+            {t.buildings.hover.clickHintBooked}
           </p>
         )}
       </div>

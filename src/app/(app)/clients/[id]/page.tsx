@@ -185,12 +185,17 @@ export default function ClientDetailPage() {
                     <th className="py-2 font-medium">{t.contracts.form.amount}</th>
                     <th className="py-2 font-medium">{t.contracts.form.paidAmount}</th>
                     <th className="py-2 font-medium">{t.buildings.hover.remaining}</th>
+                    <th className="py-2 font-medium">{t.clients.purchases.paymentsCount}</th>
                     <th className="py-2 font-medium">{t.contracts.form.status}</th>
+                    <th className="py-2 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {contracts.map((c) => {
                     const remaining = c.amount - c.paid_amount;
+                    const paidCount = (paymentsByContract[c.id] ?? []).filter(
+                      (p) => p.paid
+                    ).length;
                     return (
                       <tr key={c.id} className="border-b border-slate-100 last:border-0">
                         <td className="py-2">
@@ -210,7 +215,16 @@ export default function ClientDetailPage() {
                         <td className="py-2 text-rose-600">
                           {remaining > 0 ? formatCurrency(remaining, c.currency) : "—"}
                         </td>
+                        <td className="py-2">{paidCount}</td>
                         <td className="py-2">{t.contracts.statuses[c.status]}</td>
+                        <td className="py-2">
+                          <Link
+                            href={`/contracts/${c.id}/payments`}
+                            className="text-xs font-medium text-slate-500 hover:underline"
+                          >
+                            {t.clients.purchases.pay}
+                          </Link>
+                        </td>
                       </tr>
                     );
                   })}
