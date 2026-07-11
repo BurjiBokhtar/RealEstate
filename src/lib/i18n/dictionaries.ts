@@ -266,6 +266,12 @@ export const dictionaries = {
         signature: "Подпись",
         date: "Дата",
       },
+      bookingPreview: {
+        title: "Договор создан",
+        subtitle: "Проверьте текст договора и распечатайте его или сохраните как PDF прямо здесь.",
+        openFull: "Открыть карточку договора",
+        done: "Готово",
+      },
       receipt: {
         title: "Квитанция об оплате",
         paidDate: "Дата оплаты",
@@ -325,9 +331,11 @@ export const dictionaries = {
         price: "Цена",
         owner: "Клиент",
         remaining: "Остаток к оплате",
+        clickHint: "ЛКМ — оформить договор · ПКМ — быстрая бронь",
       },
       merge: "Объединить со следующей",
       bookUnit: "Оформление брони / договора",
+      quickBooked: "Квартира забронирована",
       viewOnlyHint: "Только просмотр — изменить данные этой квартиры может администратор.",
       configure: "Настроить здание",
       floorBuilder: {
@@ -708,6 +716,12 @@ export const dictionaries = {
         signature: "Имзо",
         date: "Сана",
       },
+      bookingPreview: {
+        title: "Шартнома сохта шуд",
+        subtitle: "Матни шартномаро санҷед ва маҳз дар ҳамин ҷо чоп кунед ё ҳамчун PDF захира кунед.",
+        openFull: "Кушодани корти шартнома",
+        done: "Тайёр",
+      },
       receipt: {
         title: "Квитансияи пардохт",
         paidDate: "Санаи пардохт",
@@ -767,9 +781,11 @@ export const dictionaries = {
         price: "Нарх",
         owner: "Мизоҷ",
         remaining: "Боқимонда барои пардохт",
+        clickHint: "Тугмаи чап — шартнома бастан · Тугмаи рост — брони тез",
       },
       merge: "Бо хонаи навбатӣ як кардан",
       bookUnit: "Брон / шартнома бастан",
+      quickBooked: "Хона брон карда шуд",
       viewOnlyHint: "Танҳо дидан — маълумоти ин хонаро танҳо администратор тағир дода метавонад.",
       configure: "Танзими бино",
       floorBuilder: {

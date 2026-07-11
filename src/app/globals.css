@@ -4,3 +4,23 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Contract documents (standalone print page and the in-modal preview after
+   booking) share the #contract-print-area id. When printing, hide
+   everything else on the page -- the sidebar, modal backdrop, buttons --
+   and let just the document fill the sheet, wherever in the DOM it sits. */
+@media print {
+  body:has(#contract-print-area) * {
+    visibility: hidden;
+  }
+  body:has(#contract-print-area) #contract-print-area,
+  body:has(#contract-print-area) #contract-print-area * {
+    visibility: visible;
+  }
+  body:has(#contract-print-area) #contract-print-area {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+  }
+}

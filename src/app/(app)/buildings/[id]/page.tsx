@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
@@ -9,17 +9,16 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
 import { Modal } from "@/components/Modal";
-import { ContractForm } from "@/components/ContractForm";
+import { ContractBookingModal } from "@/components/ContractBookingModal";
+import { Toast, type ToastType } from "@/components/Toast";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
-import type { ContractInput } from "@/lib/contracts/types";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency } from "@/lib/currency";
 import { formatArea } from "@/lib/objects/format";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
-  const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
 
@@ -29,9 +28,11 @@ export default function BuildingDetailPage() {
     {}
   );
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
-  const [bookingSubmitting, setBookingSubmitting] = useState(false);
-  const [bookingError, setBookingError] = useState<string | null>(null);
   const [viewingUnit, setViewingUnit] = useState<PropertyObject | null>(null);
+  const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
+    message: null,
+    type: "success",
+  });
   const { role } = useRole();
 
   const loadUnits = useCallback(async () => {
@@ -48,13 +49,14 @@ export default function BuildingDetailPage() {
       const { data: contracts } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("object_id, amount, paid_amount, currency, client:clients(name)")
+        .select("id, object_id, amount, paid_amount, currency, client:clients(name)")
         .in(
           "object_id",
           unitRows.map((u) => u.id)
         );
       const map: Record<string, UnitContractInfo> = {};
       for (const c of (contracts ?? []) as unknown as Array<{
+        id: string;
         object_id: string;
         amount: number;
         paid_amount: number;
@@ -62,6 +64,7 @@ export default function BuildingDetailPage() {
         client: { name: string } | null;
       }>) {
         map[c.object_id] = {
+          id: c.id,
           clientName: c.client?.name ?? "—",
           remaining: c.amount - c.paid_amount,
           currency: c.currency,
@@ -110,55 +113,59 @@ export default function BuildingDetailPage() {
     await loadUnits();
   };
 
-  const handleBookingSubmit = async (values: ContractInput) => {
-    if (!bookingUnit) return;
-    setBookingSubmitting(true);
-    setBookingError(null);
-    const supabase = createClient();
-    const { data, error } = await supabase
+  // Right-click quick booking: reserve the unit instantly with no dialog.
+  // A contract still needs a client (DB constraint), so we reuse one shared
+  // placeholder "no client yet" record rather than asking staff anything --
+  // whoever finishes the paperwork can swap in the real buyer later by
+  // opening the contract (left click on the now-reserved cell).
+  const getOrCreateQuickBookingClient = async (
+    supabase: ReturnType<typeof createClient>
+  ): Promise<string> => {
+    const { data: existing } = await supabase
       .schema("crm")
-      .from("contracts")
+      .from("clients")
+      .select("id")
+      .eq("source", "quick_booking")
+      .limit(1)
+      .maybeSingle();
+    if (existing) return existing.id;
+
+    const { data: created, error } = await supabase
+      .schema("crm")
+      .from("clients")
       .insert({
-        number: values.number || null,
-        client_id: values.client_id,
-        object_id: values.object_id,
-        amount: values.amount ? Number(values.amount) : 0,
-        paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
-        currency: values.currency,
-        amount_words: values.amount_words || null,
-        status: values.status,
-        signed_date: values.signed_date || null,
-        notes: values.notes || null,
-        payment_type: values.payment_type,
-        installment_months: values.installment_months
-          ? Number(values.installment_months)
-          : null,
-        barter_details: values.barter_details || null,
+        name: "Без клиента (быстрая бронь)",
+        source: "quick_booking",
+        status: "new",
       })
       .select("id")
       .single();
+    if (error || !created) throw new Error(error?.message ?? t.common.error);
+    return created.id;
+  };
 
-    if (!error && data) {
-      // Object status (available/reserved/sold) is derived automatically by
-      // a DB trigger from the contract's paid_amount -- no manual update
-      // needed here, and setting it here would race with that trigger.
-      const paidAmount = values.paid_amount ? Number(values.paid_amount) : 0;
-      if (paidAmount > 0) {
-        const paidDate = values.signed_date || new Date().toISOString().slice(0, 10);
-        await supabase.schema("crm").from("contract_payments").insert({
-          contract_id: data.id,
-          due_date: paidDate,
-          amount: paidAmount,
-          paid: true,
-          paid_date: paidDate,
-        });
-      }
-
-      router.push(`/contracts/${data.id}`);
-      return;
+  const handleQuickBook = async (unit: PropertyObject) => {
+    const supabase = createClient();
+    try {
+      const clientId = await getOrCreateQuickBookingClient(supabase);
+      const { error } = await supabase.schema("crm").from("contracts").insert({
+        client_id: clientId,
+        object_id: unit.id,
+        amount: unit.price ?? 0,
+        paid_amount: 0,
+        currency: unit.currency,
+        status: "draft",
+        payment_type: "full",
+      });
+      if (error) throw new Error(error.message);
+      await loadUnits();
+      setToast({ message: t.buildings.quickBooked, type: "success" });
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : t.common.error,
+        type: "error",
+      });
     }
-    setBookingError(error?.message ?? t.common.error);
-    setBookingSubmitting(false);
   };
 
   return (
@@ -197,30 +204,18 @@ export default function BuildingDetailPage() {
             units={units}
             contractsByUnit={contractsByUnit}
             onBookUnit={setBookingUnit}
+            onQuickBook={handleQuickBook}
             onMergeUnits={handleMergeUnits}
             canEditSold={role === "admin"}
             onViewUnit={setViewingUnit}
           />
 
           {bookingUnit && (
-            <Modal
-              title={t.buildings.bookUnit}
-              onClose={() => {
-                setBookingUnit(null);
-                setBookingError(null);
-              }}
-            >
-              <ContractForm
-                initial={{
-                  object_id: bookingUnit.id,
-                  amount: bookingUnit.price?.toString() ?? "",
-                  currency: bookingUnit.currency,
-                }}
-                submitting={bookingSubmitting}
-                onSubmit={handleBookingSubmit}
-              />
-              {bookingError && <p className="mt-2 text-sm text-red-600">{bookingError}</p>}
-            </Modal>
+            <ContractBookingModal
+              unit={bookingUnit}
+              onClose={() => setBookingUnit(null)}
+              onBooked={loadUnits}
+            />
           )}
 
           {viewingUnit && (
@@ -275,6 +270,11 @@ export default function BuildingDetailPage() {
           )}
         </>
       )}
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onDismiss={() => setToast((prev) => ({ ...prev, message: null }))}
+      />
     </div>
   );
 }

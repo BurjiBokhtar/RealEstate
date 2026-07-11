@@ -1,0 +1,162 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { Modal } from "@/components/Modal";
+import { ContractForm } from "@/components/ContractForm";
+import { ContractDocument, type ContractDocumentData } from "@/components/ContractDocument";
+import type { ContractInput, ContractPayment } from "@/lib/contracts/types";
+import type { PropertyObject } from "@/lib/objects/types";
+
+type PreviewContract = ContractDocumentData & { id: string };
+
+// Left-click booking flow for the shakhmatka: fill in the buyer and terms,
+// then -- without leaving the dialog -- see the generated contract text and
+// print it or save it as a PDF right there. "Save" only creates the
+// contract; the print/PDF step happens here in the preview stage.
+export function ContractBookingModal({
+  unit,
+  onClose,
+  onBooked,
+}: {
+  unit: PropertyObject;
+  onClose: () => void;
+  onBooked: () => void;
+}) {
+  const { t } = useLocale();
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PreviewContract | null>(null);
+  const [payments, setPayments] = useState<ContractPayment[]>([]);
+
+  const handleSubmit = async (values: ContractInput) => {
+    setSubmitting(true);
+    setError(null);
+    const supabase = createClient();
+    const { data, error: insertError } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .insert({
+        number: values.number || null,
+        client_id: values.client_id,
+        object_id: values.object_id,
+        amount: values.amount ? Number(values.amount) : 0,
+        paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
+        currency: values.currency,
+        amount_words: values.amount_words || null,
+        status: values.status,
+        signed_date: values.signed_date || null,
+        notes: values.notes || null,
+        payment_type: values.payment_type,
+        installment_months: values.installment_months
+          ? Number(values.installment_months)
+          : null,
+        barter_details: values.barter_details || null,
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !data) {
+      setError(insertError?.message ?? t.common.error);
+      setSubmitting(false);
+      return;
+    }
+
+    // Object status (available/reserved/sold) is derived automatically by a
+    // DB trigger from the contract's paid_amount -- no manual update here.
+    const paidAmount = values.paid_amount ? Number(values.paid_amount) : 0;
+    if (paidAmount > 0) {
+      const paidDate = values.signed_date || new Date().toISOString().slice(0, 10);
+      await supabase.schema("crm").from("contract_payments").insert({
+        contract_id: data.id,
+        due_date: paidDate,
+        amount: paidAmount,
+        paid: true,
+        paid_date: paidDate,
+      });
+    }
+
+    const [{ data: full }, { data: paymentRows }] = await Promise.all([
+      supabase
+        .schema("crm")
+        .from("contracts")
+        .select(
+          "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, building:buildings(address, price_per_sqm))"
+        )
+        .eq("id", data.id)
+        .maybeSingle(),
+      supabase
+        .schema("crm")
+        .from("contract_payments")
+        .select("*")
+        .eq("contract_id", data.id)
+        .order("due_date", { ascending: true }),
+    ]);
+
+    setSubmitting(false);
+    onBooked();
+
+    if (!full) {
+      // Contract was created fine, just couldn't reload it for preview --
+      // send staff to the full contract page instead of leaving them stuck.
+      onClose();
+      return;
+    }
+    setPreview(full as unknown as PreviewContract);
+    setPayments((paymentRows ?? []) as ContractPayment[]);
+  };
+
+  const title = preview
+    ? `${t.contracts.bookingPreview.title}${preview.number ? ` №${preview.number}` : ""}`
+    : t.buildings.bookUnit;
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      {!preview ? (
+        <>
+          <ContractForm
+            initial={{
+              object_id: unit.id,
+              amount: unit.price?.toString() ?? "",
+              currency: unit.currency,
+            }}
+            submitting={submitting}
+            onSubmit={handleSubmit}
+          />
+          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        </>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-500">{t.contracts.bookingPreview.subtitle}</p>
+
+          <ContractDocument contract={preview} payments={payments} />
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
+            >
+              {t.contracts.print.button}
+            </button>
+            <Link
+              href={`/contracts/${preview.id}`}
+              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              {t.contracts.bookingPreview.openFull}
+            </Link>
+            <button
+              type="button"
+              onClick={onClose}
+              className="ml-auto rounded-lg px-4 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-slate-100"
+            >
+              {t.contracts.bookingPreview.done}
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}

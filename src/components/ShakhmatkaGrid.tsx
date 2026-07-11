@@ -7,6 +7,7 @@ import { formatCurrency, type Currency } from "@/lib/currency";
 import type { PropertyObject } from "@/lib/objects/types";
 
 export type UnitContractInfo = {
+  id: string;
   clientName: string;
   remaining: number;
   currency: Currency;
@@ -42,6 +43,7 @@ function UnitCell({
   floorUnits,
   contractInfo,
   onBookUnit,
+  onQuickBook,
   onMergeUnits,
   canEditSold,
   onViewUnit,
@@ -51,6 +53,7 @@ function UnitCell({
   floorUnits: PropertyObject[];
   contractInfo: UnitContractInfo | undefined;
   onBookUnit: (unit: PropertyObject) => void;
+  onQuickBook: (unit: PropertyObject) => void;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -65,11 +68,19 @@ function UnitCell({
   );
   const canMerge = unit.status === "available" && nextUnit && nextUnit.status === "available";
 
+  // Left click: available -> open the full contract-drafting dialog; already
+  // booked/sold -> jump straight to that unit's contract (so staff can see
+  // the buyer and finish paperwork) if one exists, otherwise fall back to
+  // editing the unit itself.
   const handlePrimaryAction = () => {
     if (unit.status === "available") {
       onBookUnit(unit);
     } else if (canEditSold) {
-      router.push(`/objects/${unit.id}`);
+      if (contractInfo) {
+        router.push(`/contracts/${contractInfo.id}`);
+      } else {
+        router.push(`/objects/${unit.id}`);
+      }
     } else {
       onViewUnit(unit);
     }
@@ -82,7 +93,8 @@ function UnitCell({
         onClick={handlePrimaryAction}
         onContextMenu={(e) => {
           e.preventDefault();
-          if (unit.status === "available") onBookUnit(unit);
+          // Right click: instantly reserve an available unit, no dialog.
+          if (unit.status === "available") onQuickBook(unit);
         }}
         style={{ width }}
         className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-transform hover:scale-105 ${STATUS_COLORS[unit.status]}`}
@@ -136,6 +148,11 @@ function UnitCell({
             </p>
           </>
         )}
+        {unit.status === "available" && (
+          <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
+            {t.buildings.hover.clickHint}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -145,6 +162,7 @@ export function ShakhmatkaGrid({
   units,
   contractsByUnit,
   onBookUnit,
+  onQuickBook,
   onMergeUnits,
   canEditSold,
   onViewUnit,
@@ -152,6 +170,7 @@ export function ShakhmatkaGrid({
   units: PropertyObject[];
   contractsByUnit: Record<string, UnitContractInfo>;
   onBookUnit: (unit: PropertyObject) => void;
+  onQuickBook: (unit: PropertyObject) => void;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -241,6 +260,7 @@ export function ShakhmatkaGrid({
                           floorUnits={cellUnits}
                           contractInfo={contractsByUnit[unit.id]}
                           onBookUnit={onBookUnit}
+                          onQuickBook={onQuickBook}
                           onMergeUnits={onMergeUnits}
                           canEditSold={canEditSold}
                           onViewUnit={onViewUnit}
