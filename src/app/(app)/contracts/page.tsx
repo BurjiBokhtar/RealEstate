@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { Pagination } from "@/components/Pagination";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { formatCurrency } from "@/lib/currency";
 import {
@@ -13,6 +14,8 @@ import {
   type Contract,
   type ContractStatus,
 } from "@/lib/contracts/types";
+
+const PAGE_SIZE = 25;
 
 type ContractRow = Contract & {
   client: { name: string } | null;
@@ -24,8 +27,14 @@ export default function ContractsPage() {
   const configured = isSupabaseConfigured();
 
   const [contracts, setContracts] = useState<ContractRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ContractStatus | "all">("all");
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (!configured) {
@@ -33,20 +42,24 @@ export default function ContractsPage() {
       return;
     }
     const supabase = createClient();
-    supabase
+    setLoading(true);
+
+    let query = supabase
       .schema("crm")
       .from("contracts")
-      .select("*, client:clients(name), object:objects(name)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setContracts((data ?? []) as unknown as ContractRow[]);
-        setLoading(false);
-      });
-  }, [configured]);
+      .select("*, client:clients(name), object:objects(name)", { count: "exact" });
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    const from = (page - 1) * PAGE_SIZE;
+    query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
 
-  const filtered = useMemo(() => {
-    return contracts.filter((c) => statusFilter === "all" || c.status === statusFilter);
-  }, [contracts, statusFilter]);
+    query.then(({ data, count }) => {
+      setContracts((data ?? []) as unknown as ContractRow[]);
+      setTotalCount(count ?? 0);
+      setLoading(false);
+    });
+  }, [configured, page, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-5">
@@ -97,14 +110,14 @@ export default function ContractsPage() {
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && contracts.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   {t.contracts.empty}
                 </td>
               </tr>
             )}
-            {filtered.map((contract) => (
+            {contracts.map((contract) => (
               <tr
                 key={contract.id}
                 className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
@@ -134,6 +147,8 @@ export default function ContractsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }

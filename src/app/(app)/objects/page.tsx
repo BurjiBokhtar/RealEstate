@@ -7,6 +7,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { AddMenu } from "@/components/AddMenu";
+import { Pagination } from "@/components/Pagination";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency } from "@/lib/currency";
 import {
@@ -18,16 +20,25 @@ import {
 } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
 
+const PAGE_SIZE = 25;
+
 export default function ObjectsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
 
   const [objects, setObjects] = useState<PropertyObject[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebouncedValue(searchInput);
   const [typeFilter, setTypeFilter] = useState<ObjectType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ObjectStatus | "all">("all");
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter, statusFilter]);
 
   useEffect(() => {
     if (!configured) {
@@ -35,37 +46,39 @@ export default function ObjectsPage() {
       return;
     }
     const supabase = createClient();
-    Promise.all([
-      supabase
-        .schema("crm")
-        .from("objects")
-        .select("*")
-        .is("building_id", null)
-        .order("created_at", { ascending: false }),
-      supabase
-        .schema("crm")
-        .from("buildings")
-        .select("*")
-        .order("created_at", { ascending: false }),
-    ]).then(([objectsRes, buildingsRes]) => {
-      setObjects((objectsRes.data ?? []) as PropertyObject[]);
-      setBuildings((buildingsRes.data ?? []) as Building[]);
+    setLoading(true);
+
+    let query = supabase
+      .schema("crm")
+      .from("objects")
+      .select("*", { count: "exact" })
+      .is("building_id", null);
+    if (typeFilter !== "all") query = query.eq("type", typeFilter);
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    if (search.trim()) {
+      const q = search.trim();
+      query = query.or(`name.ilike.%${q}%,address.ilike.%${q}%`);
+    }
+    const from = (page - 1) * PAGE_SIZE;
+    query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+
+    query.then(({ data, count }) => {
+      setObjects((data ?? []) as PropertyObject[]);
+      setTotalCount(count ?? 0);
       setLoading(false);
     });
-  }, [configured]);
+  }, [configured, page, search, typeFilter, statusFilter]);
 
-  const filtered = useMemo(() => {
-    return objects.filter((o) => {
-      if (typeFilter !== "all" && o.type !== typeFilter) return false;
-      if (statusFilter !== "all" && o.status !== statusFilter) return false;
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        const haystack = `${o.name} ${o.address ?? ""}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [objects, typeFilter, statusFilter, search]);
+  useEffect(() => {
+    if (!configured) return;
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .from("buildings")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setBuildings((data ?? []) as Building[]));
+  }, [configured]);
 
   const filteredBuildings = useMemo(() => {
     if (typeFilter !== "all" || statusFilter !== "all") return [];
@@ -76,7 +89,8 @@ export default function ObjectsPage() {
     });
   }, [buildings, typeFilter, statusFilter, search]);
 
-  const empty = !loading && filtered.length === 0 && filteredBuildings.length === 0;
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const empty = !loading && objects.length === 0 && filteredBuildings.length === 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -95,8 +109,8 @@ export default function ObjectsPage() {
 
       <div className="flex flex-wrap gap-3">
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t.objects.search}
           className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
@@ -178,7 +192,7 @@ export default function ObjectsPage() {
                 </td>
               </tr>
             ))}
-            {filtered.map((obj) => (
+            {objects.map((obj) => (
               <tr
                 key={obj.id}
                 className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
@@ -206,6 +220,8 @@ export default function ObjectsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }

@@ -1,21 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { Pagination } from "@/components/Pagination";
 import { TASK_STATUS_COLORS } from "@/lib/tasks/format";
 import { TASK_STATUSES, type Task, type TaskStatusValue } from "@/lib/tasks/types";
+
+const PAGE_SIZE = 25;
 
 export default function TasksPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TaskStatusValue | "all">("all");
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
 
   useEffect(() => {
     if (!configured) {
@@ -23,20 +32,23 @@ export default function TasksPage() {
       return;
     }
     const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("tasks")
-      .select("*")
-      .order("due_date", { ascending: true, nullsFirst: false })
-      .then(({ data }) => {
-        setTasks((data ?? []) as Task[]);
-        setLoading(false);
-      });
-  }, [configured]);
+    setLoading(true);
 
-  const filtered = useMemo(() => {
-    return tasks.filter((task) => statusFilter === "all" || task.status === statusFilter);
-  }, [tasks, statusFilter]);
+    let query = supabase.schema("crm").from("tasks").select("*", { count: "exact" });
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    const from = (page - 1) * PAGE_SIZE;
+    query = query
+      .order("due_date", { ascending: true, nullsFirst: false })
+      .range(from, from + PAGE_SIZE - 1);
+
+    query.then(({ data, count }) => {
+      setTasks((data ?? []) as Task[]);
+      setTotalCount(count ?? 0);
+      setLoading(false);
+    });
+  }, [configured, page, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-5">
@@ -85,14 +97,14 @@ export default function TasksPage() {
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && tasks.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
                   {t.tasks.empty}
                 </td>
               </tr>
             )}
-            {filtered.map((task) => {
+            {tasks.map((task) => {
               const today = new Date().toISOString().slice(0, 10);
               const soonDate = new Date();
               soonDate.setDate(soonDate.getDate() + 3);
@@ -134,6 +146,8 @@ export default function TasksPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }

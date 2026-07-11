@@ -1,22 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { Pagination } from "@/components/Pagination";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { LEAD_STATUS_COLORS } from "@/lib/clients/format";
 import { LEAD_STATUSES, type Client, type LeadStatus } from "@/lib/clients/types";
+
+const PAGE_SIZE = 25;
 
 export default function ClientsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebouncedValue(searchInput);
   const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter]);
 
   useEffect(() => {
     if (!configured) {
@@ -24,28 +35,25 @@ export default function ClientsPage() {
       return;
     }
     const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("clients")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setClients((data ?? []) as Client[]);
-        setLoading(false);
-      });
-  }, [configured]);
+    setLoading(true);
 
-  const filtered = useMemo(() => {
-    return clients.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (search.trim()) {
-        const q = search.trim().toLowerCase();
-        const haystack = `${c.name} ${c.phone ?? ""}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
+    let query = supabase.schema("crm").from("clients").select("*", { count: "exact" });
+    if (statusFilter !== "all") query = query.eq("status", statusFilter);
+    if (search.trim()) {
+      const q = search.trim();
+      query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
+    }
+    const from = (page - 1) * PAGE_SIZE;
+    query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+
+    query.then(({ data, count }) => {
+      setClients((data ?? []) as Client[]);
+      setTotalCount(count ?? 0);
+      setLoading(false);
     });
-  }, [clients, statusFilter, search]);
+  }, [configured, page, search, statusFilter]);
+
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-5">
@@ -63,8 +71,8 @@ export default function ClientsPage() {
 
       <div className="flex flex-wrap gap-3">
         <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t.clients.search}
           className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
@@ -100,14 +108,14 @@ export default function ClientsPage() {
                 </td>
               </tr>
             )}
-            {!loading && filtered.length === 0 && (
+            {!loading && clients.length === 0 && (
               <tr>
                 <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
                   {t.clients.empty}
                 </td>
               </tr>
             )}
-            {filtered.map((client) => (
+            {clients.map((client) => (
               <tr
                 key={client.id}
                 className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
@@ -131,6 +139,8 @@ export default function ClientsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
