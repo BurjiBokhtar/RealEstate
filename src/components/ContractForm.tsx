@@ -19,17 +19,28 @@ const TEXTAREA_CLASS =
 
 type ObjectWithBuilding = PropertyObject & { building: { name: string } | null };
 
+export type LockedObject = {
+  id: string;
+  label: string;
+  buildingName: string | null;
+  positionInFloor: number | null;
+};
+
 // Contract numbers are system-generated, not typed by staff: building/object
 // initial + unit position + day of month, e.g. "Rudaki Residence" unit №1
 // today on the 11th -> "R-1-11".
-function computeContractNumber(object: ObjectWithBuilding | undefined): string {
+function computeContractNumber(
+  object:
+    | { name: string; positionInFloor: number | null; buildingName: string | null }
+    | undefined
+): string {
   if (!object) return "";
-  const source = (object.building?.name || object.name).trim();
+  const source = (object.buildingName || object.name).trim();
   if (!source) return "";
   const initial = source.charAt(0).toUpperCase();
   const day = new Date().getDate();
-  return object.position_in_floor != null
-    ? `${initial}-${object.position_in_floor}-${day}`
+  return object.positionInFloor != null
+    ? `${initial}-${object.positionInFloor}-${day}`
     : `${initial}-${day}`;
 }
 
@@ -54,11 +65,18 @@ export function ContractForm({
   submitting,
   onSubmit,
   onDelete,
+  lockedObject,
 }: {
   initial?: Partial<ContractInput>;
   submitting: boolean;
   onSubmit: (values: ContractInput) => void;
   onDelete?: () => void;
+  // When set, this form is opened for one specific, already-known unit (a
+  // shakhmatka booking click) -- the object field becomes a locked display
+  // instead of a searchable dropdown of every unit in the system, so staff
+  // can't accidentally book payment onto the wrong apartment, and we skip
+  // fetching the full objects table since nothing here needs it.
+  lockedObject?: LockedObject;
 }) {
   const { t } = useLocale();
   const [values, setValues] = useState<ContractInput>({ ...emptyInput, ...initial });
@@ -88,12 +106,15 @@ export function ContractForm({
       .select("*")
       .order("name")
       .then(({ data }) => setClients((data ?? []) as Client[]));
-    supabase
-      .schema("crm")
-      .from("objects")
-      .select("*, building:buildings(name)")
-      .order("name")
-      .then(({ data }) => setObjects((data ?? []) as unknown as ObjectWithBuilding[]));
+    if (!lockedObject) {
+      supabase
+        .schema("crm")
+        .from("objects")
+        .select("*, building:buildings(name)")
+        .order("name")
+        .then(({ data }) => setObjects((data ?? []) as unknown as ObjectWithBuilding[]));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = <K extends keyof ContractInput>(key: K, value: ContractInput[K]) =>
@@ -102,12 +123,31 @@ export function ContractForm({
   // Booking flow arrives with object_id already set (before `objects` has
   // loaded) — fill in the auto-generated number as soon as both are ready.
   useEffect(() => {
-    if (isExistingContract || values.number || !values.object_id) return;
+    if (isExistingContract || values.number) return;
+    if (lockedObject) {
+      update(
+        "number",
+        computeContractNumber({
+          name: lockedObject.label,
+          positionInFloor: lockedObject.positionInFloor,
+          buildingName: lockedObject.buildingName,
+        })
+      );
+      return;
+    }
+    if (!values.object_id) return;
     const selected = objects.find((o) => o.id === values.object_id);
     if (!selected) return;
-    update("number", computeContractNumber(selected));
+    update(
+      "number",
+      computeContractNumber({
+        name: selected.name,
+        positionInFloor: selected.position_in_floor,
+        buildingName: selected.building?.name ?? null,
+      })
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objects, values.object_id]);
+  }, [objects, values.object_id, lockedObject]);
 
   // Auto-suggest the Tajik amount-in-words whenever the amount/currency
   // changes, but only while the field still matches our last suggestion —
@@ -156,7 +196,7 @@ export function ContractForm({
   };
 
   return (
-    <form onSubmit={handleFormSubmit} className="flex max-w-xl flex-col gap-4">
+    <form onSubmit={handleFormSubmit} className={`flex flex-col gap-4 ${lockedObject ? "w-full" : "max-w-xl"}`}>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.contracts.form.number}</span>
         <input
@@ -176,32 +216,52 @@ export function ContractForm({
           newClient={newClient}
           onNewClientChange={setNewClient}
         />
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
-          <select
-            required
-            value={values.object_id}
-            onChange={(e) => {
-              const objectId = e.target.value;
-              const selected = objects.find((o) => o.id === objectId);
-              setValues((v) => ({
-                ...v,
-                object_id: objectId,
-                amount: v.amount || selected?.price?.toString() || v.amount,
-                currency: selected?.currency ?? v.currency,
-                number: isExistingContract ? v.number : computeContractNumber(selected),
-              }));
-            }}
-            className={FIELD_CLASS}
-          >
-            <option value="">{t.contracts.form.selectObject}</option>
-            {objects.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        {lockedObject ? (
+          <div className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
+            <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
+              <span className="font-semibold text-slate-900">{lockedObject.label}</span>
+              {lockedObject.buildingName && (
+                <span className="truncate text-xs text-slate-400">
+                  · {lockedObject.buildingName}
+                </span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
+            <select
+              required
+              value={values.object_id}
+              onChange={(e) => {
+                const objectId = e.target.value;
+                const selected = objects.find((o) => o.id === objectId);
+                setValues((v) => ({
+                  ...v,
+                  object_id: objectId,
+                  amount: v.amount || selected?.price?.toString() || v.amount,
+                  currency: selected?.currency ?? v.currency,
+                  number: isExistingContract
+                    ? v.number
+                    : computeContractNumber({
+                        name: selected?.name ?? "",
+                        positionInFloor: selected?.position_in_floor ?? null,
+                        buildingName: selected?.building?.name ?? null,
+                      }),
+                }));
+              }}
+              className={FIELD_CLASS}
+            >
+              <option value="">{t.contracts.form.selectObject}</option>
+              {objects.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       <div className="grid grid-cols-[2fr_2fr_1fr] gap-4">

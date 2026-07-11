@@ -273,6 +273,7 @@ export default function BuildingDetailPage() {
           {bookingUnit && (
             <ContractBookingModal
               unit={bookingUnit}
+              buildingName={building.name}
               onClose={() => setBookingUnit(null)}
               onBooked={loadUnits}
             />

@@ -62,6 +62,34 @@
     animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
+  @keyframes modal-backdrop-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes modal-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-modal-backdrop {
+    animation: modal-backdrop-in 0.2s ease-out both;
+  }
+
+  .animate-modal-panel {
+    animation: modal-panel-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
   /* Buttons and button-styled links get a light press/lift interaction
      everywhere in the app by default, so the whole product feels tactile
      without hand-adding transition classes to every one of them. */

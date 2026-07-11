@@ -18,10 +18,12 @@ type PreviewContract = ContractDocumentData & { id: string };
 // contract; the print/PDF step happens here in the preview stage.
 export function ContractBookingModal({
   unit,
+  buildingName,
   onClose,
   onBooked,
 }: {
   unit: PropertyObject;
+  buildingName: string | null;
   onClose: () => void;
   onBooked: () => void;
 }) {
@@ -113,7 +115,7 @@ export function ContractBookingModal({
     : t.buildings.bookUnit;
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose} size="lg">
       {!preview ? (
         <>
           <ContractForm
@@ -121,6 +123,12 @@ export function ContractBookingModal({
               object_id: unit.id,
               amount: unit.price?.toString() ?? "",
               currency: unit.currency,
+            }}
+            lockedObject={{
+              id: unit.id,
+              label: unit.name,
+              buildingName,
+              positionInFloor: unit.position_in_floor,
             }}
             submitting={submitting}
             onSubmit={handleSubmit}

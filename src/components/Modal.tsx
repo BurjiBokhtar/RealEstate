@@ -1,22 +1,29 @@
 "use client";
 
+const SIZE_CLASSES = {
+  md: "max-w-xl",
+  lg: "max-w-3xl",
+};
+
 export function Modal({
   title,
   onClose,
   children,
+  size = "md",
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  size?: "md" | "lg";
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="animate-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-[1px]"
       onClick={onClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl"
+        className={`animate-modal-panel max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ${SIZE_CLASSES[size]}`}
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
