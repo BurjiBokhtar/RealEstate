@@ -23,6 +23,19 @@ import {
 } from "@/lib/buildings/generateUnits";
 import { emptyBuildingInput } from "@/lib/buildings/types";
 
+const FIELD_CLASS =
+  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+const FIELD_CLASS_SM =
+  "h-9 w-full rounded-lg border border-slate-300 px-2.5 text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+const REMOVE_ICON_CLASS =
+  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg leading-none text-slate-400 transition-all hover:bg-red-50 hover:text-red-600 active:scale-90";
+const GHOST_BUTTON_CLASS =
+  "w-fit rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 transition-all hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]";
+const OUTLINE_BUTTON_CLASS =
+  "w-fit rounded-lg border-2 border-dashed border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 active:scale-[0.98]";
+const PRIMARY_BUTTON_CLASS =
+  "w-fit rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]";
+
 export default function NewBuildingPage() {
   const { t } = useLocale();
   const router = useRouter();
@@ -153,13 +166,20 @@ export default function NewBuildingPage() {
         hideUnitsPerFloor
         hideFloorsCount
       >
-        <div className="flex flex-col gap-4 border-t border-slate-200 pt-4">
-          <p className="text-sm font-semibold text-slate-700">{t.buildings.constructor.title}</p>
-          <p className="text-sm text-slate-500">{t.buildings.constructor.hint}</p>
+        <div className="flex flex-col gap-5 border-t border-slate-200 pt-5">
+          <div>
+            <p className="text-base font-semibold text-slate-900">
+              {t.buildings.constructor.title}
+            </p>
+            <p className="mt-1 text-sm text-slate-500">{t.buildings.constructor.hint}</p>
+          </div>
 
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {blocks.map((block, blockIdx) => (
-              <div key={blockIdx} className="rounded-lg border border-slate-200 p-3">
+              <div
+                key={blockIdx}
+                className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md"
+              >
                 <div className="mb-3 flex items-end justify-between gap-3">
                   <div className="grid flex-1 grid-cols-2 gap-3">
                     <label className="flex flex-col gap-1 text-sm">
@@ -170,7 +190,7 @@ export default function NewBuildingPage() {
                         value={block.name}
                         onChange={(e) => updateBlock(blockIdx, { name: e.target.value })}
                         placeholder={`${t.buildings.constructor.blockLabel} ${blockIdx + 1}`}
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className={FIELD_CLASS}
                       />
                     </label>
                     <label className="flex flex-col gap-1 text-sm">
@@ -184,7 +204,7 @@ export default function NewBuildingPage() {
                         onChange={(e) =>
                           updateBlock(blockIdx, { floorsCount: e.target.value })
                         }
-                        className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+                        className={FIELD_CLASS}
                       />
                     </label>
                   </div>
@@ -192,21 +212,22 @@ export default function NewBuildingPage() {
                     <button
                       type="button"
                       onClick={() => removeBlock(blockIdx)}
-                      className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                      title={t.buildings.constructor.removeBlock}
+                      className={REMOVE_ICON_CLASS}
                     >
-                      {t.buildings.constructor.removeBlock}
+                      ×
                     </button>
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-2.5">
                   {block.entrances.map((entrance, entranceIdx) => (
                     <div
                       key={entranceIdx}
-                      className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-end gap-2 rounded-md bg-slate-50 p-3"
+                      className="grid grid-cols-[1.5fr_1fr_1fr_auto] items-end gap-2 rounded-lg bg-slate-50 p-3"
                     >
                       <label className="flex flex-col gap-1 text-xs">
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-slate-600">
                           {t.buildings.constructor.entranceName}
                         </span>
                         <input
@@ -215,11 +236,11 @@ export default function NewBuildingPage() {
                             updateEntrance(blockIdx, entranceIdx, { name: e.target.value })
                           }
                           placeholder={`${t.buildings.constructor.entranceLabel} ${entranceIdx + 1}`}
-                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          className={FIELD_CLASS_SM}
                         />
                       </label>
                       <label className="flex flex-col gap-1 text-xs">
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-slate-600">
                           {t.buildings.constructor.unitsPerFloor}
                         </span>
                         <input
@@ -231,11 +252,11 @@ export default function NewBuildingPage() {
                               unitsPerFloor: e.target.value,
                             })
                           }
-                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          className={FIELD_CLASS_SM}
                         />
                       </label>
                       <label className="flex flex-col gap-1 text-xs">
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-slate-600">
                           {t.buildings.floorBuilder.type}
                         </span>
                         <select
@@ -245,7 +266,7 @@ export default function NewBuildingPage() {
                               type: e.target.value as ObjectType,
                             })
                           }
-                          className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                          className={FIELD_CLASS_SM}
                         >
                           {OBJECT_TYPES.map((type) => (
                             <option key={type} value={type}>
@@ -258,66 +279,63 @@ export default function NewBuildingPage() {
                         <button
                           type="button"
                           onClick={() => removeEntrance(blockIdx, entranceIdx)}
-                          className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                          title={t.buildings.constructor.removeEntrance}
+                          className={REMOVE_ICON_CLASS}
                         >
-                          {t.buildings.constructor.removeEntrance}
+                          ×
                         </button>
                       )}
                     </div>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => addEntrance(blockIdx)}
-                    className="w-fit rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                  >
+                  <button type="button" onClick={() => addEntrance(blockIdx)} className={GHOST_BUTTON_CLASS}>
                     {t.buildings.constructor.addEntrance}
                   </button>
                 </div>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addBlock}
-              className="w-fit rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-            >
+            <button type="button" onClick={addBlock} className={OUTLINE_BUTTON_CLASS}>
               {t.buildings.constructor.addBlock}
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 rounded-lg border border-dashed border-slate-300 p-3">
-            <p className="text-sm font-semibold text-slate-700">
-              {t.buildings.constructor.specialFloorsTitle}
-            </p>
-            <p className="text-xs text-slate-500">{t.buildings.constructor.specialFloorsHint}</p>
+          <div className="flex flex-col gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-4">
+            <div>
+              <p className="text-sm font-semibold text-slate-700">
+                {t.buildings.constructor.specialFloorsTitle}
+              </p>
+              <p className="mt-1 text-xs text-slate-500">
+                {t.buildings.constructor.specialFloorsHint}
+              </p>
+            </div>
             {specialFloors.map((special, idx) => (
               <div
                 key={idx}
-                className="grid grid-cols-[1.3fr_1fr_1fr_1fr_auto] items-end gap-2 rounded-md bg-slate-50 p-3"
+                className="grid grid-cols-[1.3fr_1fr_1fr_1fr_auto] items-end gap-2 rounded-lg border border-slate-200 bg-white p-3"
               >
                 <label className="flex flex-col gap-1 text-xs">
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-600">
                     {t.buildings.constructor.specialFloorLabel}
                   </span>
                   <input
                     value={special.label}
                     onChange={(e) => updateSpecialFloor(idx, { label: e.target.value })}
                     placeholder={t.buildings.constructor.specialFloorLabelPlaceholder}
-                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    className={FIELD_CLASS_SM}
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-600">
                     {t.buildings.constructor.specialFloorNumber}
                   </span>
                   <input
                     type="number"
                     value={special.floor}
                     onChange={(e) => updateSpecialFloor(idx, { floor: e.target.value })}
-                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    className={FIELD_CLASS_SM}
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-600">
                     {t.buildings.floorBuilder.count}
                   </span>
                   <input
@@ -325,11 +343,11 @@ export default function NewBuildingPage() {
                     min="1"
                     value={special.count}
                     onChange={(e) => updateSpecialFloor(idx, { count: e.target.value })}
-                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    className={FIELD_CLASS_SM}
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
-                  <span className="font-medium text-slate-700">
+                  <span className="font-medium text-slate-600">
                     {t.buildings.floorBuilder.type}
                   </span>
                   <select
@@ -337,7 +355,7 @@ export default function NewBuildingPage() {
                     onChange={(e) =>
                       updateSpecialFloor(idx, { type: e.target.value as ObjectType })
                     }
-                    className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                    className={FIELD_CLASS_SM}
                   >
                     {OBJECT_TYPES.map((type) => (
                       <option key={type} value={type}>
@@ -349,26 +367,19 @@ export default function NewBuildingPage() {
                 <button
                   type="button"
                   onClick={() => removeSpecialFloor(idx)}
-                  className="rounded-md border border-red-300 px-2 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                  title={t.buildings.constructor.removeSpecialFloor}
+                  className={REMOVE_ICON_CLASS}
                 >
-                  {t.buildings.constructor.removeSpecialFloor}
+                  ×
                 </button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addSpecialFloor}
-              className="w-fit rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-            >
+            <button type="button" onClick={addSpecialFloor} className={GHOST_BUTTON_CLASS}>
               {t.buildings.constructor.addSpecialFloor}
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleGenerate}
-            className="w-fit rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-          >
+          <button type="button" onClick={handleGenerate} className={PRIMARY_BUTTON_CLASS}>
             {t.buildings.constructor.generate}
           </button>
 

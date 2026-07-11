@@ -82,9 +82,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {userEmail && <span className="truncate px-3 text-xs text-slate-400">{userEmail}</span>}
           <button
             onClick={handleLogout}
-            className="rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 hover:bg-slate-100"
+            className="group flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition-all hover:bg-red-50 hover:text-red-600 active:scale-[0.97]"
           >
-            {t.login.logout}
+            <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+              {t.login.logout}
+            </span>
           </button>
         </div>
       </aside>

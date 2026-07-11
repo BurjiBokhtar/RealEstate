@@ -60,10 +60,18 @@ type ContractRow = {
   client: { id: string; name: string } | null;
 };
 
+type PaymentRow = {
+  paid: boolean;
+  paid_date: string | null;
+  amount: number;
+  contract: { currency: Currency; object_id: string } | null;
+};
+
 export default function DashboardPage() {
   const { t } = useLocale();
   const [allObjects, setAllObjects] = useState<ObjectRow[]>([]);
   const [allContracts, setAllContracts] = useState<ContractRow[]>([]);
+  const [allPayments, setAllPayments] = useState<PaymentRow[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
@@ -89,10 +97,16 @@ export default function DashboardPage() {
           "object_id, amount, paid_amount, currency, signed_date, status, client:clients(id, name)"
         ),
       supabase.schema("crm").from("buildings").select("*"),
-    ]).then(([objectsRes, contractsRes, buildingsRes]) => {
+      supabase
+        .schema("crm")
+        .from("contract_payments")
+        .select("paid, paid_date, amount, contract:contracts(currency, object_id)")
+        .eq("paid", true),
+    ]).then(([objectsRes, contractsRes, buildingsRes, paymentsRes]) => {
       setAllObjects((objectsRes.data ?? []) as ObjectRow[]);
       setAllContracts((contractsRes.data ?? []) as unknown as ContractRow[]);
       setBuildings((buildingsRes.data ?? []) as Building[]);
+      setAllPayments((paymentsRes.data ?? []) as unknown as PaymentRow[]);
       setLoading(false);
     });
   }, [configured]);
@@ -188,6 +202,29 @@ export default function DashboardPage() {
       .slice(-6)
       .map((month) => ({ month, ...monthMap.get(month)! }));
   }, [contracts]);
+
+  // Day-level granularity only makes sense once the period is narrowed down
+  // to "today" or "month" -- at "year"/"all" scope it would be hundreds of
+  // unreadable bars, so the existing monthly chart covers those instead.
+  const dailyRevenue: RevenueMonth[] = useMemo(() => {
+    if (periodFilter !== "today" && periodFilter !== "month") return [];
+    if (!periodBounds) return [];
+    const dayMap = new Map<string, { tjs: number; usd: number }>();
+    allPayments
+      .filter((p) => p.paid && p.paid_date && p.contract)
+      .filter((p) => !scopedObjectIds || scopedObjectIds.has(p.contract!.object_id))
+      .filter((p) => p.paid_date! >= periodBounds.start && p.paid_date! <= periodBounds.end)
+      .forEach((p) => {
+        const day = p.paid_date!;
+        const entry = dayMap.get(day) ?? { tjs: 0, usd: 0 };
+        if (p.contract!.currency === "USD") entry.usd += p.amount;
+        else entry.tjs += p.amount;
+        dayMap.set(day, entry);
+      });
+    return Array.from(dayMap.keys())
+      .sort()
+      .map((day) => ({ month: day, ...dayMap.get(day)! }));
+  }, [allPayments, scopedObjectIds, periodFilter, periodBounds]);
 
   const debtors: Debtor[] = useMemo(() => {
     const debtorMap = new Map<string, Debtor>();
@@ -346,6 +383,19 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {(periodFilter === "today" || periodFilter === "month") && (
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <p className="mb-4 text-sm font-semibold text-slate-700">
+            {t.dashboard.revenueByDay}
+          </p>
+          {dailyRevenue.length > 0 ? (
+            <RevenueChart data={dailyRevenue} />
+          ) : (
+            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          )}
+        </div>
+      )}
 
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <p className="mb-4 text-sm font-semibold text-slate-700">

@@ -4,6 +4,9 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { FileUploadField } from "@/components/FileUploadField";
 import type { BuildingInput } from "@/lib/buildings/types";
 
+const FIELD_CLASS =
+  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+
 export function BuildingForm({
   values,
   onChange,
@@ -42,7 +45,7 @@ export function BuildingForm({
           required
           value={values.name}
           onChange={(e) => update("name", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -51,7 +54,7 @@ export function BuildingForm({
         <input
           value={values.address}
           onChange={(e) => update("address", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -67,7 +70,7 @@ export function BuildingForm({
                 min="1"
                 value={values.floors_count}
                 onChange={(e) => update("floors_count", e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2"
+                className={FIELD_CLASS}
               />
             </label>
           )}
@@ -81,7 +84,7 @@ export function BuildingForm({
                 min="1"
                 value={values.units_per_floor}
                 onChange={(e) => update("units_per_floor", e.target.value)}
-                className="rounded-md border border-slate-300 px-3 py-2"
+                className={FIELD_CLASS}
               />
             </label>
           )}
@@ -96,7 +99,7 @@ export function BuildingForm({
           step="0.01"
           value={values.price_per_sqm}
           onChange={(e) => update("price_per_sqm", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          className={FIELD_CLASS}
         />
       </label>
 
@@ -125,7 +128,7 @@ export function BuildingForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {t.buildings.form.save}
         </button>
@@ -133,7 +136,7 @@ export function BuildingForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
           >
             {t.buildings.form.delete}
           </button>

@@ -73,7 +73,10 @@ export function UnitGridEditor({
         const groups = Array.from(new Set(floorUnits.map((u) => u.groupLabel)));
 
         return (
-          <div key={floor} className="rounded-lg border border-slate-200 p-3">
+          <div
+            key={floor}
+            className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-shadow hover:shadow-md"
+          >
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-semibold text-slate-700">
                 {t.buildings.constructor.floorLabel} {floor}
@@ -85,7 +88,7 @@ export function UnitGridEditor({
                     onChange={(e) =>
                       setCopyTargets((c) => ({ ...c, [floor]: e.target.value }))
                     }
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs"
+                    className="h-8 rounded-md border border-slate-300 px-2 text-xs transition-colors focus:border-slate-400 focus:outline-none"
                   >
                     <option value="">{t.buildings.constructor.copyTo}</option>
                     <option value="all">{t.buildings.constructor.copyToAll}</option>
@@ -101,7 +104,7 @@ export function UnitGridEditor({
                     type="button"
                     onClick={() => handleCopy(floor)}
                     disabled={!copyTargets[floor]}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                    className="h-8 rounded-md border border-slate-300 px-2.5 text-xs font-medium text-slate-700 transition-all hover:border-slate-400 hover:bg-slate-50 active:scale-95 disabled:opacity-40 disabled:active:scale-100"
                   >
                     {t.buildings.constructor.copyButton}
                   </button>
@@ -122,8 +125,10 @@ export function UnitGridEditor({
                     <div className="flex flex-wrap items-center gap-1">
                       {units.map((unit, idx) => (
                         <Fragment key={unit.position}>
-                          <div className="flex items-center gap-1 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5">
-                            <span className="text-xs text-slate-500">№{unit.position}</span>
+                          <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 transition-colors hover:border-slate-300">
+                            <span className="text-xs font-medium text-slate-500">
+                              №{unit.position}
+                            </span>
                             <select
                               value={unit.type}
                               onChange={(e) =>
@@ -170,7 +175,7 @@ export function UnitGridEditor({
                                 onClick={() => handleApplyColumn(unit)}
                                 disabled={!unit.rooms && !unit.area}
                                 title={t.buildings.constructor.applyColumnTitle}
-                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-200 hover:text-slate-700 disabled:opacity-30"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-all hover:bg-slate-200 hover:text-slate-700 active:scale-90 disabled:opacity-30 disabled:active:scale-100"
                               >
                                 ↓
                               </button>
@@ -189,7 +194,7 @@ export function UnitGridEditor({
                                   )
                                 }
                                 title={t.buildings.merge}
-                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs text-white hover:bg-slate-700"
+                                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs text-white shadow-sm transition-all hover:bg-slate-700 hover:shadow active:scale-90"
                               >
                                 +
                               </button>

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { formatCurrency } from "@/lib/currency";
+import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 type ContractWithRelations = Contract & {
@@ -21,6 +22,7 @@ export default function PaymentReceiptPage() {
     undefined
   );
   const [payment, setPayment] = useState<ContractPayment | null | undefined>(undefined);
+  const [receiptNo, setReceiptNo] = useState<number | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -38,6 +40,14 @@ export default function PaymentReceiptPage() {
       .eq("id", params.paymentId)
       .maybeSingle()
       .then(({ data }) => setPayment((data as ContractPayment) ?? null));
+    supabase
+      .schema("crm")
+      .from("contract_payments")
+      .select("id, due_date")
+      .eq("contract_id", params.id)
+      .then(({ data }) =>
+        setReceiptNo(receiptNumberFor((data ?? []) as ContractPayment[], params.paymentId))
+      );
   }, [params.id, params.paymentId]);
 
   if (contract === undefined || payment === undefined) {
@@ -74,7 +84,10 @@ export default function PaymentReceiptPage() {
           <p className="text-sm font-medium text-slate-200">
             {settings.company_name || t.appName}
           </p>
-          <p className="text-lg font-semibold tracking-tight">{t.contracts.receipt.title}</p>
+          <p className="text-lg font-semibold tracking-tight">
+            {t.contracts.receipt.title}
+            {receiptNo ? ` №${receiptNo}` : ""}
+          </p>
           <span
             className={`rounded-full px-3 py-0.5 text-xs font-medium ${
               payment.paid

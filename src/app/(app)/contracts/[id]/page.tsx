@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -22,20 +22,24 @@ export default function ContractDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const loadContract = useCallback(async () => {
+    const supabase = createClient();
+    const { data } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .select("*")
+      .eq("id", params.id)
+      .maybeSingle();
+    setContract((data as Contract) ?? null);
+  }, [params.id]);
+
   useEffect(() => {
     if (!configured) {
       setContract(null);
       return;
     }
-    const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("contracts")
-      .select("*")
-      .eq("id", params.id)
-      .maybeSingle()
-      .then(({ data }) => setContract((data as Contract) ?? null));
-  }, [configured, params.id]);
+    loadContract();
+  }, [configured, loadContract]);
 
   const handleSubmit = async (values: ContractInput) => {
     setSubmitting(true);
@@ -136,7 +140,7 @@ export default function ContractDetailPage() {
             onDelete={handleDelete}
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <ContractPayments contract={contract} />
+          <ContractPayments contract={contract} onPaymentAdded={loadContract} />
         </>
       )}
     </div>
