@@ -308,6 +308,9 @@ export const dictionaries = {
         statusPaid: "Платёж подтверждён",
         statusUnpaid: "Платёж ещё не отмечен как оплаченный",
         print: "Квитанция",
+        copyForClient: "Экземпляр покупателя",
+        copyForCompany: "Экземпляр продавца",
+        cutHere: "Линия отреза",
       },
       send: {
         whatsapp: "Отправить в WhatsApp",
@@ -789,6 +792,9 @@ export const dictionaries = {
         statusPaid: "Пардохт тасдиқ шуд",
         statusUnpaid: "Пардохт ҳанӯз тасдиқ нашудааст",
         print: "Квитансия",
+        copyForClient: "Нусхаи харидор",
+        copyForCompany: "Нусхаи фурӯшанда",
+        cutHere: "Хати буриш",
       },
       send: {
         whatsapp: "Ба WhatsApp фиристодан",
