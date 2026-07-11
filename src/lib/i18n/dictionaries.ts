@@ -192,6 +192,7 @@ export const dictionaries = {
       },
       form: {
         number: "Номер договора",
+        numberAuto: "Присвоится автоматически после выбора объекта",
         client: "Клиент",
         object: "Объект",
         amount: "Сумма договора (TJS)",
@@ -615,6 +616,7 @@ export const dictionaries = {
       },
       form: {
         number: "Рақами шартнома",
+        numberAuto: "Баъди интихоби объект худкор гузошта мешавад",
         client: "Мизоҷ",
         object: "Объект",
         amount: "Маблағи шартнома (TJS)",
@@ -628,7 +630,7 @@ export const dictionaries = {
         selectClient: "Мизоҷро интихоб кунед",
         selectObject: "Объектро интихоб кунед",
         paymentType: "Тарзи пардохт",
-        installmentMonths: "Мӯҳлати қасаки (моҳ)",
+        installmentMonths: "Мӯҳлати қисм-пардохт (моҳ)",
         barterDetails: "Тафсилоти бартер",
         percentOfAmount: "% аз маблағи шартнома",
         enterPercent: "Фоизро нишон додан",
@@ -644,7 +646,7 @@ export const dictionaries = {
       },
       paymentTypes: {
         full: "Пардохти пурра",
-        installment: "Қасаки (насия)",
+        installment: "Қисм-пардохт",
         barter: "Бартер",
       },
       payments: {

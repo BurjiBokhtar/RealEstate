@@ -20,6 +20,7 @@ export default function ContractDetailPage() {
 
   const [contract, setContract] = useState<Contract | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!configured) {
@@ -38,8 +39,9 @@ export default function ContractDetailPage() {
 
   const handleSubmit = async (values: ContractInput) => {
     setSubmitting(true);
+    setError(null);
     const supabase = createClient();
-    await supabase
+    const { error: updateError } = await supabase
       .schema("crm")
       .from("contracts")
       .update({
@@ -61,13 +63,26 @@ export default function ContractDetailPage() {
       })
       .eq("id", params.id);
     setSubmitting(false);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     router.push("/contracts");
   };
 
   const handleDelete = async () => {
     if (!window.confirm(t.contracts.form.confirmDelete)) return;
+    setError(null);
     const supabase = createClient();
-    await supabase.schema("crm").from("contracts").delete().eq("id", params.id);
+    const { error: deleteError } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .delete()
+      .eq("id", params.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
     router.push("/contracts");
   };
 
@@ -120,6 +135,7 @@ export default function ContractDetailPage() {
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          {error && <p className="text-sm text-red-600">{error}</p>}
           <ContractPayments contract={contract} />
         </>
       )}

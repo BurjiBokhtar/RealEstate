@@ -9,6 +9,22 @@ import { ClientAutocomplete } from "@/components/ClientAutocomplete";
 import type { Client } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
+type ObjectWithBuilding = PropertyObject & { building: { name: string } | null };
+
+// Contract numbers are system-generated, not typed by staff: building/object
+// initial + unit position + day of month, e.g. "Rudaki Residence" unit №1
+// today on the 11th -> "R-1-11".
+function computeContractNumber(object: ObjectWithBuilding | undefined): string {
+  if (!object) return "";
+  const source = (object.building?.name || object.name).trim();
+  if (!source) return "";
+  const initial = source.charAt(0).toUpperCase();
+  const day = new Date().getDate();
+  return object.position_in_floor != null
+    ? `${initial}-${object.position_in_floor}-${day}`
+    : `${initial}-${day}`;
+}
+
 const emptyInput: ContractInput = {
   number: "",
   client_id: "",
@@ -39,7 +55,8 @@ export function ContractForm({
   const { t } = useLocale();
   const [values, setValues] = useState<ContractInput>({ ...emptyInput, ...initial });
   const [clients, setClients] = useState<Client[]>([]);
-  const [objects, setObjects] = useState<PropertyObject[]>([]);
+  const [objects, setObjects] = useState<ObjectWithBuilding[]>([]);
+  const isExistingContract = Boolean(initial?.number);
 
   const amountNum = Number(values.amount) || 0;
   const paidNum = Number(values.paid_amount) || 0;
@@ -62,13 +79,23 @@ export function ContractForm({
     supabase
       .schema("crm")
       .from("objects")
-      .select("*")
+      .select("*, building:buildings(name)")
       .order("name")
-      .then(({ data }) => setObjects((data ?? []) as PropertyObject[]));
+      .then(({ data }) => setObjects((data ?? []) as unknown as ObjectWithBuilding[]));
   }, []);
 
   const update = <K extends keyof ContractInput>(key: K, value: ContractInput[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
+
+  // Booking flow arrives with object_id already set (before `objects` has
+  // loaded) — fill in the auto-generated number as soon as both are ready.
+  useEffect(() => {
+    if (isExistingContract || values.number || !values.object_id) return;
+    const selected = objects.find((o) => o.id === values.object_id);
+    if (!selected) return;
+    update("number", computeContractNumber(selected));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [objects, values.object_id]);
 
   return (
     <form
@@ -83,7 +110,11 @@ export function ContractForm({
         <input
           value={values.number}
           onChange={(e) => update("number", e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2"
+          readOnly={!isExistingContract}
+          placeholder={isExistingContract ? "" : t.contracts.form.numberAuto}
+          className={`rounded-md border border-slate-300 px-3 py-2 ${
+            isExistingContract ? "" : "bg-slate-50 text-slate-500"
+          }`}
         />
       </label>
 
@@ -106,6 +137,7 @@ export function ContractForm({
                 object_id: objectId,
                 amount: v.amount || selected?.price?.toString() || v.amount,
                 currency: selected?.currency ?? v.currency,
+                number: isExistingContract ? v.number : computeContractNumber(selected),
               }));
             }}
             className="rounded-md border border-slate-300 px-3 py-2"

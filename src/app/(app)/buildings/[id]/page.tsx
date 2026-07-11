@@ -30,6 +30,7 @@ export default function BuildingDetailPage() {
   );
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
   const [viewingUnit, setViewingUnit] = useState<PropertyObject | null>(null);
   const { role } = useRole();
 
@@ -112,6 +113,7 @@ export default function BuildingDetailPage() {
   const handleBookingSubmit = async (values: ContractInput) => {
     if (!bookingUnit) return;
     setBookingSubmitting(true);
+    setBookingError(null);
     const supabase = createClient();
     const { data, error } = await supabase
       .schema("crm")
@@ -158,6 +160,7 @@ export default function BuildingDetailPage() {
       router.push(`/contracts/${data.id}`);
       return;
     }
+    setBookingError(error?.message ?? t.common.error);
     setBookingSubmitting(false);
   };
 
@@ -203,7 +206,13 @@ export default function BuildingDetailPage() {
           />
 
           {bookingUnit && (
-            <Modal title={t.buildings.bookUnit} onClose={() => setBookingUnit(null)}>
+            <Modal
+              title={t.buildings.bookUnit}
+              onClose={() => {
+                setBookingUnit(null);
+                setBookingError(null);
+              }}
+            >
               <ContractForm
                 initial={{
                   object_id: bookingUnit.id,
@@ -213,6 +222,7 @@ export default function BuildingDetailPage() {
                 submitting={bookingSubmitting}
                 onSubmit={handleBookingSubmit}
               />
+              {bookingError && <p className="mt-2 text-sm text-red-600">{bookingError}</p>}
             </Modal>
           )}
 

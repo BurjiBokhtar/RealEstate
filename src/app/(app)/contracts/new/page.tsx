@@ -15,9 +15,11 @@ export default function NewContractPage() {
   const router = useRouter();
   const configured = isSupabaseConfigured();
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (values: ContractInput) => {
     setSubmitting(true);
+    setError(null);
     const supabase = createClient();
     const { data, error } = await supabase
       .schema("crm")
@@ -44,7 +46,9 @@ export default function NewContractPage() {
     setSubmitting(false);
     if (!error && data) {
       router.push(`/contracts/${data.id}`);
+      return;
     }
+    setError(error?.message ?? t.common.error);
   };
 
   return (
@@ -55,6 +59,7 @@ export default function NewContractPage() {
       <h1 className="text-2xl font-semibold">{t.contracts.newContract}</h1>
       {!configured && <SetupNotice />}
       <ContractForm submitting={submitting} onSubmit={handleSubmit} />
+      {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
 }
