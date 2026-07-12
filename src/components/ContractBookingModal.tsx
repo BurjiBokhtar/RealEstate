@@ -142,7 +142,26 @@ export function ContractBookingModal({
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-500">{t.contracts.bookingPreview.subtitle}</p>
 
-          <ContractDocument contract={preview} payments={payments} />
+          <div id="contract-print-area" className="flex flex-col gap-4">
+            <ContractDocument
+              contract={preview}
+              payments={payments}
+              copyLabel={t.contracts.receipt.copyForClient}
+            />
+            <div
+              aria-hidden="true"
+              className="flex items-center gap-2 text-slate-300 print:text-slate-400"
+            >
+              <span className="flex-1 border-t border-dashed border-current" />
+              <span className="text-xs">✂ {t.contracts.receipt.cutHere}</span>
+              <span className="flex-1 border-t border-dashed border-current" />
+            </div>
+            <ContractDocument
+              contract={preview}
+              payments={payments}
+              copyLabel={t.contracts.receipt.copyForCompany}
+            />
+          </div>
 
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button

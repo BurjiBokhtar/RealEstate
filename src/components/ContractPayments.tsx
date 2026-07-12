@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/currency";
 import { SendActions } from "@/components/SendActions";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
+import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 const FIELD_CLASS =
@@ -30,12 +31,14 @@ export function ContractPayments({
   onPaymentAdded?: () => void;
 }) {
   const { t } = useLocale();
+  const { role } = useRole();
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [generating, setGenerating] = useState(false);
   const [newAmount, setNewAmount] = useState("");
   const [newDate, setNewDate] = useState(today());
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -112,77 +115,55 @@ export function ContractPayments({
     onPaymentAdded?.();
   };
 
+  const handleDeletePayment = async (payment: ContractPayment) => {
+    if (!window.confirm(t.contracts.payments.confirmDelete)) return;
+    setDeletingId(payment.id);
+    setRecordError(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .schema("crm")
+      .from("contract_payments")
+      .delete()
+      .eq("id", payment.id);
+    if (error) {
+      setRecordError(error.message);
+      setDeletingId(null);
+      return;
+    }
+    // Deleting a payment that had already been counted as paid must also
+    // give that amount back on the contract, or paid_amount (and the
+    // object's sold/reserved status derived from it) silently drifts wrong.
+    if (payment.paid) {
+      await supabase
+        .schema("crm")
+        .from("contracts")
+        .update({ paid_amount: Math.max(contract.paid_amount - payment.amount, 0) })
+        .eq("id", contract.id);
+    }
+    setDeletingId(null);
+    await load();
+    onPaymentAdded?.();
+  };
+
+  const paidCount = payments.filter((p) => p.paid).length;
+
   return (
-    <div className="flex max-w-xl flex-col gap-3 rounded-lg border border-slate-200 bg-white p-4">
-      <p className="text-sm font-semibold text-slate-700">{t.contracts.payments.title}</p>
+    <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-slate-700">{t.contracts.payments.title}</p>
+        {payments.length > 0 && (
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+            {paidCount}/{payments.length}
+          </span>
+        )}
+      </div>
 
-      {payments.length === 0 && contract.payment_type === "installment" && (
-        <>
-          <p className="text-sm text-slate-400">{t.contracts.payments.generateHint}</p>
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={generating || !contract.installment_months}
-            className="w-fit rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50"
-          >
-            {t.contracts.payments.generate}
-          </button>
-        </>
-      )}
-
-      {payments.length > 0 && (
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
-            <tr>
-              <th className="py-2 font-medium">№</th>
-              <th className="py-2 font-medium">{t.contracts.payments.dueDate}</th>
-              <th className="py-2 font-medium">{t.contracts.payments.amount}</th>
-              <th className="py-2 font-medium">{t.contracts.payments.paid}</th>
-              <th className="py-2 font-medium"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {payments.map((p) => (
-              <tr key={p.id} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 text-slate-400">{receiptNumberFor(payments, p.id)}</td>
-                <td className="py-2">{p.due_date}</td>
-                <td className="py-2">{formatCurrency(p.amount, contract.currency)}</td>
-                <td className="py-2">
-                  <button
-                    type="button"
-                    onClick={() => togglePaid(p)}
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
-                      p.paid
-                        ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                        : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                    }`}
-                  >
-                    {p.paid ? t.contracts.payments.markUnpaid : t.contracts.payments.markPaid}
-                  </button>
-                </td>
-                <td className="py-2">
-                  <div className="flex flex-col items-start gap-1.5">
-                    <Link
-                      href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
-                      className="text-xs text-slate-500 hover:underline"
-                    >
-                      {t.contracts.receipt.print}
-                    </Link>
-                    {p.paid && (
-                      <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-
-      <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
+      {/* Recording a payment is the thing staff do here most often --
+          it gets the prominent spot at the top, not buried under a table. */}
+      <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
         <p className="text-xs font-medium text-slate-500">{t.contracts.payments.recordTitle}</p>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1 text-xs">
+          <label className="flex flex-1 flex-col gap-1 text-xs">
             <span className="text-slate-500">{t.contracts.payments.amount}</span>
             <input
               type="number"
@@ -190,7 +171,7 @@ export function ContractPayments({
               step="0.01"
               value={newAmount}
               onChange={(e) => setNewAmount(e.target.value)}
-              className={`${FIELD_CLASS} w-32`}
+              className={`${FIELD_CLASS} w-full`}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
@@ -202,17 +183,87 @@ export function ContractPayments({
               className={FIELD_CLASS}
             />
           </label>
-          <button
-            type="button"
-            onClick={handleRecordPayment}
-            disabled={recording || !newAmount}
-            className="h-9 rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
-          >
-            {recording ? t.common.loading : t.contracts.payments.record}
-          </button>
         </div>
+        <button
+          type="button"
+          onClick={handleRecordPayment}
+          disabled={recording || !newAmount}
+          className="h-9 w-full rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+        >
+          {recording ? t.common.loading : t.contracts.payments.record}
+        </button>
         {recordError && <p className="text-xs text-red-600">{recordError}</p>}
       </div>
+
+      {payments.length === 0 && contract.payment_type === "installment" && (
+        <>
+          <p className="text-sm text-slate-400">{t.contracts.payments.generateHint}</p>
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generating || !contract.installment_months}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:border-slate-400 hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50"
+          >
+            {t.contracts.payments.generate}
+          </button>
+        </>
+      )}
+
+      {payments.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {payments.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-col gap-2 rounded-lg border border-slate-100 px-3 py-2.5 transition-colors hover:border-slate-200"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-slate-900">
+                    {formatCurrency(p.amount, contract.currency)}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    №{receiptNumberFor(payments, p.id)} · {p.due_date}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => togglePaid(p)}
+                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
+                    p.paid
+                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                      : "bg-slate-200 text-slate-600 hover:bg-slate-300"
+                  }`}
+                >
+                  {p.paid ? t.contracts.payments.markUnpaid : t.contracts.payments.markPaid}
+                </button>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-1.5">
+                <Link
+                  href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
+                  className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                >
+                  {t.contracts.receipt.print}
+                </Link>
+                <div className="flex items-center gap-2">
+                  {p.paid && (
+                    <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
+                  )}
+                  {role === "admin" && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePayment(p)}
+                      disabled={deletingId === p.id}
+                      className="text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
+                    >
+                      {t.contracts.payments.deletePayment}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

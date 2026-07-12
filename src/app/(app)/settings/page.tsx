@@ -104,12 +104,20 @@ export default function SettingsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
         {role === "admin" && (
-          <Link
-            href="/settings/users"
-            className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
-          >
-            {t.settings.usersLink}
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              href="/settings/audit-log"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+            >
+              {t.settings.auditLogLink}
+            </Link>
+            <Link
+              href="/settings/users"
+              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+            >
+              {t.settings.usersLink}
+            </Link>
+          </div>
         )}
       </div>
 

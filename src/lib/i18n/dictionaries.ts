@@ -266,6 +266,8 @@ export const dictionaries = {
         enterPercent: "Указать %",
         currency: "Валюта",
         amountWords: "Сумма прописью",
+        missingRequiredClientFields:
+          "Для оформления договора у клиента должны быть указаны ФИО, паспортные данные и дата рождения.",
         amountWordsPlaceholder: "Например: триста сорок тысяч сомони",
       },
       statuses: {
@@ -293,6 +295,8 @@ export const dictionaries = {
         reminderSent: "SMS-напоминание отправлено",
         recordTitle: "Записать новый платёж (например, клиент пришёл оплатить взнос)",
         record: "Записать платёж",
+        deletePayment: "Удалить",
+        confirmDelete: "Удалить этот платёж? Если он был отмечен оплаченным, сумма будет вычтена из оплаченной по договору.",
       },
       backToList: "К списку договоров",
       notFound: "Договор не найден",
@@ -392,6 +396,10 @@ export const dictionaries = {
       bookUnit: "Оформление брони / договора",
       quickBooked: "Квартира забронирована",
       quickBookCancelled: "Бронь отменена",
+      resyncStatuses: "Синхронизировать статусы",
+      resyncHint:
+        "Пересчитать статус каждой квартиры заново по её договорам — на случай, если цвет на шахматке разошёлся с реальной оплатой.",
+      resyncDone: "Статусы синхронизированы",
       viewOnlyHint: "Только просмотр — изменить данные этой квартиры может администратор.",
       configure: "Настроить здание",
       floorBuilder: {
@@ -473,6 +481,7 @@ export const dictionaries = {
       saved: "Настройки сохранены",
       saveBlocked: "Не удалось сохранить — запись настроек не найдена или доступ ограничен.",
       usersLink: "Управление сотрудниками →",
+      auditLogLink: "Журнал событий →",
     },
     users: {
       title: "Сотрудники",
@@ -492,6 +501,25 @@ export const dictionaries = {
       confirmDelete: "Удалить этого сотрудника? Он потеряет доступ к системе.",
       cannotDeleteSelf: "Нельзя удалить свою же учётную запись",
       passwordHint: "Минимум 6 символов. Сотрудник сможет войти сразу этим паролем.",
+    },
+    auditLog: {
+      title: "Журнал событий",
+      subtitle: "Кто и когда удалил клиента, договор, платёж или квартиру. Видно только администратору.",
+      backToSettings: "← К настройкам",
+      empty: "Событий пока нет.",
+      date: "Когда",
+      actor: "Кто",
+      action: "Действие",
+      entityType: "Что",
+      details: "Детали",
+      actionDelete: "Удаление",
+      entityTypes: {
+        client: "Клиент",
+        contract: "Договор",
+        contract_payment: "Платёж",
+        object: "Квартира",
+      },
+      unknownActor: "Неизвестно",
     },
     login: {
       title: "Вход в RealEstate CRM",
@@ -773,6 +801,8 @@ export const dictionaries = {
         currency: "Асъор",
         amountWords: "Маблағ бо ҳарф",
         amountWordsPlaceholder: "Масалан: сесаду чил ҳазор сомонӣ",
+        missingRequiredClientFields:
+          "Барои бастани шартнома дар назди мизоҷ бояд ному насаб, маълумоти шиноснома ва санаи таваллуд нишон дода шавад.",
       },
       statuses: {
         draft: "Лоиҳа",
@@ -799,6 +829,9 @@ export const dictionaries = {
         reminderSent: "SMS-хотиррасонӣ фиристода шуд",
         recordTitle: "Пардохти навро сабт кардан (масалан, мизоҷ барои пардохт омад)",
         record: "Пардохтро сабт кардан",
+        deletePayment: "Нест кардан",
+        confirmDelete:
+          "Ин пардохт нест карда шавад? Агар қайд шуда буд, маблағаш аз суммаи пардохтшудаи шартнома кам карда мешавад.",
       },
       backToList: "Ба рӯйхати шартномаҳо",
       notFound: "Шартнома ёфт нашуд",
@@ -899,6 +932,10 @@ export const dictionaries = {
       bookUnit: "Брон / шартнома бастан",
       quickBooked: "Хона брон карда шуд",
       quickBookCancelled: "Брон бекор карда шуд",
+      resyncStatuses: "Синхронизатсияи статусҳо",
+      resyncHint:
+        "Статуси ҳар як хонаро аз рӯи шартномаҳояш аз нав ҳисоб кунед — агар ранги шахмата бо пардохти воқеӣ мувофиқат накунад.",
+      resyncDone: "Статусҳо синхронизатсия шуданд",
       viewOnlyHint: "Танҳо дидан — маълумоти ин хонаро танҳо администратор тағир дода метавонад.",
       configure: "Танзими бино",
       floorBuilder: {
@@ -980,6 +1017,7 @@ export const dictionaries = {
       saved: "Танзимот захира шуд",
       saveBlocked: "Захира нашуд — сабти танзимот ёфт нашуд ё дастрасӣ маҳдуд аст.",
       usersLink: "Идоракунии кормандон →",
+      auditLogLink: "Рӯзномаи рӯйдодҳо →",
     },
     users: {
       title: "Кормандон",
@@ -999,6 +1037,25 @@ export const dictionaries = {
       confirmDelete: "Ин кормандро нест кунам? Вай дастрасии система гум мекунад.",
       cannotDeleteSelf: "Ҳисоби худатонро нест карда наметавонед",
       passwordHint: "На кам аз 6 аломат. Корманд метавонад дарҳол бо ин парол ворид шавад.",
+    },
+    auditLog: {
+      title: "Рӯзномаи рӯйдодҳо",
+      subtitle: "Кӣ ва кай мизоҷ, шартнома, пардохт ё хонаро нест кардааст. Танҳо ба администратор намоён.",
+      backToSettings: "← Ба танзимот",
+      empty: "Ҳанӯз рӯйдод нест.",
+      date: "Кай",
+      actor: "Кӣ",
+      action: "Амал",
+      entityType: "Чӣ",
+      details: "Тафсилот",
+      actionDelete: "Нест кардан",
+      entityTypes: {
+        client: "Мизоҷ",
+        contract: "Шартнома",
+        contract_payment: "Пардохт",
+        object: "Хона",
+      },
+      unknownActor: "Номаълум",
     },
     login: {
       title: "Воридшавӣ ба RealEstate CRM",

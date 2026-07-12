@@ -178,6 +178,27 @@ export function ContractForm({
 
   const handleFormSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setClientError(null);
+
+    // A real estate purchase contract legally needs the buyer's full
+    // identification -- enforced here (not on the general lead-capture
+    // client form, which stays lightweight) and only for *new* contracts,
+    // so editing an older contract that predates this rule isn't blocked
+    // just because nobody went back and filled in its client's passport.
+    if (!isExistingContract) {
+      const resolvedClient = newClient ?? clients.find((c) => c.id === values.client_id);
+      const missing =
+        !resolvedClient ||
+        !resolvedClient.name?.trim() ||
+        !resolvedClient.passport?.trim() ||
+        !resolvedClient.passport_issued_by?.trim() ||
+        !resolvedClient.birth_date?.trim();
+      if (missing) {
+        setClientError(t.contracts.form.missingRequiredClientFields);
+        return;
+      }
+    }
+
     if (!newClient) {
       onSubmit(values);
       return;

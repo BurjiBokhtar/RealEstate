@@ -113,8 +113,11 @@ export function ClientAutocomplete({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.clients.form.passport}</span>
+            <span className="font-medium text-slate-700">
+              {t.clients.form.passport} <span className="text-red-500">*</span>
+            </span>
             <input
+              required
               value={newClient.passport}
               onChange={(e) => updateNew("passport", e.target.value)}
               placeholder={t.clients.form.passportPlaceholder}
@@ -123,9 +126,10 @@ export function ClientAutocomplete({
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700">
-              {t.clients.form.passportIssuedBy}
+              {t.clients.form.passportIssuedBy} <span className="text-red-500">*</span>
             </span>
             <input
+              required
               value={newClient.passport_issued_by}
               onChange={(e) => updateNew("passport_issued_by", e.target.value)}
               className={FIELD_CLASS}
@@ -135,8 +139,11 @@ export function ClientAutocomplete({
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.clients.form.birthDate}</span>
+            <span className="font-medium text-slate-700">
+              {t.clients.form.birthDate} <span className="text-red-500">*</span>
+            </span>
             <input
+              required
               type="date"
               value={newClient.birth_date}
               onChange={(e) => updateNew("birth_date", e.target.value)}
@@ -229,38 +236,55 @@ export function ClientAutocomplete({
       )}
 
       {selected && (
-        <div className="mt-1 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              {t.clients.form.phone}
-            </span>
-            <span className="text-sm text-slate-700">{selected.phone || "—"}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              {t.clients.form.birthDate}
-            </span>
-            <span className="text-sm text-slate-700">{selected.birth_date || "—"}</span>
-          </div>
-          <div className="col-span-2 flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              {t.clients.form.address}
-            </span>
-            <span className="text-sm text-slate-700">{selected.address || "—"}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              {t.clients.form.passport}
-            </span>
-            <span className="text-sm text-slate-700">{selected.passport || "—"}</span>
-          </div>
-          <div className="flex flex-col gap-0.5">
-            <span className="text-[11px] uppercase tracking-wide text-slate-400">
-              {t.clients.form.passportIssuedBy}
-            </span>
-            <span className="text-sm text-slate-700">
-              {selected.passport_issued_by || "—"}
-            </span>
+        <div className="mt-1 flex flex-col gap-2">
+          {(!selected.passport || !selected.passport_issued_by || !selected.birth_date) && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+              ⚠ {t.contracts.form.missingRequiredClientFields}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                {t.clients.form.phone}
+              </span>
+              <span className="text-sm text-slate-700">{selected.phone || "—"}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                {t.clients.form.birthDate}
+              </span>
+              <span
+                className={`text-sm ${selected.birth_date ? "text-slate-700" : "font-medium text-amber-600"}`}
+              >
+                {selected.birth_date || "—"}
+              </span>
+            </div>
+            <div className="col-span-2 flex flex-col gap-0.5">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                {t.clients.form.address}
+              </span>
+              <span className="text-sm text-slate-700">{selected.address || "—"}</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                {t.clients.form.passport}
+              </span>
+              <span
+                className={`text-sm ${selected.passport ? "text-slate-700" : "font-medium text-amber-600"}`}
+              >
+                {selected.passport || "—"}
+              </span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                {t.clients.form.passportIssuedBy}
+              </span>
+              <span
+                className={`text-sm ${selected.passport_issued_by ? "text-slate-700" : "font-medium text-amber-600"}`}
+              >
+                {selected.passport_issued_by || "—"}
+              </span>
+            </div>
           </div>
         </div>
       )}

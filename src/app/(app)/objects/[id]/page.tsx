@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ObjectForm } from "@/components/ObjectForm";
+import { useRole } from "@/lib/auth/useRole";
 import type { PropertyObject, PropertyObjectInput } from "@/lib/objects/types";
 
 export default function ObjectDetailPage() {
@@ -15,6 +16,7 @@ export default function ObjectDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
+  const { role } = useRole();
 
   const [object, setObject] = useState<PropertyObject | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
@@ -103,7 +105,7 @@ export default function ObjectDetailPage() {
             }}
             submitting={submitting}
             onSubmit={handleSubmit}
-            onDelete={handleDelete}
+            onDelete={role === "admin" ? handleDelete : undefined}
           />
           {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
         </>

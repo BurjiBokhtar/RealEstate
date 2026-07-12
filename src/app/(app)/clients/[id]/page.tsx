@@ -12,6 +12,7 @@ import { ClientQuickPayment } from "@/components/ClientQuickPayment";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
+import { useRole } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
 import type { ContractPayment, ContractStatus } from "@/lib/contracts/types";
 
@@ -31,6 +32,7 @@ export default function ClientDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
+  const { role } = useRole();
 
   const [client, setClient] = useState<Client | null | undefined>(undefined);
   const [interestedObject, setInterestedObject] = useState<{
@@ -190,7 +192,7 @@ export default function ClientDetailPage() {
                 }}
                 submitting={submitting}
                 onSubmit={handleSubmit}
-                onDelete={handleDelete}
+                onDelete={role === "admin" ? handleDelete : undefined}
               />
               {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
             </div>
@@ -292,12 +294,20 @@ export default function ClientDetailPage() {
                             </td>
                             <td className="px-3 py-3 text-center text-slate-600">{paidCount}</td>
                             <td className="px-5 py-3 text-right">
-                              <Link
-                                href={`/contracts/${c.id}/payments`}
-                                className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
-                              >
-                                {t.clients.purchases.pay} →
-                              </Link>
+                              <div className="flex items-center justify-end gap-3">
+                                <Link
+                                  href={`/contracts/${c.id}/print`}
+                                  className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                                >
+                                  {t.contracts.print.button}
+                                </Link>
+                                <Link
+                                  href={`/contracts/${c.id}/payments`}
+                                  className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                                >
+                                  {t.clients.purchases.pay} →
+                                </Link>
+                              </div>
                             </td>
                           </tr>
                         );

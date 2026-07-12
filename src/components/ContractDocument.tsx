@@ -32,16 +32,18 @@ export type ContractDocumentData = {
 
 // The printable contract letterhead — shared by the standalone print page
 // and the in-modal preview shown right after booking, so both produce
-// byte-for-byte the same document. `id` is used by the print CSS in
-// globals.css to hide everything else on the page while printing.
+// byte-for-byte the same document. Each caller wraps a pair of these (one
+// per copyLabel) in its own #contract-print-area element for the print CSS
+// in globals.css to scope to; this component no longer owns that id itself
+// so two copies on the same page don't end up with a duplicate id.
 export function ContractDocument({
   contract,
   payments,
-  id = "contract-print-area",
+  copyLabel,
 }: {
   contract: ContractDocumentData;
   payments: ContractPayment[];
-  id?: string;
+  copyLabel?: string;
 }) {
   const { t } = useLocale();
   const { settings } = useSettings();
@@ -72,9 +74,13 @@ export function ContractDocument({
 
   return (
     <div
-      id={id}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none"
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:shadow-none"
     >
+      {copyLabel && (
+        <p className="bg-slate-50 px-6 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-400 print:bg-transparent">
+          {copyLabel}
+        </p>
+      )}
       {/* Letterhead — dark text on white rather than white-on-dark, so it
           still reads correctly when "background graphics" is off in the
           print dialog (the default in most browsers), instead of printing

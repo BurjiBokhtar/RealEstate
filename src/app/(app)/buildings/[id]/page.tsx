@@ -37,6 +37,7 @@ export default function BuildingDetailPage() {
     position: number;
   } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
+  const [resyncing, setResyncing] = useState(false);
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
@@ -279,6 +280,30 @@ export default function BuildingDetailPage() {
     }
   };
 
+  // Manual escape hatch: the DB trigger that keeps a unit's status in sync
+  // with its contract's paid_amount is supposed to make this automatic and
+  // instant, but in case that trigger is ever missing, mid-deploy, or just
+  // hasn't been applied to this Supabase project yet, this recomputes every
+  // unit's status from its actual contracts server-side and re-fetches --
+  // a reliable way out that doesn't depend on the trigger having worked.
+  const handleResyncStatuses = async () => {
+    setResyncing(true);
+    const supabase = createClient();
+    try {
+      const { error } = await supabase.schema("crm").rpc("resync_all_object_statuses");
+      if (error) throw new Error(error.message);
+      await loadUnits();
+      setToast({ message: t.buildings.resyncDone, type: "success" });
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : t.common.error,
+        type: "error",
+      });
+    } finally {
+      setResyncing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5">
       <Link href="/buildings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
@@ -302,12 +327,23 @@ export default function BuildingDetailPage() {
               {building.address && <p className="text-sm text-slate-500">{building.address}</p>}
             </div>
             {role === "admin" && (
-              <Link
-                href={`/buildings/${building.id}/edit`}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                {t.buildings.configure}
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResyncStatuses}
+                  disabled={resyncing}
+                  title={t.buildings.resyncHint}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {resyncing ? t.common.loading : t.buildings.resyncStatuses}
+                </button>
+                <Link
+                  href={`/buildings/${building.id}/edit`}
+                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  {t.buildings.configure}
+                </Link>
+              </div>
             )}
           </div>
 

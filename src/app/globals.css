@@ -8,7 +8,13 @@
 /* Contract documents (standalone print page and the in-modal preview after
    booking) share the #contract-print-area id. When printing, hide
    everything else on the page -- the sidebar, modal backdrop, buttons --
-   and let just the document fill the sheet, wherever in the DOM it sits. */
+   and let just the document fill the sheet, wherever in the DOM it sits.
+   Deliberately NOT repositioned (no position:fixed): fixed elements don't
+   paginate in print, they just repeat the same single-viewport-height
+   slice on every page, which silently cut the contract body off a
+   multi-page document entirely. visibility:hidden alone is enough --
+   everything else already collapses via its own print:hidden (display:
+   none) classes, so there's no leftover blank space to worry about. */
 @media print {
   body:has(#contract-print-area) * {
     visibility: hidden;
@@ -17,13 +23,8 @@
   body:has(#contract-print-area) #contract-print-area * {
     visibility: visible;
   }
-  body:has(#contract-print-area) #contract-print-area {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    margin: 0;
-  }
 }
+
 
 /* ---- Motion & the dashboard hero's signature gradient ----
    Palette pulled from Tajik atlas/adras silk (ikat) weaving -- indigo

@@ -10,6 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
 import { SendActions } from "@/components/SendActions";
+import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractInput } from "@/lib/contracts/types";
 
 export default function ContractDetailPage() {
@@ -17,6 +18,7 @@ export default function ContractDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
+  const { role } = useRole();
 
   const [contract, setContract] = useState<Contract | null | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
@@ -118,29 +120,36 @@ export default function ContractDetailPage() {
               {t.contracts.print.button}
             </Link>
           </div>
-          <SendActions contractId={params.id} kind="contract" />
-          <ContractForm
-            initial={{
-              number: contract.number ?? "",
-              client_id: contract.client_id,
-              object_id: contract.object_id,
-              amount: contract.amount.toString(),
-              paid_amount: contract.paid_amount.toString(),
-              currency: contract.currency,
-              amount_words: contract.amount_words ?? "",
-              status: contract.status,
-              signed_date: contract.signed_date ?? "",
-              notes: contract.notes ?? "",
-              payment_type: contract.payment_type,
-              installment_months: contract.installment_months?.toString() ?? "",
-              barter_details: contract.barter_details ?? "",
-            }}
-            submitting={submitting}
-            onSubmit={handleSubmit}
-            onDelete={handleDelete}
-          />
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <ContractPayments contract={contract} onPaymentAdded={loadContract} />
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
+            <div className="flex flex-col gap-3">
+              <ContractForm
+                initial={{
+                  number: contract.number ?? "",
+                  client_id: contract.client_id,
+                  object_id: contract.object_id,
+                  amount: contract.amount.toString(),
+                  paid_amount: contract.paid_amount.toString(),
+                  currency: contract.currency,
+                  amount_words: contract.amount_words ?? "",
+                  status: contract.status,
+                  signed_date: contract.signed_date ?? "",
+                  notes: contract.notes ?? "",
+                  payment_type: contract.payment_type,
+                  installment_months: contract.installment_months?.toString() ?? "",
+                  barter_details: contract.barter_details ?? "",
+                }}
+                submitting={submitting}
+                onSubmit={handleSubmit}
+                onDelete={role === "admin" ? handleDelete : undefined}
+              />
+              {error && <p className="text-sm text-red-600">{error}</p>}
+            </div>
+
+            <div className="flex flex-col gap-5 xl:sticky xl:top-5">
+              <SendActions contractId={params.id} kind="contract" />
+              <ContractPayments contract={contract} onPaymentAdded={loadContract} />
+            </div>
+          </div>
         </>
       )}
     </div>

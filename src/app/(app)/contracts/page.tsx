@@ -119,19 +119,20 @@ export default function ContractsPage() {
               <th className="px-4 py-3 font-medium">{t.contracts.table.amount}</th>
               <th className="px-4 py-3 font-medium">{t.contracts.table.paid}</th>
               <th className="px-4 py-3 font-medium">{t.contracts.table.status}</th>
+              <th className="px-4 py-3 font-medium" />
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && contracts.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
                   {t.contracts.empty}
                 </td>
               </tr>
@@ -170,6 +171,22 @@ export default function ContractsPage() {
                   >
                     {t.contracts.statuses[contract.status]}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-3">
+                    <Link
+                      href={`/contracts/${contract.id}/payments`}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                    >
+                      {t.clients.purchases.pay}
+                    </Link>
+                    <Link
+                      href={`/contracts/${contract.id}/print`}
+                      className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                    >
+                      {t.contracts.print.button}
+                    </Link>
+                  </div>
                 </td>
               </tr>
             ))}

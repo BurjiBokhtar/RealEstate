@@ -65,7 +65,26 @@ export default function ContractPrintPage() {
         {t.contracts.print.button}
       </button>
 
-      <ContractDocument contract={contract} payments={payments} />
+      <div id="contract-print-area" className="flex flex-col gap-4">
+        <ContractDocument
+          contract={contract}
+          payments={payments}
+          copyLabel={t.contracts.receipt.copyForClient}
+        />
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-2 text-slate-300 print:text-slate-400"
+        >
+          <span className="flex-1 border-t border-dashed border-current" />
+          <span className="text-xs">✂ {t.contracts.receipt.cutHere}</span>
+          <span className="flex-1 border-t border-dashed border-current" />
+        </div>
+        <ContractDocument
+          contract={contract}
+          payments={payments}
+          copyLabel={t.contracts.receipt.copyForCompany}
+        />
+      </div>
     </div>
   );
 }
