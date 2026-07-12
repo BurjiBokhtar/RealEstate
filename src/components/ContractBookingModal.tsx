@@ -87,7 +87,7 @@ export function ContractBookingModal({
         .schema("crm")
         .from("contracts")
         .select(
-          "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, building:buildings(address, price_per_sqm))"
+          "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, floor, block, rooms, building:buildings(name, address, price_per_sqm))"
         )
         .eq("id", data.id)
         .maybeSingle(),

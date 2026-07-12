@@ -44,6 +44,13 @@
   --atlas-plum: #5b3468;
   --atlas-saffron: #e3a73b;
   --atlas-apricot: #f0c47a;
+  /* Checkboxes, radios, range inputs pick up the brand color natively. */
+  accent-color: var(--atlas-plum);
+}
+
+::selection {
+  background: rgb(227 167 59 / 0.35);
+  color: var(--atlas-indigo);
 }
 
 .hero-gradient {
@@ -138,9 +145,56 @@
   a[class*="rounded-"]:active {
     transform: scale(0.96);
   }
+}
+
+/* ---- Atlas-tinted interactivity ----
+   Every primary action, focus ring, and hover wash draws from the same
+   hero palette, so the whole app answers to one color voice instead of
+   generic gray buttons living under an indigo-saffron hero. These are
+   deliberately unlayered rules: in Tailwind v4 unlayered author CSS wins
+   over the utilities layer, which lets one block recolor every existing
+   `bg-slate-900` button without touching each component. Screen-only —
+   printed documents keep their plain ink-on-paper look. */
+@media screen {
+  button.bg-slate-900:not(:disabled),
+  a.bg-slate-900 {
+    background-image: linear-gradient(
+      135deg,
+      #2b2456 0%,
+      var(--atlas-plum) 70%,
+      #7c4a63 115%
+    );
+  }
   button.bg-slate-900:not(:disabled):hover,
   a.bg-slate-900:hover {
-    filter: brightness(1.1);
+    box-shadow:
+      0 4px 16px rgb(91 52 104 / 0.35),
+      0 1px 4px rgb(227 167 59 / 0.25);
+    filter: saturate(1.15) brightness(1.08);
+  }
+
+  /* Quiet/outline buttons warm up on hover instead of going gray. */
+  button[class*="border-slate-300"]:not(:disabled):hover,
+  a[class*="border-slate-300"]:hover {
+    border-color: rgb(91 52 104 / 0.45);
+    background-color: rgb(91 52 104 / 0.05);
+  }
+
+  /* One focus language for every text field: plum border, soft saffron
+     halo. Overrides each input's own slate focus utilities at once. */
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: rgb(91 52 104 / 0.55);
+    box-shadow: 0 0 0 3px rgb(227 167 59 / 0.22);
+  }
+
+  /* Keyboard navigation gets a clearly visible saffron outline. */
+  button:focus-visible,
+  a:focus-visible {
+    outline: 2px solid var(--atlas-saffron);
+    outline-offset: 2px;
   }
 }
 

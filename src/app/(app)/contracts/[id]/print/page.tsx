@@ -20,7 +20,10 @@ type ContractWithRelations = Contract & {
     name: string;
     address: string | null;
     area: number | null;
-    building: { address: string | null; price_per_sqm: number | null } | null;
+    floor: number | null;
+    block: string | null;
+    rooms: number | null;
+    building: { name: string; address: string | null; price_per_sqm: number | null } | null;
   } | null;
 };
 
@@ -38,7 +41,7 @@ export default function ContractPrintPage() {
       .schema("crm")
       .from("contracts")
       .select(
-        "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, building:buildings(address, price_per_sqm))"
+        "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, floor, block, rooms, building:buildings(name, address, price_per_sqm))"
       )
       .eq("id", params.id)
       .maybeSingle()
