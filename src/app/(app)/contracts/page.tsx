@@ -58,7 +58,18 @@ export default function ContractsPage() {
         count: "exact",
       });
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
-    if (!showQuickBookings) query = query.neq("client.source", "quick_booking");
+    if (!showQuickBookings) {
+      // Plain .neq("client.source", "quick_booking") would also silently
+      // drop every contract whose client has no source set at all --
+      // NULL <> 'quick_booking' is NULL (not true) in SQL, so a bare neq
+      // excludes NULLs instead of keeping them. Most real clients never
+      // have this optional field filled in, so that quietly hid the
+      // majority of real contracts from the default list. Explicitly keep
+      // NULLs alongside anything that isn't the placeholder value.
+      query = query.or("source.is.null,source.neq.quick_booking", {
+        referencedTable: "client",
+      });
+    }
     const from = (page - 1) * PAGE_SIZE;
     query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
 

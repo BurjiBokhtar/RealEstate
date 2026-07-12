@@ -120,27 +120,20 @@ export function ContractPayments({
     setDeletingId(payment.id);
     setRecordError(null);
     const supabase = createClient();
-    const { error } = await supabase
-      .schema("crm")
-      .from("contract_payments")
-      .delete()
-      .eq("id", payment.id);
-    if (error) {
-      setRecordError(error.message);
-      setDeletingId(null);
-      return;
-    }
     // Deleting a payment that had already been counted as paid must also
     // give that amount back on the contract, or paid_amount (and the
-    // object's sold/reserved status derived from it) silently drifts wrong.
-    if (payment.paid) {
-      await supabase
-        .schema("crm")
-        .from("contracts")
-        .update({ paid_amount: Math.max(contract.paid_amount - payment.amount, 0) })
-        .eq("id", contract.id);
-    }
+    // object's sold/reserved status derived from it) drifts wrong -- the
+    // RPC does the delete and the paid_amount adjustment as one atomic
+    // update instead of reading contract.paid_amount from this component's
+    // (possibly stale) props and writing back a computed value.
+    const { error } = await supabase.schema("crm").rpc("delete_payment", {
+      p_payment_id: payment.id,
+    });
     setDeletingId(null);
+    if (error) {
+      setRecordError(error.message);
+      return;
+    }
     await load();
     onPaymentAdded?.();
   };

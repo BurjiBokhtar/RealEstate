@@ -203,7 +203,12 @@ export default function BuildingDetailPage() {
         })
         .select("id")
         .single();
-      if (error || !data) throw new Error(error?.message ?? t.common.error);
+      if (error || !data) {
+        // 23505 = unique_violation on uq_contracts_object_active -- someone
+        // else's click landed on this same unit a moment earlier.
+        if (error?.code === "23505") throw new Error(t.buildings.alreadyBooked);
+        throw new Error(error?.message ?? t.common.error);
+      }
 
       // Flip the cell to "reserved" immediately in local state -- don't
       // wait on (or depend on) the DB-side status trigger to see it, so the
@@ -230,6 +235,11 @@ export default function BuildingDetailPage() {
         message: err instanceof Error ? err.message : t.common.error,
         type: "error",
       });
+      // Local state assumed the booking would succeed and never got
+      // updated -- reconcile with the server so a lost race (someone else
+      // booked this unit a moment earlier) doesn't leave the cell looking
+      // bookable when it no longer is.
+      await loadUnits();
     } finally {
       setPendingQuickBook((prev) => {
         const next = new Set(prev);
@@ -250,11 +260,9 @@ export default function BuildingDetailPage() {
     setPendingQuickBook((prev) => new Set(prev).add(unit.id));
     const supabase = createClient();
     try {
-      const { error } = await supabase
-        .schema("crm")
-        .from("contracts")
-        .delete()
-        .eq("id", contractId);
+      const { error } = await supabase.schema("crm").rpc("cancel_quick_booking", {
+        p_contract_id: contractId,
+      });
       if (error) throw new Error(error.message);
 
       setUnits((prev) =>
