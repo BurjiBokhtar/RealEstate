@@ -178,6 +178,7 @@ export function ShakhmatkaGrid({
   onBookUnit,
   onQuickBook,
   onCancelQuickBook,
+  onAddUnit,
   pendingUnitIds,
   onMergeUnits,
   canEditSold,
@@ -188,6 +189,7 @@ export function ShakhmatkaGrid({
   onBookUnit: (unit: PropertyObject) => void;
   onQuickBook: (unit: PropertyObject) => void;
   onCancelQuickBook: (unit: PropertyObject, contractId: string) => void;
+  onAddUnit: (floor: number, block: string, position: number) => void;
   pendingUnitIds: Set<string>;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
@@ -216,19 +218,45 @@ export function ShakhmatkaGrid({
   const floors = Array.from(new Set(units.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
   const apartmentNumbers = computeApartmentNumbers(units);
 
+  // Deleting a unit leaves a hole at its position that the grid used to
+  // just silently close up around -- nothing suggested a slot ever existed
+  // there or offered a way back. Pad each floor's row out to the widest
+  // position any floor in this block actually reaches, and render a ghost
+  // "+" cell at every gap so restoring (or adding) a specific unit is one
+  // click on the exact slot it belongs in.
+  const maxPositionByBlock = new Map<string, number>();
+  for (const block of blocks) {
+    const rightEdges = units
+      .filter((u) => (u.block ?? "") === block)
+      .map((u) => (u.position_in_floor ?? 0) + (u.span || 1) - 1);
+    maxPositionByBlock.set(block, rightEdges.length > 0 ? Math.max(...rightEdges) : 0);
+  }
+
+  type Slot = { kind: "unit"; unit: PropertyObject } | { kind: "ghost"; position: number };
+  function floorSlots(block: string, floor: number, cellUnits: PropertyObject[]): Slot[] {
+    const maxPosition = maxPositionByBlock.get(block) ?? 0;
+    const slots: Slot[] = [];
+    let p = 1;
+    while (p <= maxPosition) {
+      const unit = cellUnits.find((u) => (u.position_in_floor ?? 0) === p);
+      if (unit) {
+        slots.push({ kind: "unit", unit });
+        p += unit.span || 1;
+      } else {
+        slots.push({ kind: "ghost", position: p });
+        p += 1;
+      }
+    }
+    return slots;
+  }
+
   // Header labels and each floor's cell group live in separate flex rows, so
   // without a shared width per block column their gaps drift out of sync --
   // pin every block to the widest row it needs so columns stay aligned.
   const blockWidths = new Map<string, number>();
   for (const block of blocks) {
-    let widest = CELL;
-    for (const floor of floors) {
-      const cellUnits = units.filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor);
-      const width = cellUnits.reduce((sum, u) => sum + (u.span || 1) * CELL, 0) +
-        Math.max(0, cellUnits.length - 1) * GAP;
-      widest = Math.max(widest, width);
-    }
-    blockWidths.set(block, widest);
+    const slotCount = maxPositionByBlock.get(block) ?? 0;
+    blockWidths.set(block, slotCount * CELL + Math.max(0, slotCount - 1) * GAP);
   }
 
   return (
@@ -297,29 +325,47 @@ export function ShakhmatkaGrid({
                   const cellUnits = units
                     .filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor)
                     .sort((a, b) => (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0));
+                  const slots = floorSlots(block, floor, cellUnits);
                   return (
                     <div
                       key={block}
                       style={{ width: blockWidths.get(block) }}
                       className="flex shrink-0 flex-nowrap gap-2"
                     >
-                      {cellUnits.map((unit) => (
-                        <UnitCell
-                          key={unit.id}
-                          unit={unit}
-                          apartmentNumber={apartmentNumbers.get(unit.id)}
-                          floorUnits={cellUnits}
-                          contractInfo={contractsByUnit[unit.id]}
-                          onBookUnit={onBookUnit}
-                          onQuickBook={onQuickBook}
-                          onCancelQuickBook={onCancelQuickBook}
-                          isPending={pendingUnitIds.has(unit.id)}
-                          onMergeUnits={onMergeUnits}
-                          canEditSold={canEditSold}
-                          onViewUnit={onViewUnit}
-                          statusFilter={statusFilter}
-                        />
-                      ))}
+                      {slots.map((slot) =>
+                        slot.kind === "unit" ? (
+                          <UnitCell
+                            key={slot.unit.id}
+                            unit={slot.unit}
+                            apartmentNumber={apartmentNumbers.get(slot.unit.id)}
+                            floorUnits={cellUnits}
+                            contractInfo={contractsByUnit[slot.unit.id]}
+                            onBookUnit={onBookUnit}
+                            onQuickBook={onQuickBook}
+                            onCancelQuickBook={onCancelQuickBook}
+                            isPending={pendingUnitIds.has(slot.unit.id)}
+                            onMergeUnits={onMergeUnits}
+                            canEditSold={canEditSold}
+                            onViewUnit={onViewUnit}
+                            statusFilter={statusFilter}
+                          />
+                        ) : canEditSold ? (
+                          <button
+                            key={`ghost-${block}-${floor}-${slot.position}`}
+                            type="button"
+                            title={t.buildings.addUnitHere}
+                            onClick={() => onAddUnit(floor, block, slot.position)}
+                            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-slate-200 text-slate-300 transition-all hover:border-slate-400 hover:bg-slate-50 hover:text-slate-500 active:scale-95"
+                          >
+                            +
+                          </button>
+                        ) : (
+                          <div
+                            key={`ghost-${block}-${floor}-${slot.position}`}
+                            className="h-14 w-16 shrink-0 rounded-md border-2 border-dashed border-slate-100"
+                          />
+                        )
+                      )}
                     </div>
                   );
                 })}

@@ -10,6 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
 import { Modal } from "@/components/Modal";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
+import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
 import { Toast, type ToastType } from "@/components/Toast";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
@@ -30,6 +31,11 @@ export default function BuildingDetailPage() {
   );
   const [bookingUnit, setBookingUnit] = useState<PropertyObject | null>(null);
   const [viewingUnit, setViewingUnit] = useState<PropertyObject | null>(null);
+  const [addingUnit, setAddingUnit] = useState<{
+    floor: number;
+    block: string;
+    position: number;
+  } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
@@ -311,11 +317,26 @@ export default function BuildingDetailPage() {
             onBookUnit={setBookingUnit}
             onQuickBook={handleQuickBook}
             onCancelQuickBook={handleCancelQuickBook}
+            onAddUnit={(floor, block, position) => setAddingUnit({ floor, block, position })}
             pendingUnitIds={pendingQuickBook}
             onMergeUnits={handleMergeUnits}
             canEditSold={role === "admin"}
             onViewUnit={setViewingUnit}
           />
+
+          {addingUnit && (
+            <QuickAddUnitModal
+              buildingId={building.id}
+              floor={addingUnit.floor}
+              block={addingUnit.block}
+              position={addingUnit.position}
+              siblingUnit={units.find(
+                (u) => (u.block ?? "") === addingUnit.block && u.position_in_floor === addingUnit.position
+              )}
+              onClose={() => setAddingUnit(null)}
+              onAdded={loadUnits}
+            />
+          )}
 
           {bookingUnit && (
             <ContractBookingModal
