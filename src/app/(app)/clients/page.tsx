@@ -8,8 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
-import { LEAD_STATUS_COLORS } from "@/lib/clients/format";
-import { LEAD_STATUSES, type Client, type LeadStatus } from "@/lib/clients/types";
+import type { Client } from "@/lib/clients/types";
 
 const PAGE_SIZE = 25;
 
@@ -23,11 +22,10 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
-  const [statusFilter, setStatusFilter] = useState<LeadStatus | "all">("all");
 
   useEffect(() => {
     setPage(1);
-  }, [search, statusFilter]);
+  }, [search]);
 
   useEffect(() => {
     if (!configured) {
@@ -38,7 +36,6 @@ export default function ClientsPage() {
     setLoading(true);
 
     let query = supabase.schema("crm").from("clients").select("*", { count: "exact" });
-    if (statusFilter !== "all") query = query.eq("status", statusFilter);
     if (search.trim()) {
       const q = search.trim();
       query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
@@ -51,7 +48,7 @@ export default function ClientsPage() {
       setTotalCount(count ?? 0);
       setLoading(false);
     });
-  }, [configured, page, search, statusFilter]);
+  }, [configured, page, search]);
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -61,7 +58,7 @@ export default function ClientsPage() {
         <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
         <Link
           href="/clients/new"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
         >
           + {t.clients.newClient}
         </Link>
@@ -74,43 +71,30 @@ export default function ClientsPage() {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t.clients.search}
-          className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as LeadStatus | "all")}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
-        >
-          <option value="all">{t.clients.filters.allStatuses}</option>
-          {LEAD_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {t.clients.statuses[status]}
-            </option>
-          ))}
-        </select>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 text-slate-500">
             <tr>
               <th className="px-4 py-3 font-medium">{t.clients.table.name}</th>
               <th className="px-4 py-3 font-medium">{t.clients.table.phone}</th>
-              <th className="px-4 py-3 font-medium">{t.clients.table.status}</th>
-              <th className="px-4 py-3 font-medium">{t.clients.table.source}</th>
+              <th className="px-4 py-3 font-medium">{t.clients.form.email}</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && clients.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
                   {t.clients.empty}
                 </td>
               </tr>
@@ -118,7 +102,7 @@ export default function ClientsPage() {
             {clients.map((client) => (
               <tr
                 key={client.id}
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
               >
                 <td className="px-4 py-3 font-medium text-slate-900">
                   <Link href={`/clients/${client.id}`} className="block">
@@ -126,14 +110,7 @@ export default function ClientsPage() {
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{client.phone || "—"}</td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${LEAD_STATUS_COLORS[client.status]}`}
-                  >
-                    {t.clients.statuses[client.status]}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{client.source || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">{client.email || "—"}</td>
               </tr>
             ))}
           </tbody>

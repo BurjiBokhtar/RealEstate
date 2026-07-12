@@ -38,7 +38,7 @@ export default function BuildingsPage() {
 
       {!configured && <SetupNotice />}
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 text-slate-500">
             <tr>
@@ -66,7 +66,7 @@ export default function BuildingsPage() {
             {buildings.map((building) => (
               <tr
                 key={building.id}
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
               >
                 <td className="px-4 py-3 font-medium text-slate-900">
                   <Link href={`/buildings/${building.id}`} className="block">

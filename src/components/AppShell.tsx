@@ -41,24 +41,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full">
-      <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white sm:flex sm:flex-col print:hidden">
+      <aside className="hero-gradient relative hidden w-60 shrink-0 overflow-hidden sm:flex sm:flex-col print:hidden">
+        {/* Same faint skyline as the dashboard hero, so the two read as one
+            visual system instead of a bright gradient page dropped into a
+            plain white shell. */}
+        <svg
+          viewBox="0 0 240 400"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-48 w-full text-white/[0.06]"
+        >
+          <path
+            fill="currentColor"
+            d="M0,320 L40,260 L80,300 L120,220 L160,280 L200,200 L240,250 L240,400 L0,400 Z"
+          />
+        </svg>
+
         <Link
           href="/"
-          className="flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-80"
+          className="relative flex items-center gap-2.5 px-5 py-5 transition-opacity hover:opacity-90"
         >
           {settings.company_logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={settings.company_logo_url}
               alt=""
-              className="h-9 w-9 shrink-0 rounded object-contain"
+              className="h-9 w-9 shrink-0 rounded-lg bg-white/90 object-contain p-1"
             />
           )}
-          <span className="line-clamp-2 text-base font-semibold leading-tight tracking-tight text-slate-900">
+          <span className="line-clamp-2 text-base font-semibold leading-tight tracking-tight text-white">
             {brandName}
           </span>
         </Link>
-        <nav className="flex flex-col gap-1 px-3">
+        <nav className="relative flex flex-col gap-1 px-3">
           {navItems.map((item) => {
             const active =
               item.href === "/"
@@ -68,10 +83,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-md px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
                   active
-                    ? "bg-slate-900 text-white shadow-sm"
-                    : "text-slate-600 hover:translate-x-0.5 hover:bg-slate-100"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-white/75 hover:translate-x-0.5 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 {t.nav[item.key]}
@@ -79,11 +94,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="mt-auto flex flex-col gap-2 border-t border-slate-200 px-3 py-4">
-          {userEmail && <span className="truncate px-3 text-xs text-slate-400">{userEmail}</span>}
+        <div className="relative mt-auto flex flex-col gap-2 border-t border-white/10 px-3 py-4">
+          {userEmail && <span className="truncate px-3 text-xs text-white/40">{userEmail}</span>}
           <button
             onClick={handleLogout}
-            className="group flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-slate-600 transition-all hover:bg-red-50 hover:text-red-600 active:scale-[0.97]"
+            className="group flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-white/75 transition-all hover:bg-white/10 hover:text-rose-200 active:scale-[0.97]"
           >
             <span className="transition-transform duration-200 group-hover:translate-x-0.5">
               {t.login.logout}

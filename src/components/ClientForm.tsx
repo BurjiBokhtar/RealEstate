@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
-import { LEAD_STATUSES, type ClientInput } from "@/lib/clients/types";
+import type { ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
 const FIELD_CLASS =
@@ -130,31 +130,6 @@ export function ClientForm({
             onChange={(e) => update("address", e.target.value)}
             className={FIELD_CLASS}
           />
-        </label>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.source}</span>
-          <input
-            value={values.source}
-            onChange={(e) => update("source", e.target.value)}
-            className={FIELD_CLASS}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.status}</span>
-          <select
-            value={values.status}
-            onChange={(e) => update("status", e.target.value as ClientInput["status"])}
-            className={FIELD_CLASS}
-          >
-            {LEAD_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {t.clients.statuses[status]}
-              </option>
-            ))}
-          </select>
         </label>
       </div>
 

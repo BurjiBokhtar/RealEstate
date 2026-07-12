@@ -30,8 +30,9 @@ export const dictionaries = {
       sold: "Продано",
       inProgress: "В работе",
       hero: {
-        eyebrow: "Обзор портфеля",
-        occupancyLabel: "продано или забронировано",
+        occupancyTitle: "Заполненность",
+        occupancyLabel: "квартир продано или забронировано",
+        noUnitsYet: "Пока нет добавленных квартир",
         cta: "Открыть шахматку",
       },
       revenueByMonth: "Выручка по месяцам (подписанные договоры)",
@@ -535,6 +536,8 @@ export const dictionaries = {
       error: "Произошла ошибка",
       supabaseNotConfigured:
         "Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в .env.local",
+      uploadErrorType: "Недопустимый тип файла. Разрешены изображения и PDF.",
+      uploadErrorSize: "Файл слишком большой (максимум 10 МБ).",
     },
   },
   tj: {
@@ -565,8 +568,9 @@ export const dictionaries = {
       sold: "Фурӯхта шуд",
       inProgress: "Дар кор",
       hero: {
-        eyebrow: "Дурнамои портфел",
-        occupancyLabel: "фурӯхта ё брон шудааст",
+        occupancyTitle: "Пуршавӣ",
+        occupancyLabel: "хона фурӯхта ё брон шудааст",
+        noUnitsYet: "Ҳоло хонае илова нашудааст",
         cta: "Кушодани шахмата",
       },
       revenueByMonth: "Даромад аз рӯи моҳ (шартномаҳои имзошуда)",
@@ -1072,6 +1076,8 @@ export const dictionaries = {
       error: "Хатогӣ рух дод",
       supabaseNotConfigured:
         "Supabase танзим нашудааст. NEXT_PUBLIC_SUPABASE_URL ва NEXT_PUBLIC_SUPABASE_ANON_KEY-ро ба .env.local илова кунед",
+      uploadErrorType: "Навъи файл иҷозат дода намешавад. Танҳо расм ва PDF мумкин аст.",
+      uploadErrorSize: "Файл хеле калон аст (ҳадди аксар 10 МБ).",
     },
   },
 } satisfies Record<Locale, unknown>;

@@ -112,12 +112,12 @@ export default function ObjectsPage() {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t.objects.search}
-          className="min-w-[220px] flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value as ObjectType | "all")}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         >
           <option value="all">{t.objects.filters.allTypes}</option>
           {OBJECT_TYPES.map((type) => (
@@ -129,7 +129,7 @@ export default function ObjectsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ObjectStatus | "all")}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         >
           <option value="all">{t.objects.filters.allStatuses}</option>
           {OBJECT_STATUSES.map((status) => (
@@ -140,7 +140,7 @@ export default function ObjectsPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 text-slate-500">
             <tr>
@@ -170,7 +170,7 @@ export default function ObjectsPage() {
             {filteredBuildings.map((building) => (
               <tr
                 key={`building-${building.id}`}
-                className="cursor-pointer border-b border-slate-100 bg-slate-50/60 last:border-0 hover:bg-slate-100"
+                className="cursor-pointer border-b border-slate-100 bg-slate-50/60 transition-colors last:border-0 hover:bg-slate-100"
               >
                 <td className="px-4 py-3 font-medium text-slate-900">
                   <Link href={`/buildings/${building.id}`} className="block">
@@ -195,7 +195,7 @@ export default function ObjectsPage() {
             {objects.map((obj) => (
               <tr
                 key={obj.id}
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
               >
                 <td className="px-4 py-3 font-medium text-slate-900">
                   <Link href={`/objects/${obj.id}`} className="block">

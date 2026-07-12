@@ -28,18 +28,18 @@ export function AddMenu({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
       >
         + {label}
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-md border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="animate-modal-panel absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className="block px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="block px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
             >
               {item.label}
             </Link>

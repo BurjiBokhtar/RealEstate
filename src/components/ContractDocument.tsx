@@ -74,7 +74,7 @@ export function ContractDocument({
 
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:shadow-none"
+      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:rounded-none print:border-0 print:shadow-none"
     >
       {copyLabel && (
         <p className="bg-slate-50 px-6 py-1.5 text-center text-[11px] font-medium uppercase tracking-wide text-slate-400 print:bg-transparent">

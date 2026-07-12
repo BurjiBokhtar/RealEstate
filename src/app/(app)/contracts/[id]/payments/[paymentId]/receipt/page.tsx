@@ -184,7 +184,7 @@ export default function PaymentReceiptPage() {
   const remaining = contract.amount - contract.paid_amount;
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-4 py-6 print:py-0">
+    <div className="mx-auto flex max-w-sm flex-col gap-4 py-6 print:max-w-none print:py-0">
       <button
         type="button"
         onClick={() => window.print()}
@@ -193,34 +193,45 @@ export default function PaymentReceiptPage() {
         {t.contracts.print.button}
       </button>
 
-      <ReceiptCopy
-        t={t}
-        settings={settings}
-        contract={contract}
-        payment={payment}
-        receiptNo={receiptNo}
-        remaining={remaining}
-        copyLabel={t.contracts.receipt.copyForClient}
-      />
+      {/* Both copies share one A4 sheet, so each gets exactly half its
+          printable height (297mm - the @page top/bottom margins) rather
+          than however tall its own content happens to be -- otherwise a
+          short receipt leaves the second copy nowhere near the fold, or a
+          slightly taller one pushes it onto a second page. */}
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-4 print:h-[273mm] print:max-w-none print:gap-0">
+        <div className="print:flex print:h-1/2 print:flex-col print:justify-center print:overflow-hidden">
+          <ReceiptCopy
+            t={t}
+            settings={settings}
+            contract={contract}
+            payment={payment}
+            receiptNo={receiptNo}
+            remaining={remaining}
+            copyLabel={t.contracts.receipt.copyForClient}
+          />
+        </div>
 
-      <div
-        aria-hidden="true"
-        className="flex items-center gap-2 text-slate-300 print:text-slate-400"
-      >
-        <span className="flex-1 border-t border-dashed border-current" />
-        <span className="text-xs">✂ {t.contracts.receipt.cutHere}</span>
-        <span className="flex-1 border-t border-dashed border-current" />
+        <div
+          aria-hidden="true"
+          className="flex items-center gap-2 text-slate-300 print:text-slate-400"
+        >
+          <span className="flex-1 border-t border-dashed border-current" />
+          <span className="text-xs">✂ {t.contracts.receipt.cutHere}</span>
+          <span className="flex-1 border-t border-dashed border-current" />
+        </div>
+
+        <div className="print:flex print:h-1/2 print:flex-col print:justify-center print:overflow-hidden">
+          <ReceiptCopy
+            t={t}
+            settings={settings}
+            contract={contract}
+            payment={payment}
+            receiptNo={receiptNo}
+            remaining={remaining}
+            copyLabel={t.contracts.receipt.copyForCompany}
+          />
+        </div>
       </div>
-
-      <ReceiptCopy
-        t={t}
-        settings={settings}
-        contract={contract}
-        payment={payment}
-        receiptNo={receiptNo}
-        remaining={remaining}
-        copyLabel={t.contracts.receipt.copyForCompany}
-      />
     </div>
   );
 }

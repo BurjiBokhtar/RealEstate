@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { LEAD_STATUSES, type Client, type ClientInput } from "@/lib/clients/types";
+import type { Client, ClientInput } from "@/lib/clients/types";
 
 const FIELD_CLASS =
   "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
@@ -157,31 +157,6 @@ export function ClientAutocomplete({
               onChange={(e) => updateNew("address", e.target.value)}
               className={FIELD_CLASS}
             />
-          </label>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.clients.form.source}</span>
-            <input
-              value={newClient.source}
-              onChange={(e) => updateNew("source", e.target.value)}
-              className={FIELD_CLASS}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.clients.form.status}</span>
-            <select
-              value={newClient.status}
-              onChange={(e) => updateNew("status", e.target.value as ClientInput["status"])}
-              className={FIELD_CLASS}
-            >
-              {LEAD_STATUSES.map((status) => (
-                <option key={status} value={status}>
-                  {t.clients.statuses[status]}
-                </option>
-              ))}
-            </select>
           </label>
         </div>
 

@@ -15,12 +15,6 @@ const GLASS_SELECT =
 // a nod to the Pamirs rather than a generic SaaS blob-gradient. Everything
 // else on the page stays on the quiet slate system; the boldness lives here
 // and nowhere else.
-//
-// The filters used to live in a separate plain gray title bar below this,
-// and the KPI cards below *that* repeated numbers already shown here --
-// three disconnected sections telling an overlapping story. Now there's
-// one: filters are part of the hero chrome, and the cards further down
-// only carry numbers that aren't already visible up here.
 export function DashboardHero({
   t,
   loading,
@@ -52,6 +46,14 @@ export function DashboardHero({
   periodFilter: PeriodFilter;
   onPeriodChange: (period: PeriodFilter) => void;
 }) {
+  const hasUnits = totalUnits > 0;
+  const stats = [
+    { label: t.dashboard.totalObjects, value: totalUnits },
+    { label: t.dashboard.available, value: availableCount },
+    { label: t.dashboard.reserved, value: reservedCount },
+    { label: t.dashboard.sold, value: soldCount },
+  ];
+
   return (
     <div className="hero-gradient relative overflow-hidden rounded-2xl px-6 py-8 text-white shadow-lg shadow-slate-900/10 sm:px-10 sm:py-10">
       {/* Mountain skyline signature, low-opacity so it stays atmosphere, not decoration. */}
@@ -66,12 +68,17 @@ export function DashboardHero({
           d="M0,160 L110,90 L200,140 L320,55 L430,120 L540,40 L650,110 L760,70 L860,130 L1000,85 L1000,200 L0,200 Z"
         />
       </svg>
+      {/* A slow-drifting glow behind the headline number -- the one place
+          this page moves on its own, so the hero reads as alive even before
+          you touch anything. */}
+      <div
+        aria-hidden="true"
+        className="animate-hero-glow pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl"
+      />
 
-      <div className="relative flex flex-col gap-6">
+      <div className="relative flex flex-col gap-7">
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-          <span className="text-xs font-medium uppercase tracking-[0.2em] text-amber-100/80">
-            {t.dashboard.hero.eyebrow}
-          </span>
+          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{brandName}</h1>
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={selectedBuildingId}
@@ -108,27 +115,17 @@ export function DashboardHero({
           </div>
         </div>
 
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
-          <div className="animate-fade-up flex flex-col gap-2">
-            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{brandName}</h1>
-
-            <div className="mt-3 flex items-baseline gap-3">
-              <span className="text-5xl font-bold tabular-nums sm:text-6xl">
-                {loading ? "—" : `${occupancyPct}%`}
-              </span>
-              <span className="max-w-[10rem] text-sm leading-tight text-white/70">
-                {t.dashboard.hero.occupancyLabel}
-              </span>
-            </div>
-
-            {!loading && (
-              <p className="text-sm text-white/70">
-                {totalUnits} {t.dashboard.totalObjects.toLowerCase()} · {availableCount}{" "}
-                {t.dashboard.available.toLowerCase()} · {reservedCount}{" "}
-                {t.dashboard.reserved.toLowerCase()} · {soldCount}{" "}
-                {t.dashboard.sold.toLowerCase()}
-              </p>
-            )}
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+          <div className="animate-fade-up flex flex-col gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-amber-100/80">
+              {t.dashboard.hero.occupancyTitle}
+            </span>
+            <span className="text-6xl font-bold tabular-nums sm:text-7xl">
+              {loading ? "—" : hasUnits ? `${occupancyPct}%` : "—"}
+            </span>
+            <p className="max-w-xs text-sm leading-tight text-white/70">
+              {loading ? " " : hasUnits ? t.dashboard.hero.occupancyLabel : t.dashboard.hero.noUnitsYet}
+            </p>
           </div>
 
           <div
@@ -139,7 +136,7 @@ export function DashboardHero({
               <p className="text-[11px] uppercase tracking-wide text-white/60">
                 {t.dashboard.paidRevenue}
               </p>
-              <p className="mt-0.5 text-lg font-semibold">{loading ? "…" : paidRevenueLabel}</p>
+              <p className="mt-0.5 text-xl font-semibold">{loading ? "…" : paidRevenueLabel}</p>
             </div>
             <Link
               href="/buildings"
@@ -149,6 +146,21 @@ export function DashboardHero({
             </Link>
           </div>
         </div>
+
+        {!loading && (
+          <div className="animate-fade-up grid grid-cols-2 gap-3 sm:grid-cols-4" style={{ animationDelay: "140ms" }}>
+            {stats.map((stat, i) => (
+              <div
+                key={stat.label}
+                className="animate-fade-up rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
+                style={{ animationDelay: `${180 + i * 40}ms` }}
+              >
+                <p className="text-3xl font-bold tabular-nums sm:text-4xl">{stat.value}</p>
+                <p className="mt-0.5 text-xs text-white/60">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

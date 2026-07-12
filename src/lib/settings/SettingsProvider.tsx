@@ -38,8 +38,20 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const supabase = createClient();
-    const { data } = await supabase.schema("crm").from("settings").select("*").maybeSingle();
-    if (data) setSettings(data as Settings);
+    // This provider is mounted for every signed-in user regardless of role
+    // (it's what puts the company name/logo in the sidebar and the bank
+    // details on a printed contract), so it deliberately never selects
+    // sms_api_key -- that credential has no reason to sit in every
+    // manager's browser state just from loading the app. The settings page
+    // itself fetches the full row separately, gated to admins only.
+    const { data } = await supabase
+      .schema("crm")
+      .from("settings")
+      .select(
+        "id, sms_sender_name, sms_reminder_days, sms_payment_template, sms_task_template, company_name, company_director, company_address, company_bank_details, company_logo_url, updated_at"
+      )
+      .maybeSingle();
+    if (data) setSettings({ ...DEFAULT_SETTINGS, ...data } as Settings);
     setLoading(false);
   }, []);
 

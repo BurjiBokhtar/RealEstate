@@ -65,19 +65,17 @@ export default function ContractPrintPage() {
         {t.contracts.print.button}
       </button>
 
-      <div id="contract-print-area" className="flex flex-col gap-4">
-        <ContractDocument
-          contract={contract}
-          payments={payments}
-          copyLabel={t.contracts.receipt.copyForClient}
-        />
-        <div
-          aria-hidden="true"
-          className="flex items-center gap-2 text-slate-300 print:text-slate-400"
-        >
-          <span className="flex-1 border-t border-dashed border-current" />
-          <span className="text-xs">✂ {t.contracts.receipt.cutHere}</span>
-          <span className="flex-1 border-t border-dashed border-current" />
+      {/* Each copy is a full document in its own right (not a shared half
+          page like a receipt), so it gets its own printed page -- no cut
+          line between them, that only makes sense when two copies share
+          one sheet. */}
+      <div id="contract-print-area" className="flex flex-col gap-10 print:gap-0">
+        <div className="print:break-after-page">
+          <ContractDocument
+            contract={contract}
+            payments={payments}
+            copyLabel={t.contracts.receipt.copyForClient}
+          />
         </div>
         <ContractDocument
           contract={contract}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { uploadMedia } from "@/lib/supabase/upload";
 
 export function FileUploadField({
@@ -18,18 +19,28 @@ export function FileUploadField({
   uploadLabel: string;
   uploadingLabel: string;
 }) {
+  const { t } = useLocale();
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setFileName(file.name);
+    setError(null);
     setUploading(true);
-    const url = await uploadMedia(file, folder);
-    if (url) onChange(url);
+    const result = await uploadMedia(file, folder);
     setUploading(false);
+    if (result.url === null) {
+      setFileName("");
+      if (result.error === "type") setError(t.common.uploadErrorType);
+      else if (result.error === "size") setError(t.common.uploadErrorSize);
+      else setError(result.error);
+      return;
+    }
+    onChange(result.url);
   };
 
   return (
@@ -56,11 +67,12 @@ export function FileUploadField({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*,application/pdf"
+          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
           onChange={handleChange}
           className="hidden"
         />
       </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );
 }

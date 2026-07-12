@@ -29,8 +29,8 @@ const TASK_SMS_PLACEHOLDERS = ["assignee", "title", "due_date"];
 export default function SettingsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
-  const { settings, refresh } = useSettings();
-  const { role } = useRole();
+  const { refresh } = useSettings();
+  const { role, loading: roleLoading } = useRole();
 
   const [values, setValues] = useState<SettingsInput>({
     sms_api_key: "",
@@ -47,20 +47,34 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
 
+  // Loaded separately from the app-wide SettingsProvider, which deliberately
+  // never fetches sms_api_key (it's mounted for every signed-in user
+  // regardless of role) -- this page is the one place that needs the full
+  // row, and it's only reachable by admins in the first place.
   useEffect(() => {
-    setValues({
-      sms_api_key: settings.sms_api_key ?? "",
-      sms_sender_name: settings.sms_sender_name ?? "",
-      sms_reminder_days: settings.sms_reminder_days.toString(),
-      sms_payment_template: settings.sms_payment_template ?? "",
-      sms_task_template: settings.sms_task_template ?? "",
-      company_name: settings.company_name ?? "",
-      company_director: settings.company_director ?? "",
-      company_address: settings.company_address ?? "",
-      company_bank_details: settings.company_bank_details ?? "",
-      company_logo_url: settings.company_logo_url ?? "",
-    });
-  }, [settings]);
+    if (role !== "admin" || !configured) return;
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .from("settings")
+      .select("*")
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!data) return;
+        setValues({
+          sms_api_key: data.sms_api_key ?? "",
+          sms_sender_name: data.sms_sender_name ?? "",
+          sms_reminder_days: data.sms_reminder_days.toString(),
+          sms_payment_template: data.sms_payment_template ?? "",
+          sms_task_template: data.sms_task_template ?? "",
+          company_name: data.company_name ?? "",
+          company_director: data.company_director ?? "",
+          company_address: data.company_address ?? "",
+          company_bank_details: data.company_bank_details ?? "",
+          company_logo_url: data.company_logo_url ?? "",
+        });
+      });
+  }, [role, configured]);
 
   const update = <K extends keyof SettingsInput>(key: K, value: SettingsInput[K]) => {
     setValues((v) => ({ ...v, [key]: value }));
@@ -98,6 +112,16 @@ export default function SettingsPage() {
     await refresh();
     setToast({ message: t.settings.saved, type: "success" });
   };
+
+  if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
+  if (role !== "admin") {
+    return (
+      <div className="flex flex-col gap-3">
+        <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
+        <p className="text-slate-500">{t.users.accessDenied}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">

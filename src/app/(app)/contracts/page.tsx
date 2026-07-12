@@ -88,7 +88,7 @@ export default function ContractsPage() {
         <h1 className="text-2xl font-semibold">{t.contracts.title}</h1>
         <Link
           href="/contracts/new"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
         >
           + {t.contracts.newContract}
         </Link>
@@ -100,7 +100,7 @@ export default function ContractsPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as ContractStatus | "all")}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         >
           <option value="all">{t.contracts.filters.allStatuses}</option>
           {CONTRACT_STATUSES.map((status) => (
@@ -120,7 +120,7 @@ export default function ContractsPage() {
         </label>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
         <table className="w-full text-left text-sm">
           <thead className="border-b border-slate-200 text-slate-500">
             <tr>
@@ -151,7 +151,7 @@ export default function ContractsPage() {
             {contracts.map((contract) => (
               <tr
                 key={contract.id}
-                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
               >
                 <td className="px-4 py-3 font-medium text-slate-900">
                   <Link href={`/contracts/${contract.id}`} className="block">
