@@ -69,7 +69,7 @@ export function ReceiptDocument({
             style={{ color: PLUM }}
             className="text-[13px] font-bold uppercase tracking-[0.14em]"
           >
-            Квитансия
+            Расид
           </p>
           <p className="text-[15px] font-bold">№ {receiptNo ?? "—"}</p>
           <p className="text-[10px] text-slate-500">{dateStr}</p>

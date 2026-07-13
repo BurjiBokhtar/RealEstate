@@ -120,6 +120,12 @@ export default function ClientDetailPage() {
       });
   }, [contracts]);
 
+  // The history block shows money actually received -- real receipts, in
+  // the order they happened. The unpaid future installments belong to the
+  // schedule on the contract's cash-desk page, not here; mixing them in
+  // made the history read as a wall of "not paid" rows.
+  const paidPayments = payments.filter((p) => p.paid);
+
   const handleSubmit = async (values: ClientInput) => {
     setSubmitting(true);
     const supabase = createClient();
@@ -351,16 +357,16 @@ export default function ClientDetailPage() {
                           </td>
                           <td className="px-3 py-3 text-center text-slate-600">{paidCount}</td>
                           <td className="px-5 py-3 text-right">
-                            <div className="flex items-center justify-end gap-3">
+                            <div className="flex items-center justify-end gap-2">
                               <Link
                                 href={`/contracts/${c.id}/print`}
-                                className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
                               >
-                                {t.contracts.print.button}
+                                🖨 {t.clients.purchases.printContract}
                               </Link>
                               <Link
                                 href={`/contracts/${c.id}/payments`}
-                                className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
                               >
                                 {t.clients.purchases.pay} →
                               </Link>
@@ -381,7 +387,7 @@ export default function ClientDetailPage() {
             <p className="text-sm font-semibold text-slate-700">
               {t.clients.paymentHistory.title}
             </p>
-            {payments.length === 0 ? (
+            {paidPayments.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-6 text-center">
                 <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-400">
                   🧾
@@ -399,16 +405,15 @@ export default function ClientDetailPage() {
                       <th className="px-3 py-2.5 font-medium">{t.clients.paymentHistory.date}</th>
                       <th className="px-3 py-2.5 font-medium">{t.clients.purchases.object}</th>
                       <th className="px-3 py-2.5 font-medium">{t.contracts.payments.amount}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.contracts.payments.paid}</th>
                       <th className="px-5 py-2.5 font-medium" />
                     </tr>
                   </thead>
                   <tbody>
-                    {payments.map((p) => {
+                    {paidPayments.map((p) => {
                       const c = contracts.find((cc) => cc.id === p.contract_id);
                       return (
                         <tr key={p.id} className="border-b border-slate-100 last:border-0">
-                          <td className="px-5 py-3 text-slate-400">
+                          <td className="px-5 py-3 font-medium text-slate-500">
                             №{receiptNumberFor(paymentsByContract[p.contract_id] ?? [], p.id)}
                           </td>
                           <td className="px-3 py-3 text-slate-700">
@@ -422,28 +427,15 @@ export default function ClientDetailPage() {
                               {c?.object?.name ?? "—"}
                             </Link>
                           </td>
-                          <td className="px-3 py-3 font-medium text-slate-900">
+                          <td className="px-3 py-3 font-medium text-emerald-600">
                             {formatCurrency(p.amount, c?.currency ?? "TJS")}
-                          </td>
-                          <td className="px-3 py-3">
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                                p.paid
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-slate-200 text-slate-600"
-                              }`}
-                            >
-                              {p.paid
-                                ? t.clients.paymentHistory.paid
-                                : t.clients.paymentHistory.unpaid}
-                            </span>
                           </td>
                           <td className="px-5 py-3 text-right">
                             <Link
                               href={`/contracts/${p.contract_id}/payments/${p.id}/receipt`}
-                              className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                              className="inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
                             >
-                              {t.contracts.receipt.print} →
+                              🖨 {t.contracts.receipt.print}
                             </Link>
                           </td>
                         </tr>

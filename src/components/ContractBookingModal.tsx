@@ -1,5 +1,6 @@
 "use client";
 
+import { printDocument } from "@/lib/print";
 import { useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -208,7 +209,7 @@ export function ContractBookingModal({
           <div className="flex flex-wrap items-center gap-3 pt-1">
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={() => printDocument()}
               className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
             >
               {t.contracts.print.button}

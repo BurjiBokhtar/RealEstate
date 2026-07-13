@@ -9,12 +9,15 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { QuickSearch } from "@/components/QuickSearch";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
+// No "Договоры" item: the contracts list duplicated what the client card
+// already does better (find the contract, print it, take a payment, see
+// history). Contract detail pages stay reachable from client cards and
+// the shakhmatka.
 const navItems = [
   { href: "/", key: "dashboard" as const },
   { href: "/objects", key: "objects" as const },
   { href: "/clients", key: "clients" as const },
   { href: "/tasks", key: "tasks" as const },
-  { href: "/contracts", key: "contracts" as const },
   { href: "/buildings", key: "buildings" as const },
   { href: "/settings", key: "settings" as const },
 ];

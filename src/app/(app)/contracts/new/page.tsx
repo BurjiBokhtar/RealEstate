@@ -53,8 +53,8 @@ export default function NewContractPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/contracts" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.contracts.backToList}
+      <Link href="/clients" className="w-fit text-sm text-slate-500 hover:text-slate-900">
+        ← {t.clients.backToList}
       </Link>
       <h1 className="text-2xl font-semibold">{t.contracts.newContract}</h1>
       {!configured && <SetupNotice />}

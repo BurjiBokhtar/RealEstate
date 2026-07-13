@@ -51,9 +51,18 @@ export default function ContractPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/contracts" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.contracts.backToList}
-      </Link>
+      {contract?.client_id ? (
+        <Link
+          href={`/clients/${contract.client_id}`}
+          className="w-fit text-sm text-slate-500 hover:text-slate-900"
+        >
+          ← {t.contracts.backToClient}
+        </Link>
+      ) : (
+        <Link href="/clients" className="w-fit text-sm text-slate-500 hover:text-slate-900">
+          ← {t.clients.backToList}
+        </Link>
+      )}
 
       {!configured && <SetupNotice />}
 

@@ -39,6 +39,7 @@ export function ContractPayments({
   const [recording, setRecording] = useState(false);
   const [recordError, setRecordError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -139,6 +140,7 @@ export function ContractPayments({
   };
 
   const paidCount = payments.filter((p) => p.paid).length;
+  const nextDue = payments.find((p) => !p.paid) ?? null;
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -202,7 +204,39 @@ export function ContractPayments({
         </>
       )}
 
+      {/* Compact by default: a 12-month schedule as an always-open list
+          drowned the card. One progress line + the next due date says the
+          state at a glance; the full row list opens on demand. */}
       {payments.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
+              style={{ width: `${(paidCount / payments.length) * 100}%` }}
+            />
+          </div>
+          {nextDue && (
+            <p className="text-xs text-slate-500">
+              {t.contracts.payments.nextDue}:{" "}
+              <span className="font-semibold text-slate-700">{nextDue.due_date}</span> ·{" "}
+              <span className="font-semibold text-slate-700">
+                {formatCurrency(nextDue.amount, contract.currency)}
+              </span>
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+          >
+            {expanded
+              ? t.contracts.payments.hideSchedule
+              : `${t.contracts.payments.showSchedule} (${payments.length})`}
+          </button>
+        </div>
+      )}
+
+      {payments.length > 0 && expanded && (
         <div className="flex flex-col gap-2">
           {payments.map((p) => (
             <div

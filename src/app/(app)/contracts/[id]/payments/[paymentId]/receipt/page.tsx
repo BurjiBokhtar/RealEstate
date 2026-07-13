@@ -1,5 +1,6 @@
 "use client";
 
+import { printDocument } from "@/lib/print";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -61,7 +62,7 @@ export default function PaymentReceiptPage() {
     <div className="mx-auto flex max-w-md flex-col gap-4 py-6 print:max-w-none print:py-0">
       <button
         type="button"
-        onClick={() => window.print()}
+        onClick={() => printDocument()}
         className="w-fit self-end rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 print:hidden"
       >
         {t.contracts.print.button}
