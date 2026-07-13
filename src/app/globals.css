@@ -23,6 +23,17 @@
   body:has(#contract-print-area) #contract-print-area * {
     visibility: visible;
   }
+  /* Pull the document to the top-left corner of the sheet. Without this it
+     stays where it sat in the page flow -- below the (hidden but still
+     space-taking) toolbar and inside the app's centered column -- which
+     printed as a page with big skewed empty margins. position:absolute
+     (never fixed) still paginates multi-page content correctly. */
+  body:has(#contract-print-area) #contract-print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    margin: 0;
+  }
 
   /* A4, with a small even margin instead of each browser's own default
      (often lopsided, sometimes huge) -- the printed page shouldn't carry

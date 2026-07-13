@@ -30,8 +30,7 @@ export const dictionaries = {
       sold: "Продано",
       inProgress: "В работе",
       hero: {
-        occupancyTitle: "Заполненность",
-        occupancyLabel: "квартир продано или забронировано",
+        salesProgress: "Продано квартир",
         noUnitsYet: "Пока нет добавленных квартир",
         cta: "Открыть шахматку",
       },
@@ -164,6 +163,11 @@ export const dictionaries = {
         interestedIn: "Клиент интересуется:",
         empty: "Пока нет договоров с этим клиентом.",
       },
+      profile: {
+        edit: "Изменить данные",
+        hideForm: "Скрыть форму",
+        saved: "Данные клиента сохранены",
+      },
       paymentHistory: {
         title: "История платежей",
         empty: "Платежей пока нет.",
@@ -182,6 +186,7 @@ export const dictionaries = {
         submit: "Записать платёж",
         success: "Платёж записан",
         remainingShort: "остаток",
+        printReceipt: "Напечатать чек",
       },
       backToList: "К списку клиентов",
       notFound: "Клиент не найден",
@@ -568,8 +573,7 @@ export const dictionaries = {
       sold: "Фурӯхта шуд",
       inProgress: "Дар кор",
       hero: {
-        occupancyTitle: "Пуршавӣ",
-        occupancyLabel: "хона фурӯхта ё брон шудааст",
+        salesProgress: "Хонаҳои фурӯхташуда",
         noUnitsYet: "Ҳоло хонае илова нашудааст",
         cta: "Кушодани шахмата",
       },
@@ -702,6 +706,11 @@ export const dictionaries = {
         interestedIn: "Мизоҷ таваҷҷуҳ дорад:",
         empty: "Ҳоло бо ин мизоҷ шартнома нест.",
       },
+      profile: {
+        edit: "Тағир додани маълумот",
+        hideForm: "Пинҳон кардани форма",
+        saved: "Маълумоти мизоҷ захира шуд",
+      },
       paymentHistory: {
         title: "Таърихи пардохтҳо",
         empty: "Ҳоло пардохт нест.",
@@ -720,6 +729,7 @@ export const dictionaries = {
         submit: "Пардохтро сабт кардан",
         success: "Пардохт сабт шуд",
         remainingShort: "боқимонда",
+        printReceipt: "Чоп кардани чек",
       },
       backToList: "Ба рӯйхати мизоҷон",
       notFound: "Мизоҷ ёфт нашуд",

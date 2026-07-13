@@ -9,7 +9,7 @@ type PeriodFilter = "all" | "today" | "month" | "year";
 const GLASS_SELECT =
   "rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40";
 
-// The dashboard's one bold move: an occupancy-rate hero (the single number
+// The dashboard's one bold move: a sales-progress hero (the single figure
 // that answers "how is the portfolio doing" faster than four separate
 // boxes), on an indigo-to-saffron gradient with a faint mountain skyline --
 // a nod to the Pamirs rather than a generic SaaS blob-gradient. Everything
@@ -19,7 +19,6 @@ export function DashboardHero({
   t,
   loading,
   brandName,
-  occupancyPct,
   totalUnits,
   availableCount,
   reservedCount,
@@ -34,7 +33,6 @@ export function DashboardHero({
   t: Dictionary;
   loading: boolean;
   brandName: string;
-  occupancyPct: number;
   totalUnits: number;
   availableCount: number;
   reservedCount: number;
@@ -116,16 +114,57 @@ export function DashboardHero({
         </div>
 
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="animate-fade-up flex flex-col gap-1.5">
+          <div className="animate-fade-up flex w-full max-w-md flex-col gap-2">
             <span className="text-xs font-medium uppercase tracking-[0.2em] text-amber-100/80">
-              {t.dashboard.hero.occupancyTitle}
+              {t.dashboard.hero.salesProgress}
             </span>
-            <span className="text-6xl font-bold tabular-nums sm:text-7xl">
-              {loading ? "—" : hasUnits ? `${occupancyPct}%` : "—"}
-            </span>
-            <p className="max-w-xs text-sm leading-tight text-white/70">
-              {loading ? " " : hasUnits ? t.dashboard.hero.occupancyLabel : t.dashboard.hero.noUnitsYet}
-            </p>
+            {/* "Sold X of Y" reads instantly; a bare percentage was the
+                single most-asked "what does this number mean" on this page.
+                The bar repeats it visually: saffron = sold, white =
+                reserved, the dim track = still available. */}
+            {loading || !hasUnits ? (
+              <span className="text-6xl font-bold tabular-nums sm:text-7xl">—</span>
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2.5">
+                  <span className="text-6xl font-bold tabular-nums sm:text-7xl">
+                    {soldCount}
+                  </span>
+                  <span className="text-2xl font-semibold text-white/60">
+                    / {totalUnits}
+                  </span>
+                </div>
+                <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-white/15">
+                  <div
+                    className="h-full rounded-l-full bg-amber-300 transition-[width] duration-700"
+                    style={{ width: `${(soldCount / totalUnits) * 100}%` }}
+                  />
+                  <div
+                    className="h-full bg-white/50 transition-[width] duration-700"
+                    style={{ width: `${(reservedCount / totalUnits) * 100}%` }}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs text-white/80">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-amber-300" />
+                    {t.dashboard.sold}: {soldCount}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-white/50" />
+                    {t.dashboard.reserved}: {reservedCount}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2 w-2 rounded-full bg-white/20" />
+                    {t.dashboard.available}: {availableCount}
+                  </span>
+                </div>
+              </>
+            )}
+            {!loading && !hasUnits && (
+              <p className="max-w-xs text-sm leading-tight text-white/70">
+                {t.dashboard.hero.noUnitsYet}
+              </p>
+            )}
           </div>
 
           <div

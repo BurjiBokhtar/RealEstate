@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -43,6 +44,10 @@ export function ClientQuickPayment({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [lastReceipt, setLastReceipt] = useState<{
+    contractId: string;
+    paymentId: string;
+  } | null>(null);
 
   // Keep the selection valid as the eligible list changes (e.g. right after
   // this same payment fully pays one off and it drops out of the list).
@@ -63,8 +68,9 @@ export function ClientQuickPayment({
     setSubmitting(true);
     setError(null);
     setSuccess(false);
+    setLastReceipt(null);
     const supabase = createClient();
-    const { error: rpcError } = await supabase.schema("crm").rpc("record_payment", {
+    const { data, error: rpcError } = await supabase.schema("crm").rpc("record_payment", {
       p_contract_id: selected.id,
       p_amount: amountNum,
       p_date: date,
@@ -77,7 +83,13 @@ export function ClientQuickPayment({
     setAmount("");
     setDate(today());
     setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
+    // record_payment returns the inserted payment row -- keep a direct
+    // "print this receipt" link on screen so issuing the paper receipt is
+    // one click away from taking the money, not a hunt through history.
+    const payment = data as unknown as { id: string } | null;
+    if (payment?.id) {
+      setLastReceipt({ contractId: selected.id, paymentId: payment.id });
+    }
     onRecorded();
   };
 
@@ -158,9 +170,17 @@ export function ClientQuickPayment({
 
           {error && <p className="text-sm text-red-600">{error}</p>}
           {success && (
-            <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-              ✓ {t.clients.quickPayment.success}
-            </p>
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+              <span>✓ {t.clients.quickPayment.success}</span>
+              {lastReceipt && (
+                <Link
+                  href={`/contracts/${lastReceipt.contractId}/payments/${lastReceipt.paymentId}/receipt`}
+                  className="shrink-0 rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white transition-all hover:bg-emerald-700 active:scale-95"
+                >
+                  {t.clients.quickPayment.printReceipt} →
+                </Link>
+              )}
+            </div>
           )}
         </form>
       )}

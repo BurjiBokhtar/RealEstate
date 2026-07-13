@@ -71,15 +71,63 @@ export function ContractBookingModal({
     // Object status (available/reserved/sold) is derived automatically by a
     // DB trigger from the contract's paid_amount -- no manual update here.
     const paidAmount = values.paid_amount ? Number(values.paid_amount) : 0;
+    const amount = values.amount ? Number(values.amount) : 0;
+    const months =
+      values.payment_type === "installment" && values.installment_months
+        ? Number(values.installment_months)
+        : 0;
+    const baseDate = values.signed_date || new Date().toISOString().slice(0, 10);
+
+    const paymentRowsToInsert: Array<{
+      contract_id: string;
+      due_date: string;
+      amount: number;
+      paid: boolean;
+      paid_date: string | null;
+    }> = [];
     if (paidAmount > 0) {
-      const paidDate = values.signed_date || new Date().toISOString().slice(0, 10);
-      await supabase.schema("crm").from("contract_payments").insert({
+      paymentRowsToInsert.push({
         contract_id: data.id,
-        due_date: paidDate,
+        due_date: baseDate,
         amount: paidAmount,
         paid: true,
-        paid_date: paidDate,
+        paid_date: baseDate,
       });
+    }
+    // An installment sale gets its whole monthly schedule up front, counted
+    // from the sale date -- staff shouldn't have to open the contract later
+    // and click "generate" just so the printed annex shows the plan. Same
+    // equal-split math as ContractPayments' manual generator: the last
+    // month absorbs whatever a few cents of rounding leaves over.
+    if (months > 0 && amount - paidAmount > 0) {
+      const remaining = amount - paidAmount;
+      const base = Math.floor((remaining / months) * 100) / 100;
+      const addMonths = (dateStr: string, m: number) => {
+        const d = new Date(dateStr);
+        d.setMonth(d.getMonth() + m);
+        return d.toISOString().slice(0, 10);
+      };
+      for (let i = 0; i < months; i++) {
+        const isLast = i === months - 1;
+        paymentRowsToInsert.push({
+          contract_id: data.id,
+          due_date: addMonths(baseDate, i + 1),
+          amount: isLast ? Math.round((remaining - base * (months - 1)) * 100) / 100 : base,
+          paid: false,
+          paid_date: null,
+        });
+      }
+    }
+    if (paymentRowsToInsert.length > 0) {
+      const { error: scheduleError } = await supabase
+        .schema("crm")
+        .from("contract_payments")
+        .insert(paymentRowsToInsert);
+      if (scheduleError) {
+        // Contract exists; only the schedule failed. Surface it rather than
+        // silently printing a contract with an empty annex.
+        setError(scheduleError.message);
+      }
     }
 
     const [{ data: full }, { data: paymentRows }] = await Promise.all([

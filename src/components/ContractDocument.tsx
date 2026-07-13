@@ -33,17 +33,25 @@ export type ContractDocumentData = {
   } | null;
 };
 
-const SERIF = { fontFamily: "'Times New Roman', Georgia, serif" };
+// The one accent the paper document carries: the hero's plum, used for
+// rules and section markers. Prints as a dignified dark tone on mono
+// printers; everything else is ink-on-white.
+const PLUM = "#5b3468";
 
 function SectionHeader({ num, title }: { num: number; title: string }) {
   return (
     <div className="mb-2 flex items-center gap-2.5">
-      {/* Outlined, not filled: a dark filled circle disappears when the
-          print dialog's "background graphics" is off (the default). */}
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-slate-900 text-[12px] font-bold text-slate-900">
+      {/* Outlined, not filled: a filled circle disappears when the print
+          dialog's "background graphics" is off (the default). */}
+      <span
+        style={{ borderColor: PLUM, color: PLUM }}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold"
+      >
         {num}
       </span>
-      <span className="text-[15px] font-bold tracking-wide text-slate-900">{title}</span>
+      <span className="text-[14px] font-bold uppercase tracking-wide text-slate-900">
+        {title}
+      </span>
     </div>
   );
 }
@@ -58,27 +66,29 @@ function SpecRow({
   highlight?: boolean;
 }) {
   return (
-    <tr className={highlight ? "border-y-2 border-slate-900" : "border-y border-slate-200"}>
-      <td
-        className={`w-[42%] px-3 py-1.5 align-top ${
-          highlight ? "font-bold text-slate-900" : "bg-slate-50 font-semibold text-slate-600 print:bg-transparent"
-        }`}
-      >
+    <tr
+      style={highlight ? { borderTop: `2px solid ${PLUM}`, borderBottom: `2px solid ${PLUM}` } : undefined}
+      className={highlight ? "" : "border-b border-slate-200"}
+    >
+      <td className="w-[42%] py-2 pr-3 align-top text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
         {label}
       </td>
-      <td className={`px-3 py-1.5 ${highlight ? "text-[15px] font-bold text-slate-900" : "text-slate-800"}`}>
+      <td
+        style={highlight ? { color: PLUM } : undefined}
+        className={`py-2 ${highlight ? "text-[16px] font-bold" : "text-[13px] font-medium text-slate-900"}`}
+      >
         {value}
       </td>
     </tr>
   );
 }
 
-// Printable contract in the company's official document style: serif type,
-// numbered sections, an apartment spec table, full signature blocks with
-// requisites and a seal box. Shared by the standalone print page and the
-// in-modal preview after booking so both produce the same document. The
-// legal wording is fixed Tajik (official contract language) regardless of
-// the UI locale — same policy as the old template, just structured.
+// Printable contract in the company's official document style: clean
+// modern type, numbered sections, an apartment spec table, full signature
+// blocks with requisites and a seal box. Shared by the standalone print
+// page and the in-modal preview after booking so both produce the same
+// document. The legal wording is fixed Tajik (official contract language)
+// regardless of the UI locale.
 export function ContractDocument({
   contract,
   payments,
@@ -113,11 +123,10 @@ export function ContractDocument({
   const amountWords =
     contract.amount_words || amountToWordsTj(contract.amount, contract.currency);
 
+  const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+
   return (
-    <div
-      style={SERIF}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-[13.5px] leading-[1.65] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none"
-    >
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-[13px] leading-[1.65] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none">
       {copyLabel && (
         <p className="bg-slate-50 px-6 py-1 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400 print:bg-transparent">
           {copyLabel}
@@ -125,8 +134,11 @@ export function ContractDocument({
       )}
 
       {/* Header: company block left, contract number block right */}
-      <div className="flex items-start justify-between gap-4 border-b-[3px] border-slate-900 px-8 pb-4 pt-6">
-        <div className="flex items-center gap-3">
+      <div
+        style={{ borderBottom: `3px solid ${PLUM}` }}
+        className="flex items-start justify-between gap-4 px-8 pb-4 pt-6"
+      >
+        <div className="flex items-center gap-3.5">
           {settings.company_logo_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -136,37 +148,46 @@ export function ContractDocument({
             />
           )}
           <div>
-            <p className="text-[17px] font-bold tracking-wide text-slate-900">{companyName}</p>
+            <p className="text-[17px] font-bold tracking-tight text-slate-900">
+              {companyName}
+            </p>
             {settings.company_address && (
               <p className="text-[11px] text-slate-500">{settings.company_address}</p>
             )}
             {settings.company_bank_details && (
-              <p className="text-[11px] text-slate-400">{settings.company_bank_details}</p>
+              <p className="text-[10.5px] text-slate-400">{settings.company_bank_details}</p>
             )}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[12px] text-slate-500">Шартнома</p>
-          <p className="text-[19px] font-bold text-slate-900">№ {contract.number || "—"}</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+            Шартнома
+          </p>
+          <p style={{ color: PLUM }} className="text-[20px] font-bold">
+            № {contract.number || "—"}
+          </p>
           {contract.signed_date && (
-            <p className="text-[12px] text-slate-500">{contract.signed_date}</p>
+            <p className="text-[11px] text-slate-500">{contract.signed_date}</p>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 px-8 py-6">
+      <div className="flex flex-col gap-5 px-8 py-6">
         {/* Title */}
         <div className="text-center">
-          <p className="text-[18px] font-bold uppercase tracking-[0.18em] text-slate-900">
+          <p className="text-[17px] font-bold uppercase tracking-[0.22em] text-slate-900">
             Шартномаи ҳамкорӣ
           </p>
-          <p className="mt-0.5 text-[12px] tracking-wide text-slate-500">
+          <p className="mt-0.5 text-[11.5px] tracking-wide text-slate-500">
             {buildingName} · {buildingAddress}
           </p>
         </div>
 
         {/* Parties */}
-        <div className="rounded-r-md border-l-4 border-slate-900 bg-slate-50 px-4 py-3 text-[13px] leading-[1.7] print:bg-transparent">
+        <div
+          style={{ borderLeft: `3px solid ${PLUM}` }}
+          className="rounded-r-lg bg-slate-50 px-4 py-3 text-[12.5px] leading-[1.7] print:bg-transparent"
+        >
           <strong>{companyName}</strong> дар шахсияти роҳбари ҷамъият{" "}
           <strong>{settings.company_director || "—"}</strong>, ки дар асоси Оинномаи ҷамъият
           амал мекунад, аз як тараф, минбаъд <strong>«Фурӯшанда»</strong> ва аз тарафи дигар
@@ -183,7 +204,7 @@ export function ContractDocument({
         {/* 1. Purpose + spec table */}
         <section>
           <SectionHeader num={1} title="Мақсади шартнома" />
-          <div className="pl-[34px] text-[13px]">
+          <div className="pl-[34px] text-[12.5px]">
             <p>
               1.1. Бо мақсади вусъат бахшидани рафти сохтмони иншооти {buildingName}, воқеъ
               дар {buildingAddress}, тарафҳо уҳдадор шуданд, ки бо шартҳои манфиати
@@ -193,10 +214,10 @@ export function ContractDocument({
               1.2. «Фурӯшанда» имконият медиҳад, ки «Харидор» дар маблағгузории иншоот
               ширкат намуда, ба моликияти худ хонаи зеринро ба расмият дарорад:
             </p>
-            <table className="mt-2 w-full border-collapse text-[13px]">
+            <table className="mt-2 w-full border-collapse">
               <tbody>
-                <SpecRow label="Объект" value={<strong>{buildingName}</strong>} />
-                <SpecRow label="Хона" value={<strong>{contract.object?.name ?? "—"}</strong>} />
+                <SpecRow label="Объект" value={buildingName} />
+                <SpecRow label="Хона" value={contract.object?.name ?? "—"} />
                 {(contract.object?.floor != null || contract.object?.block) && (
                   <SpecRow
                     label="Ошёна / даромадгоҳ"
@@ -240,7 +261,7 @@ export function ContractDocument({
         {/* 2. Obligations */}
         <section>
           <SectionHeader num={2} title="Уҳдадориҳои тарафҳо" />
-          <div className="flex flex-col gap-0.5 pl-[34px] text-[13px]">
+          <div className="flex flex-col gap-0.5 pl-[34px] text-[12.5px]">
             <p className="font-semibold">2.1. «Фурӯшанда» уҳдадор мешавад:</p>
             <p>а) корҳои сохтмониро дар мӯҳлати муқарраршуда ба анҷом расонад;</p>
             <p>
@@ -261,7 +282,7 @@ export function ContractDocument({
         {/* 3. Penalties */}
         <section>
           <SectionHeader num={3} title="Масъулият ва чораҳои ҷаримавӣ" />
-          <div className="flex flex-col gap-1.5 pl-[34px] text-[13px]">
+          <div className="flex flex-col gap-1.5 pl-[34px] text-[12.5px]">
             {[
               <>
                 Таъхири пардохт аз як моҳ зиёд — ҷарима <strong>0,1%</strong> аз маблағи
@@ -274,7 +295,10 @@ export function ContractDocument({
               </>,
             ].map((item, i) => (
               <div key={i} className="flex gap-2">
-                <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-slate-900" />
+                <span
+                  style={{ background: PLUM }}
+                  className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full"
+                />
                 <p>{item}</p>
               </div>
             ))}
@@ -284,7 +308,7 @@ export function ContractDocument({
         {/* 4. Force majeure & disputes */}
         <section>
           <SectionHeader num={4} title="Форс-мажор ва ҳалли баҳсҳо" />
-          <div className="flex flex-col gap-0.5 pl-[34px] text-[13px]">
+          <div className="flex flex-col gap-0.5 pl-[34px] text-[12.5px]">
             <p>
               4.1. Ҳолатҳои фавқулода (сӯхтор, обхезӣ, заминҷунбӣ ва дигар офатҳои табиӣ)
               тарафҳоро аз масъулият озод мекунанд ва мӯҳлатҳоро ба таври мувофиқ дароз
@@ -303,54 +327,76 @@ export function ContractDocument({
 
         {/* Payments annex (only when a schedule/payments exist) */}
         {payments.length > 0 && (
-          <section className="border-t-2 border-slate-900 pt-3">
-            <p className="mb-2 text-center text-[13px] font-bold uppercase tracking-[0.14em] text-slate-900">
+          <section style={{ borderTop: `2px solid ${PLUM}` }} className="pt-3">
+            <p className="mb-2 text-center text-[12.5px] font-bold uppercase tracking-[0.18em] text-slate-900">
               Замима — ҷадвали пардохтҳо
             </p>
-            <table className="w-full border-collapse text-[12.5px]">
+            <table className="w-full border-collapse text-[12px]">
               <thead>
-                <tr className="border-b border-slate-400 text-left text-slate-500">
-                  <th className="px-2 py-1 font-semibold">№</th>
-                  <th className="px-2 py-1 font-semibold">Сана</th>
-                  <th className="px-2 py-1 font-semibold">Маблағ</th>
-                  <th className="px-2 py-1 font-semibold">Пардохт шуд</th>
+                <tr className="border-b border-slate-300 text-left text-[10.5px] uppercase tracking-wide text-slate-400">
+                  <th className="px-2 py-1.5 font-semibold">№</th>
+                  <th className="px-2 py-1.5 font-semibold">Сана</th>
+                  <th className="px-2 py-1.5 text-right font-semibold">Маблағ</th>
+                  <th className="px-2 py-1.5 text-center font-semibold">Пардохт шуд</th>
                 </tr>
               </thead>
               <tbody>
                 {payments.map((p, i) => (
                   <tr key={p.id} className="border-b border-slate-100">
-                    <td className="px-2 py-1 text-slate-500">{i + 1}</td>
-                    <td className="px-2 py-1">{p.due_date}</td>
-                    <td className="px-2 py-1">{formatCurrency(p.amount, contract.currency)}</td>
-                    <td className="px-2 py-1">{p.paid ? "✓" : "—"}</td>
+                    <td className="px-2 py-1.5 text-slate-400">{i + 1}</td>
+                    <td className="px-2 py-1.5">{p.due_date}</td>
+                    <td className="px-2 py-1.5 text-right font-medium">
+                      {formatCurrency(p.amount, contract.currency)}
+                    </td>
+                    <td className="px-2 py-1.5 text-center">{p.paid ? "✓" : "—"}</td>
                   </tr>
                 ))}
+                <tr style={{ borderTop: `2px solid ${PLUM}` }}>
+                  <td className="px-2 py-1.5" />
+                  <td className="px-2 py-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">
+                    Ҷамъ
+                  </td>
+                  <td style={{ color: PLUM }} className="px-2 py-1.5 text-right font-bold">
+                    {formatCurrency(scheduleTotal, contract.currency)}
+                  </td>
+                  <td className="px-2 py-1.5" />
+                </tr>
               </tbody>
             </table>
           </section>
         )}
 
         {/* Signatures */}
-        <div className="mt-2 grid grid-cols-2 gap-10">
+        <div className="mt-1 grid grid-cols-2 gap-10">
           <div>
-            <p className="border-b border-slate-900 pb-1 text-[13px] font-bold">«ФУРӮШАНДА»</p>
-            <div className="mt-1.5 text-[11.5px] leading-[1.6] text-slate-600">
+            <p
+              style={{ borderBottom: `2px solid ${PLUM}` }}
+              className="pb-1 text-[12.5px] font-bold tracking-wide"
+            >
+              «ФУРӮШАНДА»
+            </p>
+            <div className="mt-1.5 text-[11px] leading-[1.6] text-slate-600">
               <p className="font-semibold text-slate-900">{companyName}</p>
               {settings.company_director && <p>{settings.company_director}</p>}
               {settings.company_address && <p>{settings.company_address}</p>}
               {settings.company_bank_details && <p>{settings.company_bank_details}</p>}
             </div>
-            <div className="mt-6 border-b border-slate-500" />
-            <p className="mt-0.5 text-[10.5px] text-slate-400">
+            <div className="mt-6 border-b border-slate-400" />
+            <p className="mt-0.5 text-[10px] text-slate-400">
               имзо · {settings.company_director || companyName}
             </p>
-            <div className="mt-3 flex h-[68px] w-full items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[12px] text-slate-300">
+            <div className="mt-3 flex h-14 w-40 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[11px] tracking-widest text-slate-300">
               М. П.
             </div>
           </div>
           <div>
-            <p className="border-b border-slate-900 pb-1 text-[13px] font-bold">«ХАРИДОР»</p>
-            <div className="mt-1.5 text-[11.5px] leading-[1.6] text-slate-600">
+            <p
+              style={{ borderBottom: `2px solid ${PLUM}` }}
+              className="pb-1 text-[12.5px] font-bold tracking-wide"
+            >
+              «ХАРИДОР»
+            </p>
+            <div className="mt-1.5 text-[11px] leading-[1.6] text-slate-600">
               <p className="font-semibold text-slate-900">{contract.client?.name ?? "—"}</p>
               {contract.client?.passport && <p>Шиноснома: {contract.client.passport}</p>}
               {contract.client?.passport_issued_by && (
@@ -359,23 +405,23 @@ export function ContractDocument({
               {contract.client?.phone && <p>Тел: {contract.client.phone}</p>}
               {contract.client?.address && <p>{contract.client.address}</p>}
             </div>
-            <div className="mt-6 border-b border-slate-500" />
-            <p className="mt-0.5 text-[10.5px] text-slate-400">
+            <div className="mt-6 border-b border-slate-400" />
+            <p className="mt-0.5 text-[10px] text-slate-400">
               имзо · {contract.client?.name ?? "—"}
             </p>
-            <div className="mt-4 w-32 border-b border-slate-500" />
-            <p className="mt-0.5 text-[10.5px] text-slate-400">сана</p>
+            <div className="mt-4 w-32 border-b border-slate-400" />
+            <p className="mt-0.5 text-[10px] text-slate-400">сана</p>
           </div>
         </div>
       </div>
 
       {/* Footer requisites strip */}
-      <div className="border-t border-slate-200 px-8 py-2 text-center text-[10px] text-slate-400">
+      <div className="border-t border-slate-200 px-8 py-2 text-center text-[9.5px] tracking-wide text-slate-400">
         {[companyName, settings.company_address, settings.company_bank_details]
           .filter(Boolean)
           .join(" · ")}
       </div>
-      <div className="border-t-[3px] border-slate-900" />
+      <div style={{ borderTop: `3px solid ${PLUM}` }} />
     </div>
   );
 }

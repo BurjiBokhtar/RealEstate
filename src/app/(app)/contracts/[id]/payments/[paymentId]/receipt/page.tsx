@@ -72,7 +72,10 @@ export default function PaymentReceiptPage() {
           than however tall its own content happens to be -- otherwise a
           short receipt leaves the second copy nowhere near the fold, or a
           slightly taller one pushes it onto a second page. */}
-      <div className="mx-auto flex w-full max-w-md flex-col gap-4 print:h-[273mm] print:max-w-none print:gap-0">
+      <div
+        id="contract-print-area"
+        className="mx-auto flex w-full max-w-md flex-col gap-4 print:h-[273mm] print:max-w-none print:gap-0"
+      >
         <div className="print:flex print:h-1/2 print:flex-col print:justify-center print:overflow-hidden">
           <ReceiptDocument
             settings={settings}

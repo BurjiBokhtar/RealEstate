@@ -311,8 +311,6 @@ export default function DashboardPage() {
       .sort((a, b) => b.tjs + b.usd - (a.tjs + a.usd));
   }, [allObjects, periodContracts, buildings, selectedBuildingId]);
 
-  const occupancyPct =
-    counts.total > 0 ? Math.round(((counts.total - counts.available) / counts.total) * 100) : 0;
 
   return (
     <div className="flex flex-col gap-5">
@@ -320,7 +318,6 @@ export default function DashboardPage() {
         t={t}
         loading={loading}
         brandName={brandName}
-        occupancyPct={occupancyPct}
         totalUnits={counts.total}
         availableCount={counts.available}
         reservedCount={counts.reserved}

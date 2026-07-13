@@ -40,8 +40,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen w-full">
-      <aside className="hero-gradient relative hidden w-60 shrink-0 overflow-hidden sm:flex sm:flex-col print:hidden">
+    // h-screen + overflow-hidden pins the shell to the viewport: the
+    // sidebar and header never move, only <main> scrolls. Print must undo
+    // all of it -- a fixed-height scroll container clips a printed
+    // document to one viewport worth of content.
+    <div className="flex h-screen w-full overflow-hidden print:block print:h-auto print:overflow-visible">
+      <aside className="hero-gradient relative hidden h-full w-60 shrink-0 overflow-y-auto sm:flex sm:flex-col print:hidden">
         {/* Same faint skyline as the dashboard hero, so the two read as one
             visual system instead of a bright gradient page dropped into a
             plain white shell. */}
@@ -107,8 +111,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:justify-end print:hidden">
+      <div className="flex h-full min-w-0 flex-1 flex-col print:block print:h-auto">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:justify-end print:hidden">
           <Link
             href="/"
             className="flex min-w-0 flex-1 items-center gap-2 transition-opacity hover:opacity-80 sm:hidden"
@@ -145,7 +149,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 bg-slate-50 p-5 print:bg-white print:p-0">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-slate-50 p-5 print:overflow-visible print:bg-white print:p-0">
+          {children}
+        </main>
       </div>
     </div>
   );
