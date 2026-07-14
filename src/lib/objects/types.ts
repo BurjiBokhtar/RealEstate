@@ -36,6 +36,7 @@ export type PropertyObject = {
   plan_url: string | null;
   span: number;
   rooms: number | null;
+  manual_reserved: boolean;
   created_at: string;
   updated_at: string;
 };

@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   const { email, password, role } = (await request.json()) as {
     email: string;
     password: string;
-    role: "admin" | "manager";
+    role: "admin" | "manager" | "director";
   };
 
   if (!email || !password) {
@@ -55,7 +55,10 @@ export async function POST(request: Request) {
 
   await supabase
     .from("profiles")
-    .upsert({ id: data.user.id, role: role === "admin" ? "admin" : "manager" });
+    .upsert({
+      id: data.user.id,
+      role: role === "admin" || role === "director" ? role : "manager",
+    });
 
   return NextResponse.json({ id: data.user.id, email: data.user.email });
 }
@@ -68,9 +71,9 @@ export async function PATCH(request: Request) {
 
   const { userId, role } = (await request.json()) as {
     userId: string;
-    role: "admin" | "manager";
+    role: "admin" | "manager" | "director";
   };
-  if (!userId || (role !== "admin" && role !== "manager")) {
+  if (!userId || !["admin", "manager", "director"].includes(role)) {
     return NextResponse.json({ error: "Invalid userId/role" }, { status: 400 });
   }
 

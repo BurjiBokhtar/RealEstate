@@ -145,48 +145,19 @@ export default function BuildingDetailPage() {
     await loadUnits();
   };
 
-  // Right-click quick booking: reserve the unit instantly with no dialog.
-  // A contract still needs a client (DB constraint), so we reuse one shared
-  // placeholder "no client yet" record rather than asking staff anything --
-  // whoever finishes the paperwork can swap in the real buyer later by
-  // opening the contract (left click on the now-reserved cell).
-  const getOrCreateQuickBookingClient = async (
-    supabase: ReturnType<typeof createClient>
-  ): Promise<string> => {
-    const { data: existing } = await supabase
-      .schema("crm")
-      .from("clients")
-      .select("id")
-      .eq("source", "quick_booking")
-      .limit(1)
-      .maybeSingle();
-    if (existing) return existing.id;
-
-    const { data: created, error } = await supabase
-      .schema("crm")
-      .from("clients")
-      .insert({
-        name: "Без клиента (быстрая бронь)",
-        source: "quick_booking",
-        status: "new",
-      })
-      .select("id")
-      .single();
-    if (error || !created) throw new Error(error?.message ?? t.common.error);
-    return created.id;
-  };
-
+  // Right-click toggles a hand reservation on the unit itself -- no
+  // contract, no client attached, exactly "придержи эту квартиру". The
+  // toggle is one SECURITY DEFINER RPC that flips objects.manual_reserved
+  // and recomputes the status, so a second right-click always frees the
+  // unit back up.
   const handleQuickBook = async (unit: PropertyObject) => {
-    // Belt and suspenders against duplicate bookings: ignore a second
-    // right-click on the same cell while the first is still in flight, and
-    // re-check the freshest known state right before writing (in case the
-    // click queued up before an earlier state update landed).
+    if (role === "director") return;
     if (pendingQuickBook.has(unit.id)) return;
     const existing = contractsByUnit[unit.id];
     if (existing) {
-      // The grid already routes placeholder bookings to cancel; reaching
-      // here with a contract means it's a real buyer's -- explain instead
-      // of silently doing nothing (or worse, double-booking).
+      // Legacy placeholder bookings (old flow that created a stub contract)
+      // still cancel; a real buyer's contract explains itself instead of
+      // silently doing nothing.
       if (existing.isQuickBooking) {
         await handleCancelQuickBook(unit, existing.id);
       } else {
@@ -194,63 +165,37 @@ export default function BuildingDetailPage() {
       }
       return;
     }
-    const freshUnit = units.find((u) => u.id === unit.id) ?? unit;
-    if (freshUnit.status !== "available") return;
 
     setPendingQuickBook((prev) => new Set(prev).add(unit.id));
     const supabase = createClient();
     try {
-      const clientId = await getOrCreateQuickBookingClient(supabase);
       const { data, error } = await supabase
         .schema("crm")
-        .from("contracts")
-        .insert({
-          client_id: clientId,
-          object_id: unit.id,
-          amount: unit.price ?? 0,
-          paid_amount: 0,
-          currency: unit.currency,
-          status: "draft",
-          payment_type: "full",
-        })
-        .select("id")
-        .single();
-      if (error || !data) {
-        // 23505 = unique_violation on uq_contracts_object_active -- someone
-        // else's click landed on this same unit a moment earlier.
-        if (error?.code === "23505") throw new Error(t.buildings.alreadyBooked);
-        throw new Error(error?.message ?? t.common.error);
-      }
+        .rpc("toggle_manual_reservation", { p_object_id: unit.id });
+      if (error) throw new Error(error.message);
+      const nowReserved = Boolean(data);
 
-      // Flip the cell to "reserved" immediately in local state -- don't
-      // wait on (or depend on) the DB-side status trigger to see it, so the
-      // click always gives instant feedback even if that trigger is ever
-      // missing or slow. A background reload still reconciles with the
-      // server shortly after.
+      // Instant local feedback; a later reload reconciles with the server.
       setUnits((prev) =>
-        prev.map((u) => (u.id === unit.id ? { ...u, status: "reserved" } : u))
+        prev.map((u) =>
+          u.id === unit.id
+            ? {
+                ...u,
+                manual_reserved: nowReserved,
+                status: nowReserved ? "reserved" : "available",
+              }
+            : u
+        )
       );
-      setContractsByUnit((prev) => ({
-        ...prev,
-        [unit.id]: {
-          id: data.id,
-          clientName: "Без клиента (быстрая бронь)",
-          remaining: unit.price ?? 0,
-          currency: unit.currency,
-          paymentsCount: 0,
-          isQuickBooking: true,
-        },
-      }));
-      setToast({ message: t.buildings.quickBooked, type: "success" });
+      setToast({
+        message: nowReserved ? t.buildings.quickBooked : t.buildings.quickBookCancelled,
+        type: "success",
+      });
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : t.common.error,
         type: "error",
       });
-      // Local state assumed the booking would succeed and never got
-      // updated -- reconcile with the server so a lost race (someone else
-      // booked this unit a moment earlier) doesn't leave the cell looking
-      // bookable when it no longer is.
       await loadUnits();
     } finally {
       setPendingQuickBook((prev) => {
@@ -370,6 +315,7 @@ export default function BuildingDetailPage() {
           <ShakhmatkaGrid
             units={units}
             contractsByUnit={contractsByUnit}
+            readOnly={role === "director"}
             onBookUnit={setBookingUnit}
             onQuickBook={handleQuickBook}
             onCancelQuickBook={handleCancelQuickBook}

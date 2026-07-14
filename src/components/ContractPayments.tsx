@@ -23,6 +23,37 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// How much of each planned installment is already covered by the money
+// actually received. Clients rarely pay the exact installment -- sometimes
+// more, sometimes less -- so nobody hand-marks plan rows anymore: the
+// received total flows into the plan oldest-first (FIFO). A row is
+// "covered" when enough real money has arrived to fill it, "partial" while
+// it's filling, "upcoming" after the pool runs dry.
+//
+// The pool is (paid_amount) minus the share of the contract that was never
+// part of the plan (the down payment): plan rows always sum to
+// amount - downPayment, so pool = paid_amount - (amount - planTotal).
+type PlanRowState = { covered: number; state: "covered" | "partial" | "upcoming" };
+
+function allocatePlan(
+  contract: Contract,
+  planRows: ContractPayment[]
+): Map<string, PlanRowState> {
+  const planTotal = planRows.reduce((sum, p) => sum + p.amount, 0);
+  let pool = Math.max(0, contract.paid_amount - (contract.amount - planTotal));
+  const result = new Map<string, PlanRowState>();
+  for (const row of planRows) {
+    const covered = Math.min(pool, row.amount);
+    pool -= covered;
+    result.set(row.id, {
+      covered,
+      state:
+        covered >= row.amount - 0.005 ? "covered" : covered > 0 ? "partial" : "upcoming",
+    });
+  }
+  return result;
+}
+
 export function ContractPayments({
   contract,
   onPaymentAdded,
@@ -80,20 +111,6 @@ export function ContractPayments({
     setGenerating(false);
   };
 
-  const togglePaid = async (payment: ContractPayment) => {
-    const supabase = createClient();
-    const { error } = await supabase.schema("crm").rpc("set_payment_paid", {
-      p_payment_id: payment.id,
-      p_paid: !payment.paid,
-    });
-    if (error) {
-      setRecordError(error.message);
-      return;
-    }
-    await load();
-    onPaymentAdded?.();
-  };
-
   const handleRecordPayment = async () => {
     const amount = Number(newAmount);
     if (!amount || amount <= 0) return;
@@ -139,65 +156,84 @@ export function ContractPayments({
     onPaymentAdded?.();
   };
 
-  const paidCount = payments.filter((p) => p.paid).length;
-  const nextDue = payments.find((p) => !p.paid) ?? null;
-  // History = money actually received, newest on top. Schedule = the plan
-  // still ahead. `payments` stays due-date-ordered because receipt numbers
-  // derive from that ordering.
+  const readOnly = role === "director";
+
+  // Received money (receipts), newest first; the plan stays due-date
+  // ordered because receipt numbers derive from that ordering.
   const paidPayments = payments
     .filter((p) => p.paid)
     .sort((a, b) => (b.paid_date ?? b.due_date).localeCompare(a.paid_date ?? a.due_date));
-  const unpaidPayments = payments.filter((p) => !p.paid);
+  const planRows = payments.filter((p) => !p.paid);
+  const allocation = allocatePlan(contract, planRows);
+
+  const coveredCount = planRows.filter(
+    (p) => allocation.get(p.id)?.state === "covered"
+  ).length;
+  const nextDue =
+    planRows.find((p) => allocation.get(p.id)?.state !== "covered") ?? null;
+  const nextDueRemaining = nextDue
+    ? nextDue.amount - (allocation.get(nextDue.id)?.covered ?? 0)
+    : 0;
+
+  const paidPct =
+    contract.amount > 0
+      ? Math.min(Math.round((contract.paid_amount / contract.amount) * 100), 100)
+      : 0;
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold text-slate-700">{t.contracts.payments.title}</p>
-        {payments.length > 0 && (
+        {planRows.length > 0 && (
           <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-            {paidCount}/{payments.length}
+            {coveredCount}/{planRows.length}
           </span>
         )}
       </div>
 
       {/* Recording a payment is the thing staff do here most often --
-          it gets the prominent spot at the top, not buried under a table. */}
-      <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
-        <p className="text-xs font-medium text-slate-500">{t.contracts.payments.recordTitle}</p>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-1 flex-col gap-1 text-xs">
-            <span className="text-slate-500">{t.contracts.payments.amount}</span>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={newAmount}
-              onChange={(e) => setNewAmount(e.target.value)}
-              className={`${FIELD_CLASS} w-full`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="text-slate-500">{t.contracts.payments.dueDate}</span>
-            <input
-              type="date"
-              value={newDate}
-              onChange={(e) => setNewDate(e.target.value)}
-              className={FIELD_CLASS}
-            />
-          </label>
+          it gets the prominent spot at the top, not buried under a table.
+          Directors watch, they don't take money. */}
+      {!readOnly && (
+        <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
+          <p className="text-xs font-medium text-slate-500">
+            {t.contracts.payments.recordTitle}
+          </p>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="flex flex-1 flex-col gap-1 text-xs">
+              <span className="text-slate-500">{t.contracts.payments.amount}</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newAmount}
+                onChange={(e) => setNewAmount(e.target.value)}
+                className={`${FIELD_CLASS} w-full`}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="text-slate-500">{t.contracts.payments.dueDate}</span>
+              <input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className={FIELD_CLASS}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            onClick={handleRecordPayment}
+            disabled={recording || !newAmount}
+            className="h-9 w-full rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {recording ? t.common.loading : t.contracts.payments.record}
+          </button>
+          {recordError && <p className="text-xs text-red-600">{recordError}</p>}
         </div>
-        <button
-          type="button"
-          onClick={handleRecordPayment}
-          disabled={recording || !newAmount}
-          className="h-9 w-full rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
-        >
-          {recording ? t.common.loading : t.contracts.payments.record}
-        </button>
-        {recordError && <p className="text-xs text-red-600">{recordError}</p>}
-      </div>
+      )}
 
-      {payments.length === 0 && contract.payment_type === "installment" && (
+      {!readOnly && payments.length === 0 && contract.payment_type === "installment" && (
         <>
           <p className="text-sm text-slate-400">{t.contracts.payments.generateHint}</p>
           <button
@@ -211,15 +247,14 @@ export function ContractPayments({
         </>
       )}
 
-      {/* Compact by default: a 12-month schedule as an always-open list
-          drowned the card. One progress line + the next due date says the
-          state at a glance; the full row list opens on demand. */}
+      {/* Compact by default: overall progress + the next thing due. The
+          full plan opens on demand. */}
       {payments.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-emerald-500 transition-[width] duration-500"
-              style={{ width: `${(paidCount / payments.length) * 100}%` }}
+              style={{ width: `${paidPct}%` }}
             />
           </div>
           {nextDue && (
@@ -227,11 +262,11 @@ export function ContractPayments({
               {t.contracts.payments.nextDue}:{" "}
               <span className="font-semibold text-slate-700">{nextDue.due_date}</span> ·{" "}
               <span className="font-semibold text-slate-700">
-                {formatCurrency(nextDue.amount, contract.currency)}
+                {formatCurrency(nextDueRemaining, contract.currency)}
               </span>
             </p>
           )}
-          {unpaidPayments.length > 0 && (
+          {planRows.length > 0 && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
@@ -239,15 +274,14 @@ export function ContractPayments({
             >
               {expanded
                 ? t.contracts.payments.hideSchedule
-                : `${t.contracts.payments.showSchedule} (${unpaidPayments.length})`}
+                : `${t.contracts.payments.showSchedule} (${planRows.length})`}
             </button>
           )}
         </div>
       )}
 
       {/* Money actually received -- always visible, newest first. Every row
-          is a real receipt with its print/send/delete actions. The unpaid
-          plan lives separately below, behind the schedule toggle. */}
+          is a real receipt with its print/send/delete actions. */}
       {paidPayments.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -267,13 +301,9 @@ export function ContractPayments({
                     №{receiptNumberFor(payments, p.id)} · {p.paid_date ?? p.due_date}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => togglePaid(p)}
-                  className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 transition-all hover:bg-emerald-200 active:scale-95"
-                >
-                  {t.contracts.payments.markUnpaid}
-                </button>
+                <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                  ✓ {t.clients.paymentHistory.paid}
+                </span>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100/60 pt-1.5">
                 <Link
@@ -302,44 +332,72 @@ export function ContractPayments({
         </div>
       )}
 
-      {payments.length > 0 && expanded && unpaidPayments.length > 0 && (
+      {/* The plan, with each installment's coverage DERIVED from received
+          money (oldest first) -- nothing here is ever hand-marked, so a
+          client paying 5 000 against a 10 000 installment shows exactly
+          that: 5 000 / 10 000, not a wrongly "paid" row. */}
+      {expanded && planRows.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
             {t.contracts.payments.scheduleTitle}
           </p>
-          {unpaidPayments.map((p) => (
-            <div
-              key={p.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 transition-colors hover:border-slate-200"
-            >
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-slate-700">
-                  {formatCurrency(p.amount, contract.currency)}
-                </span>
-                <span className="text-xs text-slate-400">{p.due_date}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => togglePaid(p)}
-                  className="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-all hover:bg-slate-300 active:scale-95"
-                >
-                  {t.contracts.payments.markPaid}
-                </button>
-                {role === "admin" && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePayment(p)}
-                    disabled={deletingId === p.id}
-                    title={t.contracts.payments.deletePayment}
-                    className="flex items-center rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
-                  >
-                    ✕
-                  </button>
+          {planRows.map((p) => {
+            const a = allocation.get(p.id) ?? { covered: 0, state: "upcoming" as const };
+            return (
+              <div
+                key={p.id}
+                className={`flex flex-col gap-1.5 rounded-lg border px-3 py-2 transition-colors ${
+                  a.state === "covered"
+                    ? "border-emerald-100 bg-emerald-50/30"
+                    : a.state === "partial"
+                      ? "border-amber-200 bg-amber-50/40"
+                      : "border-slate-100 hover:border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-slate-700">
+                      {a.state === "partial"
+                        ? `${formatCurrency(a.covered, contract.currency)} / ${formatCurrency(p.amount, contract.currency)}`
+                        : formatCurrency(p.amount, contract.currency)}
+                    </span>
+                    <span className="text-xs text-slate-400">{p.due_date}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {a.state === "covered" && (
+                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                        ✓ {t.contracts.payments.covered}
+                      </span>
+                    )}
+                    {a.state === "partial" && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+                        {Math.round((a.covered / p.amount) * 100)}%
+                      </span>
+                    )}
+                    {role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeletePayment(p)}
+                        disabled={deletingId === p.id}
+                        title={t.contracts.payments.deletePayment}
+                        className="flex items-center rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {a.state === "partial" && (
+                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-amber-100">
+                    <div
+                      className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
+                      style={{ width: `${(a.covered / p.amount) * 100}%` }}
+                    />
+                  </div>
                 )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

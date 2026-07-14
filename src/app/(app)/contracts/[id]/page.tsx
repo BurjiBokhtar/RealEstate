@@ -198,13 +198,15 @@ export default function ContractDetailPage() {
                 <p className="text-sm font-semibold text-slate-700">
                   {t.contracts.detailsTitle}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setEditing((v) => !v)}
-                  className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
-                </button>
+                {role !== "director" && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing((v) => !v)}
+                    className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                  >
+                    {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                  </button>
+                )}
               </div>
 
               {!editing && (

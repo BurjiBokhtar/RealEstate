@@ -29,17 +29,33 @@ async function authHeaders() {
   };
 }
 
-// A short human label for a deleted row, pulled from whatever field the
+// A short human label for the affected row, pulled from whatever field the
 // snapshot happens to have (name for clients, number for contracts, ...) --
-// so the log reads as "deleted client Иванов" instead of a bare UUID.
+// so the log reads as "клиент Иванов" instead of a bare UUID. For updates,
+// the trigger also stores the map of changed fields; listing their names
+// answers "what exactly was edited" without opening anything.
 function summarize(entry: AuditEntry): string | null {
   const d = entry.details;
   if (!d) return null;
-  if (typeof d.name === "string") return d.name;
-  if (typeof d.number === "string" && d.number) return `№${d.number}`;
-  if (typeof d.amount === "number") return String(d.amount);
-  return null;
+  const parts: string[] = [];
+  if (typeof d.name === "string" && d.name) parts.push(d.name);
+  else if (typeof d.number === "string" && d.number) parts.push(`№${d.number}`);
+  else if (typeof d.amount === "number") parts.push(String(d.amount));
+  if (d.changed && typeof d.changed === "object") {
+    const keys = Object.keys(d.changed as Record<string, unknown>);
+    if (keys.length > 0) parts.push(`(${keys.join(", ")})`);
+  }
+  return parts.length > 0 ? parts.join(" ") : null;
 }
+
+// The DB trigger writes 'insert'; keep 'create' too so older rows (or a
+// future rename) render the same.
+const ACTION_STYLES: Record<string, string> = {
+  insert: "bg-emerald-50 text-emerald-600",
+  create: "bg-emerald-50 text-emerald-600",
+  update: "bg-sky-50 text-sky-600",
+  delete: "bg-rose-50 text-rose-600",
+};
 
 export default function AuditLogPage() {
   const { t } = useLocale();
@@ -47,16 +63,24 @@ export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [actors, setActors] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     const supabase = createClient();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .schema("crm")
       .from("audit_log")
       .select("*")
       .order("created_at", { ascending: false })
       .limit(200);
+    if (error) {
+      // The most common cause is the audit migration never having been run
+      // on this database -- an empty page with no explanation made that
+      // look like the journal itself was broken.
+      setLoadError(error.message);
+    }
     setEntries((data ?? []) as AuditEntry[]);
 
     try {
@@ -98,7 +122,12 @@ export default function AuditLogPage() {
       </div>
 
       {loading && <p className="text-slate-400">{t.common.loading}</p>}
-      {!loading && entries.length === 0 && (
+      {!loading && loadError && (
+        <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {loadError}
+        </p>
+      )}
+      {!loading && !loadError && entries.length === 0 && (
         <p className="text-slate-400">{t.auditLog.empty}</p>
       )}
 
@@ -132,8 +161,14 @@ export default function AuditLogPage() {
                         : t.auditLog.unknownActor}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600">
-                        {t.auditLog.actionDelete}
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${ACTION_STYLES[entry.action] ?? "bg-slate-100 text-slate-600"}`}
+                      >
+                        {entry.action === "create" || entry.action === "insert"
+                          ? t.auditLog.actionCreate
+                          : entry.action === "update"
+                            ? t.auditLog.actionUpdate
+                            : t.auditLog.actionDelete}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{entityLabel}</td>

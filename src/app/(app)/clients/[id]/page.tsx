@@ -172,6 +172,42 @@ export default function ClientDetailPage() {
     return sum + Math.max(0, c.amount - c.paid_amount);
   }, 0);
 
+  // Contracts can be in TJS or USD -- sum each currency separately and
+  // print both when both occur (same convention as the dashboard).
+  const moneyPair = (pick: (c: ClientContract) => number) => {
+    const v = { tjs: 0, usd: 0 };
+    contracts
+      .filter((c) => c.status !== "cancelled")
+      .forEach((c) => {
+        if (c.currency === "USD") v.usd += pick(c);
+        else v.tjs += pick(c);
+      });
+    const parts: string[] = [];
+    if (v.tjs > 0) parts.push(formatCurrency(v.tjs, "TJS"));
+    if (v.usd > 0) parts.push(formatCurrency(v.usd, "USD"));
+    return parts.length ? parts.join(" + ") : "—";
+  };
+  const activeContracts = contracts.filter((c) => c.status !== "cancelled");
+  const statTiles = [
+    {
+      label: t.clients.stats.bought,
+      value: String(activeContracts.length),
+      tone: "text-slate-900",
+    },
+    {
+      label: t.clients.stats.paidTotal,
+      value: moneyPair((c) => c.paid_amount),
+      tone: "text-emerald-600",
+    },
+    {
+      label: t.clients.stats.debt,
+      value: moneyPair((c) => Math.max(0, c.amount - c.paid_amount)),
+      tone: totalDebt > 0 ? "text-rose-600" : "text-emerald-600",
+    },
+  ];
+
+  const readOnly = role === "director";
+
   const paymentsByContract = payments.reduce<Record<string, ContractPayment[]>>((acc, p) => {
     (acc[p.contract_id] ??= []).push(p);
     return acc;
@@ -205,9 +241,34 @@ export default function ClientDetailPage() {
 
       {client && (
         <>
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          {/* Client state at a glance -- same tile language as the cash desk */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {statTiles.map((tile, i) => (
+              <div
+                key={tile.label}
+                style={{ animationDelay: `${i * 50}ms` }}
+                className="animate-fade-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">
+                  {tile.label}
+                </p>
+                <p className={`mt-1 text-2xl font-bold tabular-nums ${tile.tone}`}>
+                  {tile.value}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div
+            className={`grid grid-cols-1 gap-5 lg:items-start ${
+              readOnly ? "" : "lg:grid-cols-[minmax(0,1fr)_360px]"
+            }`}
+          >
             {/* Profile card: everything at a glance, edit folded away */}
-            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div
+              className="animate-fade-up flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+              style={{ animationDelay: "150ms" }}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-3.5">
                   <span className="hero-gradient flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white">
@@ -223,13 +284,15 @@ export default function ClientDetailPage() {
                     )}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setEditing((v) => !v)}
-                  className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setEditing((v) => !v)}
+                    className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                  >
+                    {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                  </button>
+                )}
               </div>
 
               {!editing && (
@@ -273,12 +336,16 @@ export default function ClientDetailPage() {
               )}
             </div>
 
-            <ClientQuickPayment contracts={contracts} onRecorded={loadContracts} />
+            {!readOnly && (
+              <div className="animate-fade-up" style={{ animationDelay: "200ms" }}>
+                <ClientQuickPayment contracts={contracts} onRecorded={loadContracts} />
+              </div>
+            )}
           </div>
 
           {/* Purchases: unit, money state, and the two actions staff need
               from here -- print the contract, take a payment. */}
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="animate-fade-up flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style={{ animationDelay: "250ms" }}>
             <p className="text-sm font-semibold text-slate-700">{t.clients.purchases.title}</p>
             {contracts.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-6 text-center">
@@ -383,7 +450,7 @@ export default function ClientDetailPage() {
 
           {/* Full receipt history -- every payment ever taken from this
               client, with one-click reprint of any receipt. */}
-          <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="animate-fade-up flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style={{ animationDelay: "300ms" }}>
             <p className="text-sm font-semibold text-slate-700">
               {t.clients.paymentHistory.title}
             </p>

@@ -32,6 +32,7 @@ function UnitCell({
   isPending,
   onMergeUnits,
   canEditSold,
+  readOnly,
   onViewUnit,
   statusFilter,
 }: {
@@ -45,6 +46,7 @@ function UnitCell({
   isPending: boolean;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
+  readOnly: boolean;
   onViewUnit: (unit: PropertyObject) => void;
   statusFilter: ObjectStatus | null;
 }) {
@@ -67,10 +69,21 @@ function UnitCell({
   // admins, since that means editing the raw unit record.
   const handlePrimaryAction = () => {
     if (isPending) return;
+    if (readOnly) {
+      // Director: everything opens as a view -- the cash desk page is
+      // already read-only for this role, unit cells never open write forms.
+      if (contractInfo) router.push(`/contracts/${contractInfo.id}/payments`);
+      else onViewUnit(unit);
+      return;
+    }
     if (unit.status === "available") {
       onBookUnit(unit);
     } else if (contractInfo) {
       router.push(`/contracts/${contractInfo.id}/payments`);
+    } else if (unit.manual_reserved) {
+      // Hand-reserved, no contract yet: the natural next step is drafting
+      // the real contract for whoever the unit was held for.
+      onBookUnit(unit);
     } else if (canEditSold) {
       router.push(`/objects/${unit.id}`);
     } else {
@@ -85,7 +98,7 @@ function UnitCell({
         onClick={handlePrimaryAction}
         onContextMenu={(e) => {
           e.preventDefault();
-          if (isPending) return;
+          if (isPending || readOnly) return;
           // Right click toggles a quick booking. Decide by whether the
           // unit's contract is an untouched placeholder booking -- NOT by
           // the unit's status color: if the status-sync DB trigger is
@@ -159,12 +172,23 @@ function UnitCell({
             </p>
           </>
         )}
-        {unit.status === "available" && (
+        {!contractInfo && unit.manual_reserved && (
+          <p className="flex justify-between text-slate-500">
+            <span>{t.buildings.hover.owner}</span>
+            <span className="text-slate-700">{t.buildings.hover.reservedNoClient}</span>
+          </p>
+        )}
+        {!readOnly && unit.status === "available" && (
           <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
             {t.buildings.hover.clickHint}
           </p>
         )}
-        {contractInfo && (
+        {!readOnly && !contractInfo && unit.manual_reserved && (
+          <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
+            {t.buildings.hover.clickHintQuickBooked}
+          </p>
+        )}
+        {!readOnly && contractInfo && (
           <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-[10px] text-slate-400">
             {contractInfo.isQuickBooking
               ? t.buildings.hover.clickHintQuickBooked
@@ -186,6 +210,7 @@ export function ShakhmatkaGrid({
   pendingUnitIds,
   onMergeUnits,
   canEditSold,
+  readOnly = false,
   onViewUnit,
 }: {
   units: PropertyObject[];
@@ -197,6 +222,7 @@ export function ShakhmatkaGrid({
   pendingUnitIds: Set<string>;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
   canEditSold: boolean;
+  readOnly?: boolean;
   onViewUnit: (unit: PropertyObject) => void;
 }) {
   const { t } = useLocale();
@@ -350,6 +376,7 @@ export function ShakhmatkaGrid({
                             isPending={pendingUnitIds.has(slot.unit.id)}
                             onMergeUnits={onMergeUnits}
                             canEditSold={canEditSold}
+                            readOnly={readOnly}
                             onViewUnit={onViewUnit}
                             statusFilter={statusFilter}
                           />
