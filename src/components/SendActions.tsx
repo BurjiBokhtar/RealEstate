@@ -46,22 +46,34 @@ export function SendActions({ contractId, kind, paymentId }: { contractId: strin
 
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex flex-wrap gap-2">
+      {/* Compact icon chips: recognizable at a glance in a dense row of
+          per-payment actions, label kept so the icon never has to be
+          guessed. Title carries the full wording. */}
+      <div className="flex flex-wrap gap-1.5">
         <button
           type="button"
           onClick={() => send("whatsapp")}
           disabled={sending !== null}
-          className="rounded-md border border-emerald-300 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+          title={t.contracts.send.whatsapp}
+          className="flex items-center gap-1 rounded-lg border border-emerald-300 px-2 py-1 text-[11px] font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-95 disabled:opacity-50"
         >
-          {sending === "whatsapp" ? t.contracts.send.sending : t.contracts.send.whatsapp}
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
+            <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1a13 13 0 0 1-1.5-.5c-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c0 .2.1.3 0 .5l-.3.5-.4.5c-.2.1-.3.3-.1.6.1.3.7 1.1 1.4 1.8.9.9 1.7 1.1 2 1.3.2.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.1.1.6-.1 1.1Z" />
+          </svg>
+          {sending === "whatsapp" ? "…" : "WhatsApp"}
         </button>
         <button
           type="button"
           onClick={() => send("email")}
           disabled={sending !== null}
-          className="rounded-md border border-sky-300 px-3 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-50 disabled:opacity-50"
+          title={t.contracts.send.email}
+          className="flex items-center gap-1 rounded-lg border border-sky-300 px-2 py-1 text-[11px] font-semibold text-sky-700 transition-all hover:bg-sky-50 active:scale-95 disabled:opacity-50"
         >
-          {sending === "email" ? t.contracts.send.sending : t.contracts.send.email}
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current" strokeWidth="2" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <path d="m3 7 9 6 9-6" />
+          </svg>
+          {sending === "email" ? "…" : "Email"}
         </button>
       </div>
       {result && (

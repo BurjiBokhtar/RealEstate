@@ -86,14 +86,18 @@ function UnitCell({
         onContextMenu={(e) => {
           e.preventDefault();
           if (isPending) return;
-          // Right click: instantly reserve an available unit, no dialog.
-          if (unit.status === "available") {
-            onQuickBook(unit);
-          } else if (unit.status === "reserved" && contractInfo?.isQuickBooking) {
-            // Right click again on a unit booked this same way undoes it --
-            // only ever applies to that untouched placeholder booking, never
-            // to a unit with a real buyer or any payment on it.
+          // Right click toggles a quick booking. Decide by whether the
+          // unit's contract is an untouched placeholder booking -- NOT by
+          // the unit's status color: if the status-sync DB trigger is
+          // missing or lagging, the cell can still read "available" while
+          // its placeholder contract already exists (and vice versa), and
+          // keying off status made the second right-click a silent no-op.
+          if (contractInfo?.isQuickBooking) {
             onCancelQuickBook(unit, contractInfo.id);
+          } else {
+            // Real bookings (or no contract at all) go to the page handler,
+            // which quick-books a free unit or explains why it can't.
+            onQuickBook(unit);
           }
         }}
         disabled={isPending}

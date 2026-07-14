@@ -2,7 +2,7 @@
 
 import { printDocument } from "@/lib/print";
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
@@ -18,6 +18,7 @@ type ContractWithRelations = Contract & {
 export default function PaymentReceiptPage() {
   const { t } = useLocale();
   const { settings } = useSettings();
+  const router = useRouter();
   const params = useParams<{ id: string; paymentId: string }>();
   const [contract, setContract] = useState<ContractWithRelations | null | undefined>(
     undefined
@@ -60,13 +61,22 @@ export default function PaymentReceiptPage() {
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-4 py-6 print:max-w-none print:py-0">
-      <button
-        type="button"
-        onClick={() => printDocument()}
-        className="w-fit self-end rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 print:hidden"
-      >
-        {t.contracts.print.button}
-      </button>
+      <div className="flex items-center justify-between gap-3 print:hidden">
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+        >
+          ← {t.common.back}
+        </button>
+        <button
+          type="button"
+          onClick={() => printDocument()}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+        >
+          🖨 {t.contracts.print.button}
+        </button>
+      </div>
 
       {/* Both copies share one A4 sheet, so each gets exactly half its
           printable height (297mm minus the @page top/bottom margins) rather

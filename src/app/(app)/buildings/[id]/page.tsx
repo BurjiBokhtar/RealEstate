@@ -179,9 +179,21 @@ export default function BuildingDetailPage() {
   const handleQuickBook = async (unit: PropertyObject) => {
     // Belt and suspenders against duplicate bookings: ignore a second
     // right-click on the same cell while the first is still in flight, and
-    // re-check the freshest known status right before writing (in case the
+    // re-check the freshest known state right before writing (in case the
     // click queued up before an earlier state update landed).
     if (pendingQuickBook.has(unit.id)) return;
+    const existing = contractsByUnit[unit.id];
+    if (existing) {
+      // The grid already routes placeholder bookings to cancel; reaching
+      // here with a contract means it's a real buyer's -- explain instead
+      // of silently doing nothing (or worse, double-booking).
+      if (existing.isQuickBooking) {
+        await handleCancelQuickBook(unit, existing.id);
+      } else {
+        setToast({ message: t.buildings.cannotUnbookReal, type: "error" });
+      }
+      return;
+    }
     const freshUnit = units.find((u) => u.id === unit.id) ?? unit;
     if (freshUnit.status !== "available") return;
 

@@ -34,6 +34,15 @@ export function printDocument(areaId = "contract-print-area") {
     return;
   }
 
+  // The compiled Tailwind CSS arrives via <link> tags, which load
+  // asynchronously inside the fresh iframe -- printing before the frame's
+  // load event fires would render the document completely unstyled.
+  // (Verified: computed font-weight of a `font-bold` node is 400 right
+  // after document.close(), 700 once this event has fired.)
+  const frameLoaded = new Promise<void>((resolve) => {
+    iframe.addEventListener("load", () => resolve(), { once: true });
+  });
+
   // Tailwind's compiled CSS lives in the host page's <style>/<link> tags --
   // copy them so the clone keeps its exact styling (including print:
   // variants and @page rules).
@@ -77,9 +86,11 @@ export function printDocument(areaId = "contract-print-area") {
         })
     )
   );
-  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 1500));
-  Promise.race([allLoaded, timeout]).then(() => {
-    // Give the iframe one more frame to finish font layout.
-    setTimeout(doPrint, 50);
-  });
+  const timeout = new Promise<void>((resolve) => setTimeout(resolve, 2500));
+  Promise.race([Promise.all([frameLoaded, allLoaded]).then(() => undefined), timeout]).then(
+    () => {
+      // Give the iframe one more frame to finish font layout.
+      setTimeout(doPrint, 50);
+    }
+  );
 }

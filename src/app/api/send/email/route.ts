@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   if (kind === "receipt" && paymentId) {
     const payment = await fetchPayment(supabase, paymentId);
     if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
-    subject = `Расид об оплате — договор №${contract.number ?? ""}`;
+    subject = `Чек об оплате — договор №${contract.number ?? ""}`;
     bodyHtml = `
       <div style="text-align:center;margin-bottom:20px;">
         <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:.05em;">Оплачено</div>

@@ -141,6 +141,13 @@ export function ContractPayments({
 
   const paidCount = payments.filter((p) => p.paid).length;
   const nextDue = payments.find((p) => !p.paid) ?? null;
+  // History = money actually received, newest on top. Schedule = the plan
+  // still ahead. `payments` stays due-date-ordered because receipt numbers
+  // derive from that ordering.
+  const paidPayments = payments
+    .filter((p) => p.paid)
+    .sort((a, b) => (b.paid_date ?? b.due_date).localeCompare(a.paid_date ?? a.due_date));
+  const unpaidPayments = payments.filter((p) => !p.paid);
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -224,24 +231,32 @@ export function ContractPayments({
               </span>
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-          >
-            {expanded
-              ? t.contracts.payments.hideSchedule
-              : `${t.contracts.payments.showSchedule} (${payments.length})`}
-          </button>
+          {unpaidPayments.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+            >
+              {expanded
+                ? t.contracts.payments.hideSchedule
+                : `${t.contracts.payments.showSchedule} (${unpaidPayments.length})`}
+            </button>
+          )}
         </div>
       )}
 
-      {payments.length > 0 && expanded && (
+      {/* Money actually received -- always visible, newest first. Every row
+          is a real receipt with its print/send/delete actions. The unpaid
+          plan lives separately below, behind the schedule toggle. */}
+      {paidPayments.length > 0 && (
         <div className="flex flex-col gap-2">
-          {payments.map((p) => (
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {t.clients.paymentHistory.title}
+          </p>
+          {paidPayments.map((p) => (
             <div
               key={p.id}
-              className="flex flex-col gap-2 rounded-lg border border-slate-100 px-3 py-2.5 transition-colors hover:border-slate-200"
+              className="flex flex-col gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2.5 transition-colors hover:border-emerald-200"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-col">
@@ -249,43 +264,79 @@ export function ContractPayments({
                     {formatCurrency(p.amount, contract.currency)}
                   </span>
                   <span className="text-xs text-slate-400">
-                    №{receiptNumberFor(payments, p.id)} · {p.due_date}
+                    №{receiptNumberFor(payments, p.id)} · {p.paid_date ?? p.due_date}
                   </span>
                 </div>
                 <button
                   type="button"
                   onClick={() => togglePaid(p)}
-                  className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
-                    p.paid
-                      ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                      : "bg-slate-200 text-slate-600 hover:bg-slate-300"
-                  }`}
+                  className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700 transition-all hover:bg-emerald-200 active:scale-95"
                 >
-                  {p.paid ? t.contracts.payments.markUnpaid : t.contracts.payments.markPaid}
+                  {t.contracts.payments.markUnpaid}
                 </button>
               </div>
-              <div className="flex items-center justify-between gap-2 border-t border-slate-50 pt-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100/60 pt-1.5">
                 <Link
                   href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
-                  className="text-xs font-medium text-slate-500 hover:text-slate-900 hover:underline"
+                  className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
                 >
-                  {t.contracts.receipt.print}
+                  🖨 {t.contracts.receipt.print}
                 </Link>
-                <div className="flex items-center gap-2">
-                  {p.paid && (
-                    <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
-                  )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
                   {role === "admin" && (
                     <button
                       type="button"
                       onClick={() => handleDeletePayment(p)}
                       disabled={deletingId === p.id}
-                      className="text-xs font-medium text-red-500 transition-colors hover:text-red-700 disabled:opacity-50"
+                      title={t.contracts.payments.deletePayment}
+                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
                     >
-                      {t.contracts.payments.deletePayment}
+                      ✕
                     </button>
                   )}
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {payments.length > 0 && expanded && unpaidPayments.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {t.contracts.payments.scheduleTitle}
+          </p>
+          {unpaidPayments.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 px-3 py-2 transition-colors hover:border-slate-200"
+            >
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-slate-700">
+                  {formatCurrency(p.amount, contract.currency)}
+                </span>
+                <span className="text-xs text-slate-400">{p.due_date}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => togglePaid(p)}
+                  className="shrink-0 rounded-full bg-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-all hover:bg-slate-300 active:scale-95"
+                >
+                  {t.contracts.payments.markPaid}
+                </button>
+                {role === "admin" && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePayment(p)}
+                    disabled={deletingId === p.id}
+                    title={t.contracts.payments.deletePayment}
+                    className="flex items-center rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           ))}

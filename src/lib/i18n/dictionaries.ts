@@ -159,7 +159,7 @@ export const dictionaries = {
         object: "Квартира",
         totalDebt: "Общий долг",
         paymentsCount: "Платежей",
-        pay: "Оплата / расид",
+        pay: "Оплата / чек",
         printContract: "Печать контракта",
         interestedIn: "Клиент интересуется:",
         empty: "Пока нет договоров с этим клиентом.",
@@ -173,7 +173,7 @@ export const dictionaries = {
         title: "История платежей",
         empty: "Платежей пока нет.",
         date: "Дата",
-        receiptNo: "№ расида",
+        receiptNo: "№ чека",
         paid: "Оплачено",
         unpaid: "Не оплачено",
       },
@@ -290,7 +290,7 @@ export const dictionaries = {
         barter: "Бартер",
       },
       payments: {
-        title: "График платежей",
+        title: "Платежи",
         generate: "Сгенерировать график",
         generateHint:
           "Создаст ежемесячные платежи начиная от даты подписания договора, на основе оставшейся суммы и срока рассрочки.",
@@ -306,6 +306,7 @@ export const dictionaries = {
         showSchedule: "Показать график",
         hideSchedule: "Скрыть график",
         nextDue: "Следующий платёж",
+        scheduleTitle: "График (ещё не оплачено)",
         deletePayment: "Удалить",
         confirmDelete: "Удалить этот платёж? Если он был отмечен оплаченным, сумма будет вычтена из оплаченной по договору.",
       },
@@ -314,8 +315,8 @@ export const dictionaries = {
       detailsTitle: "Данные договора",
       notFound: "Договор не найден",
       cashier: {
-        title: "Оплата и расиды",
-        subtitle: "Приём платежа и выдача расида — без открытия полной карточки договора.",
+        title: "Оплата и чеки",
+        subtitle: "Приём платежа и выдача чека — без открытия полной карточки договора.",
         paymentsMade: "Платежей внесено",
         editFull: "Полная карточка договора",
       },
@@ -335,12 +336,12 @@ export const dictionaries = {
         done: "Готово",
       },
       receipt: {
-        title: "Расид об оплате",
+        title: "Чек об оплате",
         paidDate: "Дата оплаты",
         amountPaid: "Оплачено",
         statusPaid: "Платёж подтверждён",
         statusUnpaid: "Платёж ещё не отмечен как оплаченный",
-        print: "Расид",
+        print: "Чек",
         copyForClient: "Экземпляр покупателя",
         copyForCompany: "Экземпляр продавца",
         cutHere: "Линия отреза",
@@ -402,14 +403,16 @@ export const dictionaries = {
         remaining: "Остаток к оплате",
         paymentsCount: "Платежей внесено",
         clickHint: "ЛКМ — оформить договор · ПКМ — быстрая бронь",
-        clickHintBooked: "ЛКМ — оплата и расиды",
-        clickHintQuickBooked: "ЛКМ — оплата и расиды · ПКМ ещё раз — отменить бронь",
+        clickHintBooked: "ЛКМ — оплата и чеки",
+        clickHintQuickBooked: "ЛКМ — оплата и чеки · ПКМ ещё раз — отменить бронь",
       },
       merge: "Объединить со следующей",
       bookUnit: "Оформление брони / договора",
       quickBooked: "Квартира забронирована",
       quickBookCancelled: "Бронь отменена",
       alreadyBooked: "Кто-то уже забронировал эту квартиру мгновение назад",
+      cannotUnbookReal:
+        "У этой брони уже настоящий клиент — отменить можно только через договор",
       resyncStatuses: "Синхронизировать статусы",
       resyncHint:
         "Пересчитать статус каждой квартиры заново по её договорам — на случай, если цвет на шахматке разошёлся с реальной оплатой.",
@@ -546,6 +549,7 @@ export const dictionaries = {
     common: {
       loading: "Загрузка...",
       error: "Произошла ошибка",
+      back: "Назад",
       supabaseNotConfigured:
         "Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в .env.local",
       uploadErrorType: "Недопустимый тип файла. Разрешены изображения и PDF.",
@@ -840,7 +844,7 @@ export const dictionaries = {
         barter: "Бартер",
       },
       payments: {
-        title: "Ҷадвали пардохт",
+        title: "Пардохтҳо",
         generate: "Ҷадвалро сохтан",
         generateHint:
           "Аз рӯи санаи имзо ва маблағи боқимонда пардохтҳои моҳона месозад.",
@@ -856,6 +860,7 @@ export const dictionaries = {
         showSchedule: "Нишон додани ҷадвал",
         hideSchedule: "Пинҳон кардани ҷадвал",
         nextDue: "Пардохти навбатӣ",
+        scheduleTitle: "Ҷадвал (ҳанӯз пардохт нашудааст)",
         deletePayment: "Нест кардан",
         confirmDelete:
           "Ин пардохт нест карда шавад? Агар қайд шуда буд, маблағаш аз суммаи пардохтшудаи шартнома кам карда мешавад.",
@@ -962,6 +967,8 @@ export const dictionaries = {
       quickBooked: "Хона брон карда шуд",
       quickBookCancelled: "Брон бекор карда шуд",
       alreadyBooked: "Ин хонаро як лаҳза пеш касе дигар брон карда буд",
+      cannotUnbookReal:
+        "Ин брон мизоҷи воқеӣ дорад — бекоркунӣ танҳо тавассути шартнома",
       resyncStatuses: "Синхронизатсияи статусҳо",
       resyncHint:
         "Статуси ҳар як хонаро аз рӯи шартномаҳояш аз нав ҳисоб кунед — агар ранги шахмата бо пардохти воқеӣ мувофиқат накунад.",
@@ -1098,6 +1105,7 @@ export const dictionaries = {
     common: {
       loading: "Боркунӣ...",
       error: "Хатогӣ рух дод",
+      back: "Бозгашт",
       supabaseNotConfigured:
         "Supabase танзим нашудааст. NEXT_PUBLIC_SUPABASE_URL ва NEXT_PUBLIC_SUPABASE_ANON_KEY-ро ба .env.local илова кунед",
       uploadErrorType: "Навъи файл иҷозат дода намешавад. Танҳо расм ва PDF мумкин аст.",

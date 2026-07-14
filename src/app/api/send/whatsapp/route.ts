@@ -54,7 +54,7 @@ export async function POST(request: Request) {
     if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     message =
       `*${companyName}*\n` +
-      `Расид об оплате по договору №${contract.number ?? "—"}\n\n` +
+      `Чек об оплате по договору №${contract.number ?? "—"}\n\n` +
       `Оплачено: *${formatMoney(payment.amount, contract.currency)}*\n` +
       `Дата: ${payment.due_date}\n` +
       `Объект: ${contract.object?.name ?? "—"}\n\n` +
