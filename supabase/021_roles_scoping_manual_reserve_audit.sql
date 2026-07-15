@@ -443,7 +443,7 @@ declare
 begin
   if TG_OP = 'INSERT' then
     insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
-    values (auth.uid(), 'insert', TG_ARGV[0], NEW.id, to_jsonb(NEW));
+    values (auth.uid(), 'create', TG_ARGV[0], NEW.id, to_jsonb(NEW));
     return NEW;
   end if;
 
@@ -467,6 +467,12 @@ begin
 end;
 $$;
 
+-- Более ранний вариант этого файла ставил триггеры с другими именами;
+-- убираем их, иначе оба набора сработают и журнал задвоится.
+drop trigger if exists trg_log_change_contracts on crm.contracts;
+drop trigger if exists trg_log_change_contract_payments on crm.contract_payments;
+drop trigger if exists trg_log_change_clients on crm.clients;
+
 drop trigger if exists trg_audit_change_contracts on crm.contracts;
 create trigger trg_audit_change_contracts
 after insert or update on crm.contracts
@@ -481,6 +487,65 @@ drop trigger if exists trg_audit_change_clients on crm.clients;
 create trigger trg_audit_change_clients
 after insert or update on crm.clients
 for each row execute function crm.log_change('client');
+
+-- ---------- пересборка графика рассрочки из остатка ----------
+create or replace function crm.regenerate_schedule(
+  p_contract_id uuid,
+  p_months integer
+)
+returns integer
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_contract crm.contracts;
+  v_remaining numeric;
+  v_base numeric;
+  v_amount numeric;
+  i integer;
+begin
+  if not crm.can_write() then
+    raise exception 'Read-only role';
+  end if;
+  if p_months is null or p_months < 1 then
+    raise exception 'Months must be at least 1';
+  end if;
+
+  select * into v_contract from crm.contracts where id = p_contract_id;
+  if not found then
+    raise exception 'Contract not found';
+  end if;
+
+  v_remaining := greatest(v_contract.amount - v_contract.paid_amount, 0);
+  if v_remaining <= 0 then
+    raise exception 'Nothing left to schedule';
+  end if;
+
+  -- Только план; фактические (оплаченные) строки неприкосновенны.
+  delete from crm.contract_payments
+  where contract_id = p_contract_id and paid = false;
+
+  v_base := floor(v_remaining / p_months * 100) / 100;
+  for i in 1..p_months loop
+    if i = p_months then
+      v_amount := round((v_remaining - v_base * (p_months - 1)) * 100) / 100;
+    else
+      v_amount := v_base;
+    end if;
+    insert into crm.contract_payments (contract_id, due_date, amount, paid, paid_date)
+    values (p_contract_id, (current_date + (i || ' month')::interval)::date, v_amount, false, null);
+  end loop;
+
+  update crm.contracts
+  set installment_months = p_months, payment_type = 'installment'
+  where id = p_contract_id;
+
+  return p_months;
+end;
+$$;
+
+grant execute on function crm.regenerate_schedule(uuid, integer) to authenticated;
 
 -- финальная синхронизация статусов
 select crm.resync_all_object_statuses();
