@@ -221,7 +221,7 @@ as $$
     ) then 'reserved'
     when o.manual_reserved then 'reserved'
     else 'available'
-  end
+  end::crm.object_status
   where o.id = p_object_id;
 $$;
 
@@ -274,7 +274,7 @@ begin
     ) then 'reserved'
     when o.manual_reserved then 'reserved'
     else 'available'
-  end
+  end::crm.object_status
   where o.manual_reserved
      or exists (select 1 from crm.contracts c where c.object_id = o.id);
 
@@ -546,6 +546,12 @@ end;
 $$;
 
 grant execute on function crm.regenerate_schedule(uuid, integer) to authenticated;
+
+-- Пересозданные выше функции наследуют старые grant-ы, но если 020 в этой
+-- базе так и не выполнился, их никто не выдавал — проставим явно.
+grant execute on function crm.record_payment(uuid, numeric, date) to authenticated;
+grant execute on function crm.set_payment_paid(uuid, boolean) to authenticated;
+grant execute on function crm.cancel_quick_booking(uuid) to authenticated;
 
 -- финальная синхронизация статусов
 select crm.resync_all_object_statuses();

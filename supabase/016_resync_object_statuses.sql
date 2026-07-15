@@ -21,7 +21,7 @@ as $$
       where c.object_id = p_object_id and c.status <> 'cancelled'
     ) then 'reserved'
     else 'available'
-  end
+  end::crm.object_status
   where id = p_object_id;
 $$;
 
@@ -71,7 +71,7 @@ begin
       where c.object_id = o.id and c.status <> 'cancelled'
     ) then 'reserved'
     else 'available'
-  end
+  end::crm.object_status
   where exists (select 1 from crm.contracts c where c.object_id = o.id);
 
   get diagnostics v_count = row_count;
