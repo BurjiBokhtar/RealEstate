@@ -85,12 +85,56 @@ function shortDate(iso: string | null): string {
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
 
-// Numbered section heading, matching the paper contract's structure.
+const PLUM = "#5b3468";
+
+// Numbered section heading: a plum numeral in an outlined disc, the title,
+// then a hairline rule running to the margin. Outlined rather than filled
+// because a filled disc vanishes when the print dialog's "background
+// graphics" box is unticked -- which is the default.
 function Section({ num, title }: { num: number; title: string }) {
   return (
-    <p className="mt-3 text-center text-[14px] font-bold">
-      {num}. {title}
-    </p>
+    <div className="mt-4 flex items-center gap-2.5">
+      <span
+        style={{ borderColor: PLUM, color: PLUM }}
+        className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-[11px] font-bold"
+      >
+        {num}
+      </span>
+      <span className="shrink-0 text-[13.5px] font-bold uppercase tracking-[0.08em]">
+        {title}
+      </span>
+      <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-30" />
+    </div>
+  );
+}
+
+// Data that changes with every deal -- buyer, apartment, sums, dates.
+// Rendered like a filled-in field (bold, dotted plum underline) so the
+// document reads as a completed form rather than a wall of prose, and so
+// staff can eyeball the substituted values before signing. The company's
+// own details are deliberately NOT marked this way: they're constant.
+function Var({ children }: { children: React.ReactNode }) {
+  return (
+    <span
+      style={{ borderBottom: `1px dotted ${PLUM}` }}
+      className="font-bold text-slate-900"
+    >
+      {children}
+    </span>
+  );
+}
+
+// The handful of facts staff actually check before signing, lifted into a
+// scannable panel. The legal paragraphs below still state every one of them
+// verbatim -- this is a summary, not a replacement.
+function DealFact({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-0.5 px-3 py-1.5">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+        {label}
+      </span>
+      <span className="text-[12.5px] font-bold leading-tight">{value}</span>
+    </div>
   );
 }
 
@@ -177,15 +221,79 @@ export function ContractDocument({
           </p>
         )}
 
-        <div className="flex flex-col gap-2 px-10 py-8">
-          <p className="text-center text-[17px] font-bold tracking-wide">
-            ШАРТНОМАИ ҲАМКОРӢ
-            {contract.number ? ` №${contract.number}` : ""}
-          </p>
+        {/* Letterhead: the company's fixed identity, left; the contract's
+            own identity, right. Everything here except the number/date is
+            constant across every contract the company ever prints. */}
+        <div
+          style={{ borderBottom: `2.5px solid ${PLUM}` }}
+          className="flex items-start justify-between gap-6 px-10 pb-4 pt-7"
+        >
+          <div className="flex items-start gap-3">
+            {settings.company_logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={settings.company_logo_url}
+                alt=""
+                className="h-14 w-14 shrink-0 object-contain"
+              />
+            )}
+            <div className="leading-[1.45]">
+              <p className="text-[15px] font-bold tracking-tight">
+                ҶДММ «{companyName}»
+              </p>
+              {settings.company_address && (
+                <p className="text-[10px] text-slate-500">{settings.company_address}</p>
+              )}
+              {settings.company_bank_details && (
+                <p className="text-[9.5px] text-slate-400">{settings.company_bank_details}</p>
+              )}
+            </div>
+          </div>
+          <div
+            style={{ borderColor: PLUM }}
+            className="shrink-0 rounded-lg border-[1.5px] px-3 py-1.5 text-right"
+          >
+            <p className="text-[8.5px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+              Шартнома
+            </p>
+            <p style={{ color: PLUM }} className="text-[17px] font-bold leading-tight">
+              №{contract.number || "____"}
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-baseline justify-between text-[13px] font-bold">
-            <span>{tjLongDate(contract.signed_date)}</span>
-            <span>ш. Бохтар</span>
+        <div className="flex flex-col gap-2 px-10 pb-8 pt-5">
+          {/* Title */}
+          <div className="flex items-center gap-3">
+            <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+            <p className="shrink-0 text-center text-[18px] font-bold tracking-[0.14em]">
+              ШАРТНОМАИ ҲАМКОРӢ
+            </p>
+            <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+          </div>
+
+          <div className="flex items-baseline justify-between text-[12.5px]">
+            <span>
+              <Var>{tjLongDate(contract.signed_date)}</Var>
+            </span>
+            <span className="font-bold">ш. Бохтар</span>
+          </div>
+
+          {/* Deal summary -- what changes every time, at a glance */}
+          <div
+            style={{ borderColor: PLUM }}
+            className="mt-2 grid grid-cols-2 divide-x divide-y rounded-lg border sm:grid-cols-4 sm:divide-y-0"
+          >
+            <DealFact label="Харидор" value={contract.client?.name ?? "____________"} />
+            <DealFact label="Хона" value={`№${aptNo}`} />
+            <DealFact
+              label="Масоҳат"
+              value={`${docArea(contract.object?.area ?? null)} м²`}
+            />
+            <DealFact
+              label="Маблағи умумӣ"
+              value={docAmount(contract.amount, contract.currency)}
+            />
           </div>
 
           <Section num={1} title="Тарафҳои аҳдкунанда" />
@@ -193,11 +301,13 @@ export function ContractDocument({
             Ҷамъияти дорои масъулияти маҳдуди «{companyName}» дар шахсияти роҳбари ҷамъият{" "}
             <b>{director}</b>, ки дар асоси Оинномаи ҷамъият амал мекунад, аз як тараф,
             минбаъд <b>«Фурӯшанда»</b> ва аз тарафи дигар шаҳрванди Ҷумҳурии Тоҷикистон{" "}
-            <b>{contract.client?.name ?? "____________"}</b>
-            {contract.client?.passport ? `, шиноснома № ${contract.client.passport}` : ""}
-            {contract.client?.passport_issued_by
-              ? `, дода шудааст аз ҷониби ${contract.client.passport_issued_by}`
-              : ""}
+            <Var>{contract.client?.name ?? "____________"}</Var>
+            {contract.client?.passport ? ", шиноснома № " : ""}
+            {contract.client?.passport && <Var>{contract.client.passport}</Var>}
+            {contract.client?.passport_issued_by ? ", дода шудааст аз ҷониби " : ""}
+            {contract.client?.passport_issued_by && (
+              <Var>{contract.client.passport_issued_by}</Var>
+            )}
             , ки минбаъд <b>«Харидор»</b> номида мешавад, ҳамин шартномаро бо шартҳои зерин
             бастанд.
           </p>
@@ -206,26 +316,26 @@ export function ContractDocument({
           <p className="text-justify">
             2.1. Бо мақсади вусъат бахшидани рафти сохтмони биноҳои истиқоматии баландошёна
             бо пентхаус, дар ошёнаи якум маркази савдо ва хизматрасонӣ ва дар таҳхонаҳои онҳо
-            ташкил намудани таваққуфгоҳи зеризаминӣ, воқеъ дар {buildingAddress}, тарафҳо
+            ташкил намудани таваққуфгоҳи зеризаминӣ, воқеъ дар <Var>{buildingAddress}</Var>, тарафҳо
             уҳдадор шуданд, ки бо шартҳои манфиати мутақобила ҳамкорӣ намоянд.
           </p>
           <p className="text-justify">
             2.2. «Фурӯшанда» имконият медиҳад, ки «Харидор» дар маблағгузории иншооти мазкур
             ширкат намуда, барои ба моликияти худ ба расмият даровардани ҳуҷраи истиқоматӣ{" "}
             {contract.object?.block ? `дар ${contract.object.block}, ` : ""}
-            дар ошёнаи <b>{contract.object?.floor ?? "__"}</b>-ум,{" "}
-            <b>{contract.object?.rooms ?? "__"}</b>-ҳуҷрагӣ, бо масоҳати{" "}
-            <b>{docArea(contract.object?.area ?? null)} м²</b> (масоҳати умумӣ мувофиқи лоиҳа{" "}
-            {docArea(contract.object?.area ?? null)} м²), ҳуҷраи <b>№{aptNo}</b>
+            дар ошёнаи <Var>{contract.object?.floor ?? "__"}</Var>-ум,{" "}
+            <Var>{contract.object?.rooms ?? "__"}</Var>-ҳуҷрагӣ, бо масоҳати{" "}
+            <Var>{docArea(contract.object?.area ?? null)} м²</Var> (масоҳати умумӣ мувофиқи лоиҳа{" "}
+            {docArea(contract.object?.area ?? null)} м²), ҳуҷраи <Var>№{aptNo}</Var>
             {pricePerSqm != null && (
               <>
                 , ки маблағи фурӯш барои 1 м² —{" "}
-                <b>{docAmount(pricePerSqm, contract.currency)}</b> ({pricePerSqmWords})
+                <Var>{docAmount(pricePerSqm, contract.currency)}</Var> ({pricePerSqmWords})
                 мебошад
               </>
             )}
             , пардохт намояд. «Харидор» уҳдадор мешавад, ки маблағи умумии хонаи
-            истиқоматиро — <b>{docAmount(contract.amount, contract.currency)}</b> (
+            истиқоматиро — <Var>{docAmount(contract.amount, contract.currency)}</Var> (
             {amountWords}) — пардохт намуда, дар муҳлати пешбининамудаи шартномаи мазкур онро
             минбаъд ба моликияти шахсии худ табдил дода, иҷро намояд.
           </p>
@@ -365,42 +475,92 @@ export function ContractDocument({
             </>
           )}
 
-          <p className="mt-4 text-[14px] font-bold">Суроғаи ҳуқуқӣ ва имзои тарафҳо:</p>
+          <Section num={9} title="Суроғаи ҳуқуқӣ ва имзои тарафҳо" />
 
-          <div className="mt-1 grid grid-cols-2 gap-8 text-[12px] leading-[1.55]">
-            <div>
-              <p className="text-[13px] font-bold">«ФУРӮШАНДА»</p>
-              <p className="mt-1">Роҳбари ҶДММ «{companyName}»</p>
-              <p className="font-bold">{director}</p>
-              {settings.company_address && <p>{settings.company_address}</p>}
-              {settings.company_bank_details && (
-                <p className="whitespace-pre-line">{settings.company_bank_details}</p>
+          {/* Two party cards. The seller's block is the company's fixed
+              identity (settings); the buyer's is the part that differs on
+              every contract, so it gets the filled-field treatment. */}
+          <div className="mt-1 grid grid-cols-2 gap-5 text-[11.5px] leading-[1.55]">
+            <div
+              style={{ borderColor: PLUM }}
+              className="flex flex-col rounded-lg border p-3.5"
+            >
+              <p
+                style={{ borderColor: PLUM, color: PLUM }}
+                className="border-b pb-1 text-[12.5px] font-bold tracking-wide"
+              >
+                «ФУРӮШАНДА»
+              </p>
+              <p className="mt-1.5">Роҳбари ҶДММ «{companyName}»</p>
+              <p className="text-[12.5px] font-bold">{director}</p>
+              {settings.company_address && (
+                <p className="text-slate-600">{settings.company_address}</p>
               )}
-              <p className="mt-5 font-bold">Имзо ___________________</p>
-              <p className="mt-1">Санаи {shortDate(contract.signed_date)}</p>
-              <div className="mt-3 flex h-16 w-40 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[11px] tracking-widest text-slate-300">
-                М. П.
+              {settings.company_bank_details && (
+                <p className="whitespace-pre-line text-slate-600">
+                  {settings.company_bank_details}
+                </p>
+              )}
+              <div className="mt-auto pt-6">
+                <div className="border-b border-slate-400" />
+                <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+                <p className="mt-2">
+                  Санаи <Var>{shortDate(contract.signed_date)}</Var>
+                </p>
+                <div className="mt-2.5 flex h-14 w-32 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300">
+                  М. П.
+                </div>
               </div>
             </div>
-            <div>
-              <p className="text-[13px] font-bold">«ХАРИДОР»</p>
-              <p className="mt-1 font-bold">{contract.client?.name ?? "____________"}</p>
-              {contract.client?.passport && <p>Шиноснома: {contract.client.passport}</p>}
-              {contract.client?.passport_issued_by && (
-                <p>Дода шудааст: {contract.client.passport_issued_by}</p>
+
+            <div
+              style={{ borderColor: PLUM }}
+              className="flex flex-col rounded-lg border p-3.5"
+            >
+              <p
+                style={{ borderColor: PLUM, color: PLUM }}
+                className="border-b pb-1 text-[12.5px] font-bold tracking-wide"
+              >
+                «ХАРИДОР»
+              </p>
+              <p className="mt-1.5 text-[12.5px]">
+                <Var>{contract.client?.name ?? "____________"}</Var>
+              </p>
+              {contract.client?.passport && (
+                <p className="text-slate-600">Шиноснома: {contract.client.passport}</p>
               )}
-              {contract.client?.address && <p>{contract.client.address}</p>}
-              {contract.client?.phone && <p>Тел: {contract.client.phone}</p>}
-              <p className="mt-5 font-bold">Имзо ___________________</p>
-              <p className="mt-1">Санаи {shortDate(contract.signed_date)}</p>
+              {contract.client?.passport_issued_by && (
+                <p className="text-slate-600">
+                  Дода шудааст: {contract.client.passport_issued_by}
+                </p>
+              )}
+              {contract.client?.address && (
+                <p className="text-slate-600">{contract.client.address}</p>
+              )}
+              {contract.client?.phone && (
+                <p className="text-slate-600">Тел: {contract.client.phone}</p>
+              )}
+              <div className="mt-auto pt-6">
+                <div className="border-b border-slate-400" />
+                <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+                <p className="mt-2">
+                  Санаи <Var>{shortDate(contract.signed_date)}</Var>
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* ЗАМИМА -- its own page, as in the original */}
-        <div className="flex flex-col gap-1.5 px-10 pb-8 print:break-before-page">
-          <p className="text-center text-[15px] font-bold tracking-wide">ЗАМИМА</p>
-          <p className="text-center text-[13px] font-bold">
+        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page">
+          <div className="flex items-center gap-3">
+            <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+            <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
+              ЗАМИМА
+            </p>
+            <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+          </div>
+          <p className="text-center text-[12.5px] font-bold">
             Номгӯи корҳои иҷрошаванда ва масолеҳҳои истифодашаванда
           </p>
           <p className="mt-1 text-justify">
@@ -408,25 +568,41 @@ export function ContractDocument({
             баҳрабардорӣ ва расмиятдарорӣ бо моликият пас аз анҷоми корҳои зайл омода
             ҳисобида мешаванд:
           </p>
-          <ol className="mt-1 list-decimal pl-6">
-            {worksList.map((w) => (
-              <li key={w} className="py-[1px]">
-                {w}
-              </li>
+          {/* Two columns: the list is 14 short items, so a single column
+              left half the page empty and pushed the signatures over. */}
+          <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-0.5">
+            {worksList.map((w, i) => (
+              <div key={w} className="flex items-baseline gap-2 py-[2px]">
+                <span
+                  style={{ color: PLUM }}
+                  className="shrink-0 text-[10px] font-bold tabular-nums"
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="text-[12px]">{w}</span>
+              </div>
             ))}
-          </ol>
+          </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-8 text-center text-[12px]">
+          <div className="mt-8 grid grid-cols-2 gap-8 text-center text-[12px]">
             <div>
-              <p className="text-[13px] font-bold">«Фурӯшанда»</p>
+              <p style={{ color: PLUM }} className="text-[12.5px] font-bold">
+                «Фурӯшанда»
+              </p>
               <p className="mt-1">Роҳбари ҶДММ «{companyName}»</p>
               <p className="font-bold">{director}</p>
-              <p className="mt-5 font-bold">Имзо ________________</p>
+              <div className="mx-auto mt-7 w-4/5 border-b border-slate-400" />
+              <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
             </div>
             <div>
-              <p className="text-[13px] font-bold">«Харидор»</p>
-              <p className="mt-1 font-bold">{contract.client?.name ?? "____________"}</p>
-              <p className="mt-5 font-bold">Имзо ________________</p>
+              <p style={{ color: PLUM }} className="text-[12.5px] font-bold">
+                «Харидор»
+              </p>
+              <p className="mt-1">
+                <Var>{contract.client?.name ?? "____________"}</Var>
+              </p>
+              <div className="mx-auto mt-7 w-4/5 border-b border-slate-400" />
+              <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
             </div>
           </div>
         </div>

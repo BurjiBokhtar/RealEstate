@@ -13,6 +13,18 @@ export function getServiceClient(): ServiceClient | null {
   return makeServiceClient(supabaseUrl, serviceRoleKey);
 }
 
+// Names the variable that's actually missing. The old blanket "Supabase not
+// configured" was indistinguishable from the app having no Supabase at all,
+// which sent people looking at the URL/anon key -- while the real gap was
+// almost always SUPABASE_SERVICE_ROLE_KEY, the one var no route can work
+// without and the one that was never documented.
+export function missingServiceEnv(): string {
+  const missing: string[] = [];
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  return `Не задана переменная окружения ${missing.join(" и ")} на сервере (Vercel → Project Settings → Environment Variables). Без неё создание аккаунтов невозможно.`;
+}
+
 export async function requireUser(supabase: ServiceClient, request: Request) {
   const authHeader = request.headers.get("authorization");
   const token = authHeader?.replace(/^Bearer\s+/i, "");

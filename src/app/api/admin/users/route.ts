@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getServiceClient, requireAdmin } from "@/lib/supabase/serviceClient";
+import { getServiceClient, missingServiceEnv, requireAdmin } from "@/lib/supabase/serviceClient";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   const supabase = getServiceClient();
-  if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const supabase = getServiceClient();
-  if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   const supabase = getServiceClient();
-  if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -85,7 +85,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   const supabase = getServiceClient();
-  if (!supabase) return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+  if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
