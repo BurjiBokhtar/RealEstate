@@ -196,12 +196,14 @@ export function ContractBookingModal({
               <ContractDocument
                 contract={preview}
                 payments={payments}
+                apartmentNumber={apartmentNumber}
                 copyLabel={t.contracts.receipt.copyForClient}
               />
             </div>
             <ContractDocument
               contract={preview}
               payments={payments}
+              apartmentNumber={apartmentNumber}
               copyLabel={t.contracts.receipt.copyForCompany}
             />
           </div>

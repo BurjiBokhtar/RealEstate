@@ -39,12 +39,36 @@ export function ReceiptDocument({
   const remaining = Math.max(contract.amount - contract.paid_amount, 0);
   const dateStr = payment.paid_date ?? payment.due_date;
 
+  // A client can be buying several apartments at once, and receipt numbers
+  // run per contract -- so a bare "№1" would appear once per apartment and
+  // two different receipts could carry the same number. Prefixing with the
+  // contract number keeps every printed receipt unique and traceable back
+  // to its apartment.
+  const receiptLabel =
+    receiptNo == null
+      ? "—"
+      : contract.number
+        ? `${contract.number}/${receiptNo}`
+        : String(receiptNo);
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white text-[13px] leading-[1.55] text-slate-900 shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:shadow-none">
-      {/* Header: company left, КВИТАНСИЯ № + copy chip right */}
+    <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white text-[13px] leading-[1.55] text-slate-900 shadow-sm print:break-inside-avoid print:rounded-none print:border-0 print:shadow-none">
+      {/* Watermark: same washed-out company logo as the contract. An <img>,
+          not a CSS background -- browsers skip background graphics when
+          printing unless the user opts in, but images always print. */}
+      {settings.company_logo_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={settings.company_logo_url}
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1/2 w-[52%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.12]"
+        />
+      )}
+      {/* Header: company left, РАСИД № + copy chip right */}
       <div
         style={{ borderBottom: `2.5px solid ${PLUM}` }}
-        className="flex items-start justify-between gap-3 px-6 pb-3 pt-4"
+        className="relative flex items-start justify-between gap-3 px-6 pb-3 pt-4"
       >
         <div className="flex items-center gap-2.5">
           {settings.company_logo_url && (
@@ -71,7 +95,7 @@ export function ReceiptDocument({
           >
             Расид
           </p>
-          <p className="text-[15px] font-bold">№ {receiptNo ?? "—"}</p>
+          <p className="text-[15px] font-bold">№ {receiptLabel}</p>
           <p className="text-[10px] text-slate-500">{dateStr}</p>
           <span className="mt-0.5 inline-block rounded border border-slate-300 px-1.5 py-px text-[9px] uppercase tracking-wide text-slate-500">
             {copyLabel}
@@ -79,7 +103,7 @@ export function ReceiptDocument({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2.5 px-6 py-3.5">
+      <div className="relative flex flex-col gap-2.5 px-6 py-3.5">
         {/* Payer */}
         <div
           style={{ borderLeft: `3px solid ${PLUM}` }}

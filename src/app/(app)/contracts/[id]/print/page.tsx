@@ -6,6 +6,8 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { ContractDocument } from "@/components/ContractDocument";
+import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
+import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 type ContractWithRelations = Contract & {
@@ -18,6 +20,8 @@ type ContractWithRelations = Contract & {
     address: string | null;
   } | null;
   object: {
+    id: string;
+    building_id: string | null;
     name: string;
     address: string | null;
     area: number | null;
@@ -35,6 +39,7 @@ export default function ContractPrintPage() {
     undefined
   );
   const [payments, setPayments] = useState<ContractPayment[]>([]);
+  const [apartmentNumber, setApartmentNumber] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const supabase = createClient();
@@ -42,11 +47,30 @@ export default function ContractPrintPage() {
       .schema("crm")
       .from("contracts")
       .select(
-        "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(name, address, area, floor, block, rooms, building:buildings(name, address, price_per_sqm))"
+        "*, client:clients(name, phone, passport, passport_issued_by, birth_date, address), object:objects(id, name, address, area, floor, block, rooms, building_id, building:buildings(name, address, price_per_sqm))"
       )
       .eq("id", params.id)
       .maybeSingle()
-      .then(({ data }) => setContract((data as unknown as ContractWithRelations) ?? null));
+      .then(async ({ data }) => {
+        const row = (data as unknown as ContractWithRelations) ?? null;
+        setContract(row);
+        // The apartment number printed on the contract ("ҳуҷраи №157") isn't
+        // stored on the unit -- it's derived from where the unit sits in its
+        // building's grid, so it has to be computed from the building's whole
+        // unit list, exactly the way the shakhmatka does it.
+        const buildingId = row?.object?.building_id;
+        const objectId = row?.object?.id;
+        if (!buildingId || !objectId) return;
+        const { data: units } = await supabase
+          .schema("crm")
+          .from("objects")
+          .select("*")
+          .eq("building_id", buildingId);
+        if (!units) return;
+        setApartmentNumber(
+          computeApartmentNumbers(units as PropertyObject[]).get(objectId)
+        );
+      });
     supabase
       .schema("crm")
       .from("contract_payments")
@@ -78,12 +102,14 @@ export default function ContractPrintPage() {
           <ContractDocument
             contract={contract}
             payments={payments}
+            apartmentNumber={apartmentNumber}
             copyLabel={t.contracts.receipt.copyForClient}
           />
         </div>
         <ContractDocument
           contract={contract}
           payments={payments}
+          apartmentNumber={apartmentNumber}
           copyLabel={t.contracts.receipt.copyForCompany}
         />
       </div>

@@ -59,12 +59,32 @@ const CURRENCY_WORDS: Record<Currency, string> = {
   USD: "доллари ИМА",
 };
 
-// Best-effort Tajik number-to-words for the contract's "сумма прописью"
-// field. Fractional amounts are rounded to the nearest whole unit -- real
-// estate contracts are effectively always round numbers in practice.
+const SUBUNIT_WORDS: Record<Currency, string> = {
+  TJS: "дирам",
+  USD: "сент",
+};
+
+// Tajik number-to-words for the contract's "сумма прописью" field.
+//
+// The fractional part is spelled out too when there is one ("... сомонӣ ва
+// чордаҳ дирам"), matching the company's paper contract: the total price is
+// usually round, but the price per m² almost never is (6355,14), and on a
+// legal document that rounding would misstate the agreed rate.
 export function amountToWordsTj(amount: number, currency: Currency): string {
-  const whole = Math.round(Math.abs(amount));
-  const words = integerToWordsTj(whole);
+  const abs = Math.abs(amount);
+  const whole = Math.floor(abs);
+  // Round the subunits rather than truncate, so 6355.149 -> 15 dirams, and
+  // guard the carry case (…​.999 -> 100 subunits) by rolling into the unit.
+  let subunits = Math.round((abs - whole) * 100);
+  let units = whole;
+  if (subunits === 100) {
+    units += 1;
+    subunits = 0;
+  }
+
+  const words = integerToWordsTj(units);
   const capitalized = words.charAt(0).toUpperCase() + words.slice(1);
-  return `${capitalized} ${CURRENCY_WORDS[currency]}`;
+  const base = `${capitalized} ${CURRENCY_WORDS[currency]}`;
+  if (subunits === 0) return base;
+  return `${base} ва ${integerToWordsTj(subunits)} ${SUBUNIT_WORDS[currency]}`;
 }
