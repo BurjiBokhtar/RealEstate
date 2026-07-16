@@ -3,11 +3,17 @@ import { getServiceClient, missingServiceEnv, requireAdmin } from "@/lib/supabas
 
 export const dynamic = "force-dynamic";
 
+// Managing accounts requires role=admin in crm.profiles. The very first
+// admin can only be granted in SQL (there is no admin yet to click the
+// button), so the error spells out that exact step instead of "Forbidden".
+const FORBIDDEN_MSG =
+  "Ваша учётная запись не админ. Первому администратору роль выдаётся через Supabase → SQL Editor: insert into crm.profiles (id, role) select id, 'admin' from auth.users where email = 'ВАШ_EMAIL' on conflict (id) do update set role = 'admin'; — затем выйдите из программы и войдите заново.";
+
 export async function GET(request: Request) {
   const supabase = getServiceClient();
   if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: FORBIDDEN_MSG }, { status: 403 });
 
   const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
   if (listError) return NextResponse.json({ error: listError.message }, { status: 500 });
@@ -29,7 +35,7 @@ export async function POST(request: Request) {
   const supabase = getServiceClient();
   if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: FORBIDDEN_MSG }, { status: 403 });
 
   const { email, password, role } = (await request.json()) as {
     email: string;
@@ -67,7 +73,7 @@ export async function PATCH(request: Request) {
   const supabase = getServiceClient();
   if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: FORBIDDEN_MSG }, { status: 403 });
 
   const { userId, role } = (await request.json()) as {
     userId: string;
@@ -87,7 +93,7 @@ export async function DELETE(request: Request) {
   const supabase = getServiceClient();
   if (!supabase) return NextResponse.json({ error: missingServiceEnv() }, { status: 500 });
   const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: FORBIDDEN_MSG }, { status: 403 });
 
   const { userId } = (await request.json()) as { userId: string };
   if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
