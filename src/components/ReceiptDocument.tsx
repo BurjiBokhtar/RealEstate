@@ -2,6 +2,7 @@
 
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
+import { bareCompanyName } from "@/lib/settings/companyName";
 import type { Settings } from "@/lib/settings/types";
 import type { ContractPayment } from "@/lib/contracts/types";
 
@@ -36,6 +37,7 @@ export function ReceiptDocument({
   receiptNo: number | null;
   copyLabel: string;
 }) {
+  const companyName = bareCompanyName(settings.company_name) || "—";
   const remaining = Math.max(contract.amount - contract.paid_amount, 0);
   const dateStr = payment.paid_date ?? payment.due_date;
 
@@ -81,7 +83,7 @@ export function ReceiptDocument({
           )}
           <div>
             <p className="text-[15px] font-bold leading-tight tracking-tight">
-              {settings.company_name || "—"}
+              ҶДММ «{companyName}»
             </p>
             {settings.company_address && (
               <p className="text-[10px] text-slate-500">{settings.company_address}</p>

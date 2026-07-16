@@ -1,12 +1,3 @@
-export const LEAD_STATUSES = [
-  "new",
-  "contacted",
-  "negotiation",
-  "client",
-  "lost",
-] as const;
-export type LeadStatus = (typeof LEAD_STATUSES)[number];
-
 export type Client = {
   id: string;
   name: string;
@@ -17,7 +8,6 @@ export type Client = {
   birth_date: string | null;
   address: string | null;
   source: string | null;
-  status: LeadStatus;
   interested_object_id: string | null;
   notes: string | null;
   created_at: string;
@@ -33,7 +23,6 @@ export type ClientInput = {
   birth_date: string;
   address: string;
   source: string;
-  status: LeadStatus;
   interested_object_id: string;
   notes: string;
 };

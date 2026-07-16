@@ -1,5 +1,6 @@
 "use client";
 
+import { COPY_FOR_CLIENT, COPY_FOR_COMPANY } from "@/lib/contracts/copyLabels";
 import { printDocument } from "@/lib/print";
 import { useState } from "react";
 import Link from "next/link";
@@ -174,13 +175,16 @@ export function ContractBookingModal({
               object_id: unit.id,
               amount: unit.price?.toString() ?? "",
               currency: unit.currency,
+              // The deal is being struck now -- default the signing date to
+              // today rather than making staff pick it every single time.
+              signed_date: new Date().toISOString().slice(0, 10),
             }}
             lockedObject={{
               id: unit.id,
               label: apartmentNumber != null ? `№${apartmentNumber}` : unit.name,
               secondaryLabel: apartmentNumber != null ? unit.name : null,
               buildingName,
-              positionInFloor: unit.position_in_floor,
+              apartmentNumber: apartmentNumber ?? null,
             }}
             submitting={submitting}
             onSubmit={handleSubmit}
@@ -197,14 +201,14 @@ export function ContractBookingModal({
                 contract={preview}
                 payments={payments}
                 apartmentNumber={apartmentNumber}
-                copyLabel={t.contracts.receipt.copyForClient}
+                copyLabel={COPY_FOR_CLIENT}
               />
             </div>
             <ContractDocument
               contract={preview}
               payments={payments}
               apartmentNumber={apartmentNumber}
-              copyLabel={t.contracts.receipt.copyForCompany}
+              copyLabel={COPY_FOR_COMPANY}
             />
           </div>
 

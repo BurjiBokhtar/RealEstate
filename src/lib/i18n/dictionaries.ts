@@ -348,8 +348,6 @@ export const dictionaries = {
         statusPaid: "Платёж подтверждён",
         statusUnpaid: "Платёж ещё не отмечен как оплаченный",
         print: "Чек",
-        copyForClient: "Экземпляр покупателя",
-        copyForCompany: "Экземпляр продавца",
         cutHere: "Линия отреза",
       },
       send: {
@@ -916,8 +914,6 @@ export const dictionaries = {
         statusPaid: "Пардохт тасдиқ шуд",
         statusUnpaid: "Пардохт ҳанӯз тасдиқ нашудааст",
         print: "Расид",
-        copyForClient: "Нусхаи харидор",
-        copyForCompany: "Нусхаи фурӯшанда",
         cutHere: "Хати буриш",
       },
       send: {

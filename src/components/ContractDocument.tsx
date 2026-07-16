@@ -1,6 +1,7 @@
 "use client";
 
 import { useSettings } from "@/lib/settings/SettingsProvider";
+import { bareCompanyName } from "@/lib/settings/companyName";
 import type { Currency } from "@/lib/currency";
 import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
 import type { ContractPayment, PaymentType } from "@/lib/contracts/types";
@@ -156,7 +157,9 @@ export function ContractDocument({
 }) {
   const { settings } = useSettings();
 
-  const companyName = settings.company_name || "____________";
+  // Bare name: the document supplies the legal form itself, so a stored
+  // "ЧДММ «Х»" would otherwise print as "ҶДММ «ЧДММ «Х»»".
+  const companyName = bareCompanyName(settings.company_name) || "____________";
   const director = settings.company_director || "____________";
   const buildingAddress =
     contract.object?.building?.address ?? contract.object?.address ?? "____________";

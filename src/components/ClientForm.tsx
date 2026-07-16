@@ -20,7 +20,6 @@ const emptyInput: ClientInput = {
   birth_date: "",
   address: "",
   source: "",
-  status: "new",
   interested_object_id: "",
   notes: "",
 };

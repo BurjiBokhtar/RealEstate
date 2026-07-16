@@ -1,5 +1,6 @@
 "use client";
 
+import { COPY_FOR_CLIENT, COPY_FOR_COMPANY } from "@/lib/contracts/copyLabels";
 import { printDocument } from "@/lib/print";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -103,14 +104,14 @@ export default function ContractPrintPage() {
             contract={contract}
             payments={payments}
             apartmentNumber={apartmentNumber}
-            copyLabel={t.contracts.receipt.copyForClient}
+            copyLabel={COPY_FOR_CLIENT}
           />
         </div>
         <ContractDocument
           contract={contract}
           payments={payments}
           apartmentNumber={apartmentNumber}
-          copyLabel={t.contracts.receipt.copyForCompany}
+          copyLabel={COPY_FOR_COMPANY}
         />
       </div>
     </div>

@@ -31,7 +31,6 @@ export default function NewClientPage() {
         birth_date: values.birth_date || null,
         address: values.address || null,
         source: values.source || null,
-        status: values.status,
         interested_object_id: values.interested_object_id || null,
         notes: values.notes || null,
       })

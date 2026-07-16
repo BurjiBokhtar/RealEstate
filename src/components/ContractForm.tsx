@@ -24,25 +24,43 @@ export type LockedObject = {
   label: string;
   secondaryLabel: string | null;
   buildingName: string | null;
-  positionInFloor: number | null;
+  apartmentNumber: number | null;
 };
 
-// Contract numbers are system-generated, not typed by staff: building/object
-// initial + unit position + day of month, e.g. "Rudaki Residence" unit №1
-// today on the 11th -> "R-1-11".
+// Initials of a full name: "Ҳакимов Парвиз Холиқович" -> "ҲПХ".
+function initialsOf(fullName: string): string {
+  return fullName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join("");
+}
+
+// Contract numbers are system-generated, never typed by staff:
+// building initial + apartment number + the buyer's initials, e.g. a unit
+// №157 in "Бурҷи Бохтар" sold to Ҳакимов Парвиз Холиқович -> "Б-157-ҲПХ".
+//
+// The apartment number is the real shakhmatka number (the one printed on the
+// contract), not the unit's position within its floor -- position repeats on
+// every floor, so it never identified the apartment on its own. The day of
+// the month used to be the third part; the buyer's initials say far more and
+// don't collide across two deals on the same day.
 function computeContractNumber(
   object:
-    | { name: string; positionInFloor: number | null; buildingName: string | null }
-    | undefined
+    | { name: string; apartmentNumber: number | null; buildingName: string | null }
+    | undefined,
+  clientName: string
 ): string {
   if (!object) return "";
   const source = (object.buildingName || object.name).trim();
   if (!source) return "";
-  const initial = source.charAt(0).toUpperCase();
-  const day = new Date().getDate();
-  return object.positionInFloor != null
-    ? `${initial}-${object.positionInFloor}-${day}`
-    : `${initial}-${day}`;
+  const parts = [source.charAt(0).toUpperCase()];
+  if (object.apartmentNumber != null) parts.push(String(object.apartmentNumber));
+  const initials = initialsOf(clientName);
+  if (initials) parts.push(initials);
+  return parts.join("-");
 }
 
 const emptyInput: ContractInput = {
@@ -135,34 +153,38 @@ export function ContractForm({
   const update = <K extends keyof ContractInput>(key: K, value: ContractInput[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
 
-  // Booking flow arrives with object_id already set (before `objects` has
-  // loaded) — fill in the auto-generated number as soon as both are ready.
+  // The number embeds the buyer's initials, so it has to be regenerated when
+  // the buyer changes -- not just once when the unit is known. The field is
+  // read-only for new contracts, so there's no hand-typed value to clobber.
+  const resolvedClientName = (
+    newClient?.name ??
+    clients.find((c) => c.id === values.client_id)?.name ??
+    ""
+  ).trim();
+
   useEffect(() => {
-    if (isExistingContract || values.number) return;
+    if (isExistingContract) return;
+    let source: Parameters<typeof computeContractNumber>[0];
     if (lockedObject) {
-      update(
-        "number",
-        computeContractNumber({
-          name: lockedObject.secondaryLabel || lockedObject.label,
-          positionInFloor: lockedObject.positionInFloor,
-          buildingName: lockedObject.buildingName,
-        })
-      );
-      return;
-    }
-    if (!values.object_id) return;
-    const selected = objects.find((o) => o.id === values.object_id);
-    if (!selected) return;
-    update(
-      "number",
-      computeContractNumber({
+      source = {
+        name: lockedObject.secondaryLabel || lockedObject.label,
+        apartmentNumber: lockedObject.apartmentNumber,
+        buildingName: lockedObject.buildingName,
+      };
+    } else {
+      const selected = objects.find((o) => o.id === values.object_id);
+      if (!selected) return;
+      source = {
         name: selected.name,
-        positionInFloor: selected.position_in_floor,
+        // Only the shakhmatka booking flow knows the real apartment number;
+        // editing an existing contract never regenerates a number anyway.
+        apartmentNumber: null,
         buildingName: selected.building?.name ?? null,
-      })
-    );
+      };
+    }
+    update("number", computeContractNumber(source, resolvedClientName));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [objects, values.object_id, lockedObject]);
+  }, [objects, values.object_id, lockedObject, resolvedClientName]);
 
   // Auto-suggest the Tajik amount-in-words whenever the amount/currency
   // changes, but only while the field still matches our last suggestion —
@@ -218,7 +240,6 @@ export function ContractForm({
         birth_date: newClient.birth_date || null,
         address: newClient.address || null,
         source: newClient.source || null,
-        status: newClient.status,
         notes: newClient.notes || null,
       })
       .select("id")
@@ -278,18 +299,13 @@ export function ContractForm({
               onChange={(e) => {
                 const objectId = e.target.value;
                 const selected = objects.find((o) => o.id === objectId);
+                // The number is regenerated by the effect above whenever the
+                // unit or the buyer changes -- don't compute it here too.
                 setValues((v) => ({
                   ...v,
                   object_id: objectId,
                   amount: v.amount || selected?.price?.toString() || v.amount,
                   currency: selected?.currency ?? v.currency,
-                  number: isExistingContract
-                    ? v.number
-                    : computeContractNumber({
-                        name: selected?.name ?? "",
-                        positionInFloor: selected?.position_in_floor ?? null,
-                        buildingName: selected?.building?.name ?? null,
-                      }),
                 }));
               }}
               className={FIELD_CLASS}

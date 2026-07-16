@@ -1,5 +1,6 @@
 "use client";
 
+import { COPY_FOR_CLIENT, COPY_FOR_COMPANY } from "@/lib/contracts/copyLabels";
 import { printDocument } from "@/lib/print";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -93,7 +94,7 @@ export default function PaymentReceiptPage() {
             contract={contract}
             payment={payment}
             receiptNo={receiptNo}
-            copyLabel="Нусхаи харидор"
+            copyLabel={COPY_FOR_CLIENT}
           />
         </div>
 
@@ -112,7 +113,7 @@ export default function PaymentReceiptPage() {
             contract={contract}
             payment={payment}
             receiptNo={receiptNo}
-            copyLabel="Нусхаи ширкат"
+            copyLabel={COPY_FOR_COMPANY}
           />
         </div>
       </div>
