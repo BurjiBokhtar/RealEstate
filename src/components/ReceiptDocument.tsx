@@ -30,12 +30,14 @@ export function ReceiptDocument({
   payment,
   receiptNo,
   copyLabel,
+  apartmentNumber,
 }: {
   settings: Settings;
   contract: ReceiptContractData;
   payment: ContractPayment;
   receiptNo: number | null;
   copyLabel: string;
+  apartmentNumber?: number;
 }) {
   const companyName = bareCompanyName(settings.company_name) || "—";
   const remaining = Math.max(contract.amount - contract.paid_amount, 0);
@@ -117,8 +119,12 @@ export function ReceiptDocument({
           <p className="text-[14px] font-bold leading-tight">
             {contract.client?.name ?? "—"}
           </p>
+          {/* The real building-wide apartment number (the one on the
+              contract), not the unit's internal grid name -- that string
+              repeats the floor and shows position-in-floor, which means
+              nothing to the client. */}
           <p className="text-[11px] text-slate-500">
-            {contract.object?.name ?? "—"}
+            {apartmentNumber != null ? `Хонаи №${apartmentNumber}` : (contract.object?.name ?? "—")}
             {contract.object?.area != null && ` · ${contract.object.area} м²`}
             {contract.object?.floor != null && ` · ${contract.object.floor}-ошёна`}
           </p>

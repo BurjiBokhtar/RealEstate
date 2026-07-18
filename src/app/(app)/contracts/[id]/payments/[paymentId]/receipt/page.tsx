@@ -9,11 +9,19 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { ReceiptDocument } from "@/components/ReceiptDocument";
+import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
+import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 type ContractWithRelations = Contract & {
   client: { name: string } | null;
-  object: { name: string; area: number | null; floor: number | null } | null;
+  object: {
+    id: string;
+    building_id: string | null;
+    name: string;
+    area: number | null;
+    floor: number | null;
+  } | null;
 };
 
 export default function PaymentReceiptPage() {
@@ -26,16 +34,34 @@ export default function PaymentReceiptPage() {
   );
   const [payment, setPayment] = useState<ContractPayment | null | undefined>(undefined);
   const [receiptNo, setReceiptNo] = useState<number | null>(null);
+  const [apartmentNumber, setApartmentNumber] = useState<number | undefined>(undefined);
 
   useEffect(() => {
     const supabase = createClient();
     supabase
       .schema("crm")
       .from("contracts")
-      .select("*, client:clients(name), object:objects(name, area, floor)")
+      .select("*, client:clients(name), object:objects(id, building_id, name, area, floor)")
       .eq("id", params.id)
       .maybeSingle()
-      .then(({ data }) => setContract((data as unknown as ContractWithRelations) ?? null));
+      .then(async ({ data }) => {
+        const row = (data as unknown as ContractWithRelations) ?? null;
+        setContract(row);
+        // The receipt prints the building-wide apartment number, same as the
+        // contract -- derived from the whole unit grid, not stored per unit.
+        const buildingId = row?.object?.building_id;
+        const objectId = row?.object?.id;
+        if (!buildingId || !objectId) return;
+        const { data: units } = await supabase
+          .schema("crm")
+          .from("objects")
+          .select("*")
+          .eq("building_id", buildingId);
+        if (!units) return;
+        setApartmentNumber(
+          computeApartmentNumbers(units as PropertyObject[]).get(objectId)
+        );
+      });
     supabase
       .schema("crm")
       .from("contract_payments")
@@ -95,6 +121,7 @@ export default function PaymentReceiptPage() {
             payment={payment}
             receiptNo={receiptNo}
             copyLabel={COPY_FOR_CLIENT}
+            apartmentNumber={apartmentNumber}
           />
         </div>
 
@@ -114,6 +141,7 @@ export default function PaymentReceiptPage() {
             payment={payment}
             receiptNo={receiptNo}
             copyLabel={COPY_FOR_COMPANY}
+            apartmentNumber={apartmentNumber}
           />
         </div>
       </div>
