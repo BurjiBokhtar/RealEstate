@@ -8,7 +8,15 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { formatCurrency, type Currency } from "@/lib/currency";
 import type { Client } from "@/lib/clients/types";
+
+// Paid/total across a client's active contracts, per currency -- fetched
+// only for the 25 clients on the current page, so the list stays fast no
+// matter how big the client base grows.
+type ClientDebt = {
+  byCurrency: Record<string, { total: number; paid: number }>;
+};
 
 const PAGE_SIZE = 25;
 
@@ -17,6 +25,7 @@ export default function ClientsPage() {
   const configured = isSupabaseConfigured();
 
   const [clients, setClients] = useState<Client[]>([]);
+  const [debts, setDebts] = useState<Record<string, ClientDebt>>({});
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -43,10 +52,38 @@ export default function ClientsPage() {
     const from = (page - 1) * PAGE_SIZE;
     query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
 
-    query.then(({ data, count }) => {
-      setClients((data ?? []) as Client[]);
+    query.then(async ({ data, count }) => {
+      const rows = (data ?? []) as Client[];
+      setClients(rows);
       setTotalCount(count ?? 0);
       setLoading(false);
+
+      if (rows.length === 0) {
+        setDebts({});
+        return;
+      }
+      const { data: contractRows } = await supabase
+        .schema("crm")
+        .from("contracts")
+        .select("client_id, amount, paid_amount, currency, status")
+        .in(
+          "client_id",
+          rows.map((c) => c.id)
+        )
+        .neq("status", "cancelled");
+      const map: Record<string, ClientDebt> = {};
+      for (const c of (contractRows ?? []) as Array<{
+        client_id: string;
+        amount: number;
+        paid_amount: number;
+        currency: Currency;
+      }>) {
+        const entry = (map[c.client_id] ??= { byCurrency: {} });
+        const cur = (entry.byCurrency[c.currency] ??= { total: 0, paid: 0 });
+        cur.total += c.amount;
+        cur.paid += Math.min(c.paid_amount, c.amount);
+      }
+      setDebts(map);
     });
   }, [configured, page, search]);
 
@@ -82,19 +119,20 @@ export default function ClientsPage() {
               <th className="px-4 py-3 font-medium">{t.clients.table.name}</th>
               <th className="px-4 py-3 font-medium">{t.clients.table.phone}</th>
               <th className="px-4 py-3 font-medium">{t.clients.form.email}</th>
+              <th className="w-56 px-4 py-3 font-medium">{t.clients.stats.debt}</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && clients.length === 0 && (
               <tr>
-                <td colSpan={3} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
                   {t.clients.empty}
                 </td>
               </tr>
@@ -111,6 +149,11 @@ export default function ClientsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-600">{client.phone || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{client.email || "—"}</td>
+                <td className="px-4 py-3">
+                  <Link href={`/clients/${client.id}`} className="block">
+                    <DebtBar debt={debts[client.id]} />
+                  </Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -118,6 +161,48 @@ export default function ClientsPage() {
       </div>
 
       <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+    </div>
+  );
+}
+
+// The debt cell: one bar per currency (TJS and USD don't mix into one
+// percentage), green fill = share paid, red figure = what's still owed.
+function DebtBar({ debt }: { debt: ClientDebt | undefined }) {
+  if (!debt) return <span className="text-slate-300">—</span>;
+  const entries = Object.entries(debt.byCurrency).filter(([, v]) => v.total > 0);
+  if (entries.length === 0) return <span className="text-slate-300">—</span>;
+  return (
+    <div className="flex flex-col gap-1.5">
+      {entries.map(([currency, v]) => {
+        const pct = Math.min(100, Math.round((v.paid / v.total) * 100));
+        const remaining = Math.max(0, v.total - v.paid);
+        return (
+          <div key={currency}>
+            <div className="flex items-baseline justify-between gap-2 text-[11px]">
+              <span className={pct === 100 ? "font-semibold text-emerald-600" : "text-slate-400"}>
+                {pct}%
+              </span>
+              {remaining > 0 ? (
+                <span className="font-semibold text-rose-600">
+                  −{formatCurrency(remaining, currency as Currency)}
+                </span>
+              ) : (
+                <span className="font-semibold text-emerald-600">✓</span>
+              )}
+            </div>
+            <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full ${
+                  pct === 100
+                    ? "bg-emerald-500"
+                    : "bg-gradient-to-r from-emerald-500 to-emerald-400"
+                }`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
