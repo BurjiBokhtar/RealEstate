@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { OBJECT_TYPES, type ObjectType } from "@/lib/objects/types";
 import { buildUnitsFromRows, type StructureRow } from "@/lib/buildings/generateUnits";
+import { formatCurrency } from "@/lib/currency";
 import type { PropertyObject } from "@/lib/objects/types";
 
 // Atlas accents, same as the hero and the contract.
@@ -112,6 +113,43 @@ export function FloorUnitsBuilder({
     () => expandBlocks(blocks).reduce((sum, r) => sum + Number(r.count), 0),
     [blocks]
   );
+
+  // Estimated value of the plan: floors x per-floor x area x price/m2 for
+  // every range that has an area. Rough by design -- it exists so a typo
+  // (extra zero in the count, wrong area) jumps out before generating.
+  const previewPrice = useMemo(() => {
+    if (!pricePerSqm) return 0;
+    return expandBlocks(blocks).reduce((sum, r) => {
+      const area = Number(r.area);
+      if (!area) return sum;
+      return sum + Number(r.count) * area * pricePerSqm;
+    }, 0);
+  }, [blocks, pricePerSqm]);
+
+  // Live shakhmatka preview: existing structure in grey, planned additions
+  // in green, per block per floor. What the plan LOOKS like, before it runs.
+  const previewGrid = useMemo(() => {
+    const byBlock = new Map<string, Map<number, { existing: number; added: number }>>();
+    const bump = (block: string, floor: number, kind: "existing" | "added", by: number) => {
+      const floors = byBlock.get(block) ?? new Map();
+      const cell = floors.get(floor) ?? { existing: 0, added: 0 };
+      cell[kind] += by;
+      floors.set(floor, cell);
+      byBlock.set(block, floors);
+    };
+    for (const u of existingUnits) {
+      if (u.floor != null) bump(u.block?.trim() || "", u.floor, "existing", 1);
+    }
+    for (const r of expandBlocks(blocks)) {
+      bump(r.block, Number(r.floor), "added", Number(r.count));
+    }
+    return [...byBlock.entries()].map(([name, floors]) => ({
+      name,
+      floors: [...floors.entries()]
+        .sort((a, b) => b[0] - a[0])
+        .map(([floor, cell]) => ({ floor, ...cell })),
+    }));
+  }, [existingUnits, blocks]);
 
   const patchBlock = (i: number, patch: Partial<BlockDraft>) =>
     setBlocks((bs) => bs.map((b, j) => (j === i ? { ...b, ...patch } : b)));
@@ -331,6 +369,81 @@ export function FloorUnitsBuilder({
           <option key={n} value={n} />
         ))}
       </datalist>
+
+      {previewGrid.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[13px] font-semibold text-slate-700">
+              {t.buildings.floorBuilder.preview}
+            </p>
+            <div className="flex items-center gap-3 text-[10.5px] text-slate-500">
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-200" />
+                {t.buildings.floorBuilder.newMarker}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" />
+                {t.buildings.floorBuilder.existingMarker}
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-3 flex gap-5 overflow-x-auto pb-1">
+            {previewGrid.map((b) => (
+              <div key={b.name || "__none"} className="shrink-0">
+                <p className="mb-1.5 text-[11px] font-semibold text-slate-600">
+                  {b.name || t.buildings.floorBuilder.noBlockName}
+                </p>
+                <div className="flex flex-col gap-[3px]">
+                  {b.floors.map((f) => (
+                    <div key={f.floor} className="flex items-center gap-1.5">
+                      <span className="w-6 shrink-0 text-right text-[10px] tabular-nums text-slate-400">
+                        {f.floor}
+                      </span>
+                      {f.existing > 0 && (
+                        <span className="flex h-5 min-w-10 items-center justify-center rounded bg-slate-200 px-1.5 text-[10px] font-semibold text-slate-600">
+                          {f.existing}x
+                        </span>
+                      )}
+                      {f.added > 0 && (
+                        <span className="flex h-5 min-w-10 items-center justify-center rounded bg-emerald-200 px-1.5 text-[10px] font-semibold text-emerald-800">
+                          +{f.added}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {previewCount > 0 && (
+            <div className="mt-3 border-t border-slate-200 pt-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                {t.buildings.floorBuilder.estTitle}
+              </p>
+              <div className="mt-1 flex flex-col gap-0.5 text-[12.5px]">
+                <p className="flex justify-between">
+                  <span className="text-slate-500">
+                    {t.buildings.floorBuilder.estUnits}
+                  </span>
+                  <span className="font-bold text-slate-800">{previewCount}</span>
+                </p>
+                {previewPrice > 0 && (
+                  <p className="flex justify-between">
+                    <span className="text-slate-500">
+                      {t.buildings.floorBuilder.estPrice}
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {formatCurrency(previewPrice, "TJS")}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <button
