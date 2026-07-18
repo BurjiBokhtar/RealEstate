@@ -298,14 +298,21 @@ export default function BuildingDetailPage() {
                   onClick={handleResyncStatuses}
                   disabled={resyncing}
                   title={t.buildings.resyncHint}
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-50"
+                  className="group inline-flex items-center gap-2 rounded-lg border border-[#5b3468]/40 bg-white px-4 py-2 text-sm font-medium text-[#5b3468] shadow-sm transition-all hover:border-[#5b3468] hover:bg-purple-50 hover:shadow active:scale-[0.98] disabled:opacity-50"
                 >
+                  <span
+                    aria-hidden="true"
+                    className={`text-base leading-none transition-transform duration-500 ${resyncing ? "animate-spin" : "group-hover:rotate-180"}`}
+                  >
+                    ⟳
+                  </span>
                   {resyncing ? t.common.loading : t.buildings.resyncStatuses}
                 </button>
                 <Link
                   href={`/buildings/${building.id}/edit`}
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
                 >
+                  <span aria-hidden="true" className="text-base leading-none">⚙</span>
                   {t.buildings.configure}
                 </Link>
               </div>

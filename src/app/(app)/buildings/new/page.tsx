@@ -336,7 +336,7 @@ export default function NewBuildingPage() {
                 </label>
                 <label className="flex flex-col gap-1 text-xs">
                   <span className="font-medium text-slate-600">
-                    {t.buildings.floorBuilder.count}
+                    {t.buildings.floorBuilder.perFloor}
                   </span>
                   <input
                     type="number"
