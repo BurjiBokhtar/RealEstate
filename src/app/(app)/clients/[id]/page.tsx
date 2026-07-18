@@ -46,6 +46,10 @@ export default function ClientDetailPage() {
     building_id: string | null;
   } | null>(null);
   const [contracts, setContracts] = useState<ClientContract[]>([]);
+  // Cascade-delete confirmation: open flag + the name the admin has typed.
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTyped, setDeleteTyped] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -156,12 +160,24 @@ export default function ClientDetailPage() {
     await loadClient();
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm(t.clients.form.confirmDelete)) return;
+  // Deleting a client takes their contracts and payments with them, so a
+  // browser confirm() is not enough ceremony: the modal spells out what
+  // goes, and the admin must retype the client's name. The role check that
+  // matters lives in the delete_client_cascade RPC, in the database.
+  const handleDelete = () => {
+    setDeleteTyped("");
+    setDeleteOpen(true);
+  };
+
+  const confirmCascadeDelete = async () => {
+    setDeleting(true);
     const supabase = createClient();
-    const { error } = await supabase.schema("crm").from("clients").delete().eq("id", params.id);
+    const { error } = await supabase
+      .schema("crm")
+      .rpc("delete_client_cascade", { p_client_id: params.id });
+    setDeleting(false);
     if (error) {
-      setToast({ message: t.clients.form.deleteBlocked, type: "error" });
+      setToast({ message: error.message, type: "error" });
       return;
     }
     router.push("/clients");
@@ -520,6 +536,63 @@ export default function ClientDetailPage() {
         type={toast.type}
         onDismiss={() => setToast((prev) => ({ ...prev, message: null }))}
       />
+      {deleteOpen && client && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          onClick={() => setDeleteOpen(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-lg font-bold text-red-600">
+              {t.clients.cascadeDelete.title}
+            </p>
+            <p className="mt-2 text-sm text-slate-600">
+              {t.clients.cascadeDelete.warning}
+            </p>
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+              {client.name} · {activeContracts.length}{" "}
+              {t.clients.cascadeDelete.contracts} · {payments.length}{" "}
+              {t.clients.cascadeDelete.payments}
+            </p>
+            <label className="mt-3 flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">
+                {t.clients.cascadeDelete.typeToConfirm}
+              </span>
+              <input
+                value={deleteTyped}
+                onChange={(e) => setDeleteTyped(e.target.value)}
+                placeholder={client.name}
+                autoFocus
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+              />
+            </label>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteOpen(false)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                {t.clients.cascadeDelete.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={confirmCascadeDelete}
+                disabled={deleting || deleteTyped.trim() !== client.name.trim()}
+                title={
+                  deleteTyped && deleteTyped.trim() !== client.name.trim()
+                    ? t.clients.cascadeDelete.mismatch
+                    : undefined
+                }
+                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-red-700 active:scale-[0.98] disabled:opacity-40"
+              >
+                {deleting ? t.common.loading : t.clients.cascadeDelete.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
