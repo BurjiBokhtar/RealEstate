@@ -6,6 +6,7 @@ import {
   getServiceClient,
   requireUser,
 } from "@/lib/send/contractData";
+import { getUserScopedClient } from "@/lib/supabase/serviceClient";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,12 @@ export async function POST(request: Request) {
   }
   const user = await requireUser(supabase, request);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // CRM reads run AS the caller (RLS applies): a manager can only send
+  // documents for contracts in their own buildings, and a role-less
+  // account can't fetch anything at all. The service client above is used
+  // solely to validate the token.
+  const callerDb = getUserScopedClient(request);
+  if (!callerDb) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -55,13 +62,13 @@ export async function POST(request: Request) {
     paymentId?: string;
   };
 
-  const contract = await fetchContract(supabase, contractId);
+  const contract = await fetchContract(callerDb, contractId);
   if (!contract) return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   if (!contract.client?.email) {
     return NextResponse.json({ error: "Client has no email on file" }, { status: 400 });
   }
 
-  const settings = await fetchSettings(supabase);
+  const settings = await fetchSettings(callerDb);
   const companyName = settings.company_name || "RealEstate CRM";
   const remaining = contract.amount - contract.paid_amount;
 
@@ -69,7 +76,7 @@ export async function POST(request: Request) {
   let bodyHtml: string;
 
   if (kind === "receipt" && paymentId) {
-    const payment = await fetchPayment(supabase, paymentId);
+    const payment = await fetchPayment(callerDb, paymentId);
     if (!payment) return NextResponse.json({ error: "Payment not found" }, { status: 404 });
     subject = `Чек об оплате — договор №${contract.number ?? ""}`;
     bodyHtml = `

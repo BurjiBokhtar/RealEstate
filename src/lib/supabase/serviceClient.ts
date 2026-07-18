@@ -48,3 +48,20 @@ export async function requireAdmin(supabase: ServiceClient, request: Request) {
   if (profile?.role !== "admin") return null;
   return user;
 }
+
+// A client that acts AS THE CALLER: anon key + the caller's JWT, so every
+// query runs under RLS with the caller's own role and building scope. Server
+// routes must use this -- not the service client -- whenever they read CRM
+// data on behalf of a user; the service client sees everything and would
+// happily hand a manager another building's contracts by id.
+export function getUserScopedClient(request: Request) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const token = request.headers.get("authorization")?.replace(/^Bearers+/i, "");
+  if (!supabaseUrl || !anonKey || !token) return null;
+  return createClient(supabaseUrl, anonKey, {
+    db: { schema: "crm" },
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth: { persistSession: false },
+  });
+}
