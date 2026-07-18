@@ -60,7 +60,7 @@ export default function BuildingDetailPage() {
       const { data: contracts } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("id, object_id, amount, paid_amount, currency, client:clients(name, source)")
+        .select("id, object_id, amount, paid_amount, currency, client:clients(name, phone, source)")
         .in(
           "object_id",
           unitRows.map((u) => u.id)
@@ -71,7 +71,7 @@ export default function BuildingDetailPage() {
         amount: number;
         paid_amount: number;
         currency: UnitContractInfo["currency"];
-        client: { name: string; source: string | null } | null;
+        client: { name: string; phone: string | null; source: string | null } | null;
       }>;
 
       const paymentsCountByContract: Record<string, number> = {};
@@ -96,6 +96,9 @@ export default function BuildingDetailPage() {
         map[c.object_id] = {
           id: c.id,
           clientName: c.client?.name ?? "—",
+          clientPhone: c.client?.phone ?? null,
+          amount: c.amount,
+          paid: c.paid_amount,
           remaining: c.amount - c.paid_amount,
           currency: c.currency,
           paymentsCount: paymentsCountByContract[c.id] ?? 0,

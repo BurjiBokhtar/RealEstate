@@ -410,6 +410,10 @@ export const dictionaries = {
         in_progress: "В работе",
       },
       hover: {
+        paid: "Оплачено",
+        phone: "Телефон",
+        floorShort: "этаж",
+        roomsShort: "комн.",
         rooms: "Комнат",
         area: "Площадь",
         price: "Цена",
@@ -996,6 +1000,10 @@ export const dictionaries = {
         in_progress: "Дар кор",
       },
       hover: {
+        paid: "Пардохта",
+        phone: "Телефон",
+        floorShort: "ошёна",
+        roomsShort: "хона",
         rooms: "Ҳуҷраҳо",
         area: "Масоҳат",
         price: "Нарх",
