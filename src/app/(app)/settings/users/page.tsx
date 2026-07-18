@@ -40,6 +40,10 @@ export default function UsersPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newRole, setNewRole] = useState<Role>("manager");
+  // Buildings ticked in the create form -- assigned right after the account
+  // is created, so a manager never exists in a "sees nothing yet" limbo the
+  // admin has to remember to fix.
+  const [newBuildings, setNewBuildings] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
@@ -82,9 +86,18 @@ export default function UsersPage() {
     });
     const data = await res.json();
     if (res.ok) {
+      if (newRole === "manager" && newBuildings.size > 0 && data.id) {
+        const supabase = createClient();
+        const { error: assignError } = await supabase
+          .schema("crm")
+          .from("manager_buildings")
+          .insert([...newBuildings].map((b) => ({ user_id: data.id, building_id: b })));
+        if (assignError) setError(assignError.message);
+      }
       setEmail("");
       setPassword("");
       setNewRole("manager");
+      setNewBuildings(new Set());
       await load();
     } else {
       setError(data.error);
@@ -212,6 +225,38 @@ export default function UsersPage() {
             {creating ? t.users.creating : t.users.create}
           </button>
         </div>
+        {newRole === "manager" && buildings.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="mr-1 text-xs font-semibold text-slate-600">
+              {t.users.assignBuildings}:
+            </span>
+            {buildings.map((b) => {
+              const on = newBuildings.has(b.id);
+              return (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() =>
+                    setNewBuildings((prev) => {
+                      const next = new Set(prev);
+                      if (on) next.delete(b.id);
+                      else next.add(b.id);
+                      return next;
+                    })
+                  }
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-[0.97] ${
+                    on
+                      ? "border-[#5b3468] bg-[#5b3468] text-white shadow-sm"
+                      : "border-slate-300 text-slate-600 hover:border-[#5b3468]/50 hover:text-[#5b3468]"
+                  }`}
+                >
+                  {on ? "✓ " : ""}
+                  {b.name}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <p className="mt-2 text-xs text-slate-400">{t.users.rolesHint}</p>
         {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
       </div>

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useSettings } from "@/lib/settings/SettingsProvider";
+import { useRole } from "@/lib/auth/useRole";
 import { QuickSearch } from "@/components/QuickSearch";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
@@ -25,6 +26,13 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useLocale();
   const { settings } = useSettings();
+  const { role } = useRole();
+  // Settings (company data, staff accounts, audit log) is admin territory --
+  // the pages themselves refuse non-admins, but showing the menu item just
+  // leads staff to an "access denied" dead end. RLS stays the real lock.
+  const visibleNavItems = navItems.filter(
+    (item) => item.key !== "settings" || role === "admin"
+  );
   const pathname = usePathname();
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -81,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
         <nav className="relative flex flex-col gap-1 px-3">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active =
               item.href === "/"
                 ? pathname === "/"
