@@ -38,15 +38,39 @@ export async function requireUser(supabase: ServiceClient, request: Request) {
 // Always checked server-side against the profiles row, never trusting
 // anything the client claims about its own role.
 export async function requireAdmin(supabase: ServiceClient, request: Request) {
-  const user = await requireUser(supabase, request);
-  if (!user) return null;
-  const { data: profile } = await supabase
+  const check = await checkAdmin(supabase, request);
+  return check.ok ? check.user : null;
+}
+
+// Same check, but says WHY it failed. "Not admin" and "the service key can't
+// even talk to this Supabase project" are opposite problems -- the first is
+// fixed in SQL, the second in Vercel env vars -- and collapsing them into
+// one 403 sent the user chasing the wrong one.
+export async function checkAdmin(
+  supabase: ServiceClient,
+  request: Request
+): Promise<
+  | { ok: true; user: { id: string; email?: string } }
+  | { ok: false; reason: "no-token" | "bad-token" | "no-profile" | "not-admin"; detail?: string }
+> {
+  const authHeader = request.headers.get("authorization");
+  const token = authHeader?.replace(/^Bearers+/i, "");
+  if (!token) return { ok: false, reason: "no-token" };
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    return { ok: false, reason: "bad-token", detail: error?.message };
+  }
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", user.id)
+    .eq("id", data.user.id)
     .maybeSingle();
-  if (profile?.role !== "admin") return null;
-  return user;
+  if (profileError) {
+    return { ok: false, reason: "bad-token", detail: profileError.message };
+  }
+  if (!profile) return { ok: false, reason: "no-profile" };
+  if (profile.role !== "admin") return { ok: false, reason: "not-admin" };
+  return { ok: true, user: data.user };
 }
 
 // A client that acts AS THE CALLER: anon key + the caller's JWT, so every
