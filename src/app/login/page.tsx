@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -15,6 +15,30 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  // Company branding for the header. The login page runs before auth, and
+  // full settings are staff-only -- public_branding() (026) exposes exactly
+  // the name and logo, nothing else. Falls back to the app name until the
+  // RPC answers (or if the migration isn't applied yet).
+  const [brand, setBrand] = useState<{ name: string | null; logo: string | null }>({
+    name: null,
+    logo: null,
+  });
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .rpc("public_branding")
+      .then(({ data }) => {
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row) {
+          setBrand({
+            name: row.company_name ?? null,
+            logo: row.company_logo_url ?? null,
+          });
+        }
+      });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +65,22 @@ export default function LoginPage() {
         className="relative flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-900/5"
       >
         <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900" />
-        <h1 className="text-xl font-semibold text-slate-900">{t.login.title}</h1>
+        <div className="flex items-center gap-3">
+          {brand.logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brand.logo}
+              alt=""
+              className="h-11 w-11 rounded-xl border border-slate-200 object-contain p-1"
+            />
+          )}
+          <div>
+            <h1 className="text-xl font-semibold text-slate-900">
+              {brand.name || t.appName}
+            </h1>
+            <p className="text-sm text-slate-500">{t.login.title}</p>
+          </div>
+        </div>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.login.email}</span>
           <input

@@ -580,7 +580,7 @@ export const dictionaries = {
       unknownActor: "Неизвестно",
     },
     login: {
-      title: "Вход в RealEstate CRM",
+      title: "Вход в систему",
       email: "Email",
       password: "Пароль",
       submit: "Войти",
@@ -1177,7 +1177,7 @@ export const dictionaries = {
       unknownActor: "Номаълум",
     },
     login: {
-      title: "Воридшавӣ ба RealEstate CRM",
+      title: "Воридшавӣ ба система",
       email: "Email",
       password: "Парол",
       submit: "Ворид шудан",
