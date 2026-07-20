@@ -71,6 +71,27 @@
     var(--atlas-plum) 45%,
     var(--atlas-saffron) 100%
   );
+  /* Oversized and slowly panned so the gradient itself breathes -- the
+     colours drift a few degrees back and forth over half a minute. Cheap:
+     one compositor-driven background-position animation. */
+  background-size: 180% 180%;
+  animation: hero-pan 28s ease-in-out infinite;
+}
+
+@keyframes hero-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-gradient {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -103,6 +124,38 @@
 
   .animate-hero-glow {
     animation: hero-glow 10s ease-in-out infinite;
+  }
+
+  @keyframes hero-glow-2 {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+      opacity: 0.35;
+    }
+    50% {
+      transform: translate(-40px, -15px) scale(1.2);
+      opacity: 0.6;
+    }
+  }
+
+  .animate-hero-glow-2 {
+    animation: hero-glow-2 14s ease-in-out infinite;
+  }
+
+  @keyframes nav-dot {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.6);
+      opacity: 0.55;
+    }
+  }
+
+  .animate-nav-dot {
+    animation: nav-dot 2.4s ease-in-out infinite;
   }
 
   @keyframes modal-backdrop-in {

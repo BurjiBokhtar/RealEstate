@@ -14,6 +14,29 @@ import type { Locale } from "@/lib/i18n/dictionaries";
 // already does better (find the contract, print it, take a payment, see
 // history). Contract detail pages stay reachable from client cards and
 // the shakhmatka.
+// Outline icons, not emoji: same stroke weight everywhere, they inherit
+// currentColor, and they never render differently across devices.
+const NAV_ICONS: Record<string, React.ReactNode> = {
+  dashboard: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+  ),
+  objects: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 8h2M7 12h2M7 16h2M17 13h1M17 17h1"/></svg>
+  ),
+  clients: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16 15.2c2.6.3 4.6 1.8 5.5 4.3"/></svg>
+  ),
+  tasks: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8.5 9l2 2 4-4.5M8.5 16.5H15"/></svg>
+  ),
+  buildings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></svg>
+  ),
+};
+
 const navItems = [
   { href: "/", key: "dashboard" as const },
   { href: "/objects", key: "objects" as const },
@@ -57,6 +80,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // document to one viewport worth of content.
     <div className="flex h-screen w-full overflow-hidden print:block print:h-auto print:overflow-visible">
       <aside className="hero-gradient relative hidden h-full w-60 shrink-0 overflow-y-auto sm:flex sm:flex-col print:hidden">
+        {/* Same slow-drifting glow language as the hero, so the sidebar
+            belongs to the same living surface. */}
+        <div
+          aria-hidden="true"
+          className="animate-hero-glow pointer-events-none absolute -left-16 top-1/3 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl"
+        />
         {/* Same faint skyline as the dashboard hero, so the two read as one
             visual system instead of a bright gradient page dropped into a
             plain white shell. */}
@@ -98,13 +127,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
+                className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                   active
                     ? "bg-white text-slate-900 shadow-sm"
-                    : "text-white/75 hover:translate-x-0.5 hover:bg-white/10 hover:text-white"
+                    : "text-white/75 hover:translate-x-1 hover:bg-white/10 hover:text-white"
                 }`}
               >
+                <span
+                  className={`shrink-0 transition-transform duration-200 ${
+                    active ? "text-[#5b3468]" : "group-hover:scale-110"
+                  }`}
+                >
+                  {NAV_ICONS[item.key]}
+                </span>
                 {t.nav[item.key]}
+                {active && (
+                  <span className="animate-nav-dot ml-auto h-1.5 w-1.5 rounded-full bg-[#e3a73b]" />
+                )}
               </Link>
             );
           })}

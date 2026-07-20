@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Building } from "@/lib/buildings/types";
@@ -45,6 +46,21 @@ export function DashboardHero({
   onPeriodChange: (period: PeriodFilter) => void;
 }) {
   const hasUnits = totalUnits > 0;
+
+  // The headline number counts up to its value instead of appearing -- an
+  // eased ~0.9s run, re-triggered when the figure itself changes (filters,
+  // fresh data). rAF-driven, cancelled on unmount.
+  const displaySold = useCountUp(soldCount, loading);
+
+  // Bars fill from zero on mount so the existing width transition has
+  // something to animate on first paint, not only on filter changes.
+  const [barsLive, setBarsLive] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setBarsLive(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const soldPct = hasUnits && barsLive ? (soldCount / totalUnits) * 100 : 0;
+  const reservedPct = hasUnits && barsLive ? (reservedCount / totalUnits) * 100 : 0;
   const stats = [
     { label: t.dashboard.totalObjects, value: totalUnits },
     { label: t.dashboard.available, value: availableCount },
@@ -72,6 +88,10 @@ export function DashboardHero({
       <div
         aria-hidden="true"
         className="animate-hero-glow pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl"
+      />
+      <div
+        aria-hidden="true"
+        className="animate-hero-glow-2 pointer-events-none absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-fuchsia-400/15 blur-3xl"
       />
 
       <div className="relative flex flex-col gap-7">
@@ -128,7 +148,7 @@ export function DashboardHero({
               <>
                 <div className="flex items-baseline gap-2.5">
                   <span className="text-6xl font-bold tabular-nums sm:text-7xl">
-                    {soldCount}
+                    {displaySold}
                   </span>
                   <span className="text-2xl font-semibold text-white/60">
                     / {totalUnits}
@@ -136,12 +156,12 @@ export function DashboardHero({
                 </div>
                 <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-white/15">
                   <div
-                    className="h-full rounded-l-full bg-amber-300 transition-[width] duration-700"
-                    style={{ width: `${(soldCount / totalUnits) * 100}%` }}
+                    className="h-full rounded-l-full bg-amber-300 transition-[width] duration-1000 ease-out"
+                    style={{ width: `${soldPct}%` }}
                   />
                   <div
-                    className="h-full bg-white/50 transition-[width] duration-700"
-                    style={{ width: `${(reservedCount / totalUnits) * 100}%` }}
+                    className="h-full bg-white/50 transition-[width] duration-1000 ease-out"
+                    style={{ width: `${reservedPct}%` }}
                   />
                 </div>
                 <div className="flex flex-wrap gap-4 text-xs text-white/80">
@@ -203,4 +223,28 @@ export function DashboardHero({
       </div>
     </div>
   );
+}
+
+// Eased count-up to `target` over ~0.9s; shows the final value straight
+// away while data is still loading (no fake zero flashes).
+function useCountUp(target: number, loading: boolean): number {
+  const [value, setValue] = useState(0);
+  const frame = useRef(0);
+
+  useEffect(() => {
+    if (loading) return;
+    const from = 0;
+    const start = performance.now();
+    const duration = 900;
+    const tick = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setValue(Math.round(from + (target - from) * eased));
+      if (p < 1) frame.current = requestAnimationFrame(tick);
+    };
+    frame.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame.current);
+  }, [target, loading]);
+
+  return value;
 }
