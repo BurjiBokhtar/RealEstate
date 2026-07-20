@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { LoginScene } from "@/components/LoginScene";
 
 const FIELD_CLASS =
   "h-11 w-full rounded-lg border border-slate-300 px-3.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
@@ -63,10 +64,11 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="relative flex min-h-screen items-center justify-center p-4">
+      <LoginScene />
       <form
         onSubmit={handleSubmit}
-        className="relative flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-7 shadow-xl shadow-slate-900/5"
+        className="relative z-10 flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-white/40 bg-white/85 p-7 shadow-2xl shadow-slate-900/30 backdrop-blur-md"
       >
         <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900" />
         <h1 className="text-xl font-semibold text-slate-900">{t.login.resetTitle}</h1>
