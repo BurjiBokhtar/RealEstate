@@ -3,19 +3,25 @@
 Всё выполняется в **Supabase → SQL Editor** (открыть файл на GitHub → кнопка
 **Raw** → выделить всё → скопировать → вставить → **Run**).
 
-## Новая база (с нуля)
+## Новая база (с нуля) — ОДИН файл
 
-По порядку номеров:
+Выполните только `000_full_setup.sql` — это все миграции, склеенные в
+правильном порядке. Больше ничего запускать не нужно.
 
-1. `schema.sql`
-2. `002` … `013`
-3. `020_apply_all_pending.sql`
-4. `021_roles_scoping_manual_reserve_audit.sql`
-5. `022_lock_out_strangers.sql`
-6. `023_delete_client_cascade.sql`
-7. `024_performance_indexes.sql`
-8. `025_validate_payment_amounts.sql`
-9. `026_public_branding.sql`
+После него:
+1. Authentication → Users → **Add user** → первый пользователь (Auto Confirm);
+2. роль админа (SQL ниже);
+3. Authentication → Sign In / Providers → **Allow new users to sign up → OFF**.
+
+```sql
+insert into crm.profiles (id, role)
+select id, 'admin' from auth.users
+where email = 'ВАШ_EMAIL'
+on conflict (id) do update set role = 'admin';
+```
+
+Файл генерируется из миграций ниже — по отдельности их запускают только
+при обновлении существующей базы.
 
 ## Существующая база (обновление)
 
