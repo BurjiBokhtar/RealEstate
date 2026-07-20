@@ -62,11 +62,23 @@ export function LoginScene() {
   }, []);
 
   useEffect(() => {
-    // Bokhtar, Tajikistan. Weather-code buckets: 0-1 clear, 2-3 + fog
-    // cloudy, 51-67 + 80-99 rain/storm, 71-77 + 85-86 snow.
-    fetch(
-      "https://api.open-meteo.com/v1/forecast?latitude=37.84&longitude=68.78&current=weather_code"
-    )
+    // Weather where the VISITOR is: coarse IP geolocation first (silent, no
+    // browser permission popup on a login page), Bokhtar as the fallback.
+    // Weather-code buckets: 0-1 clear, 2-3 + fog cloudy, 51-67 + 80-99
+    // rain/storm, 71-77 + 85-86 snow.
+    const locate = fetch("https://get.geojs.io/v1/ip/geo.json")
+      .then((r) => r.json())
+      .then((g) => ({
+        lat: Number(g?.latitude) || 37.84,
+        lon: Number(g?.longitude) || 68.78,
+      }))
+      .catch(() => ({ lat: 37.84, lon: 68.78 }));
+    locate
+      .then(({ lat, lon }) =>
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`
+        )
+      )
       .then((r) => r.json())
       .then((d) => {
         const code = Number(d?.current?.weather_code);

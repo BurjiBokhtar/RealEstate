@@ -10,7 +10,7 @@ const FIELD_CLASS =
   "h-11 w-full rounded-lg border border-slate-300 px-3.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
 
 export default function LoginPage() {
-  const { t } = useLocale();
+  const { t, locale, setLocale } = useLocale();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,21 +68,41 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="relative z-10 flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-white/40 bg-white/85 p-7 shadow-2xl shadow-slate-900/30 backdrop-blur-md"
       >
-        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-slate-900 via-slate-700 to-slate-900" />
-        <div className="flex items-center gap-3">
-          {brand.logo && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logo}
-              alt=""
-              className="h-11 w-11 rounded-xl border border-slate-200 object-contain p-1"
-            />
-          )}
-          <div>
-            <h1 className="text-xl font-semibold text-slate-900">
-              {brand.name || t.appName}
-            </h1>
-            <p className="text-sm text-slate-500">{t.login.title}</p>
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#1c1a3a] via-[#5b3468] to-[#e3a73b]" />
+        {/* Language first: the person picking РУ/ТҶ hasn't logged in yet,
+            so the login page itself must offer the choice. */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            {brand.logo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logo}
+                alt=""
+                className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 shadow-sm"
+              />
+            )}
+            <div>
+              <h1 className="bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] bg-clip-text text-xl font-bold tracking-tight text-transparent">
+                {brand.name || t.appName}
+              </h1>
+              <p className="text-sm text-slate-500">{t.login.title}</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 overflow-hidden rounded-lg border border-slate-200">
+            {(["ru", "tj"] as const).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setLocale(l)}
+                className={`px-2.5 py-1 text-xs font-semibold uppercase transition-colors ${
+                  locale === l
+                    ? "bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] text-white"
+                    : "bg-white text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {l === "ru" ? "Ру" : "Тҷ"}
+              </button>
+            ))}
           </div>
         </div>
         <label className="flex flex-col gap-1 text-sm">
@@ -110,7 +130,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-1 h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-slate-800 hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+          className="mt-1 h-11 rounded-lg bg-gradient-to-r from-[#1c1a3a] via-[#5b3468] to-[#8a4a7a] text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {submitting ? t.common.loading : t.login.submit}
         </button>
