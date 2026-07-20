@@ -10,15 +10,8 @@
 
 После него:
 1. Authentication → Users → **Add user** → первый пользователь (Auto Confirm);
-2. роль админа (SQL ниже);
+2. **готово — первый пользователь сам станет админом**;
 3. Authentication → Sign In / Providers → **Allow new users to sign up → OFF**.
-
-```sql
-insert into crm.profiles (id, role)
-select id, 'admin' from auth.users
-where email = 'ВАШ_EMAIL'
-on conflict (id) do update set role = 'admin';
-```
 
 Файл генерируется из миграций ниже — по отдельности их запускают только
 при обновлении существующей базы.
@@ -34,6 +27,7 @@ on conflict (id) do update set role = 'admin';
 5. `024_performance_indexes.sql`
 6. `025_validate_payment_amounts.sql`
 7. `026_public_branding.sql`
+8. `027_first_user_is_admin.sql`
 
 Все файлы идемпотентные — их можно запускать повторно сколько угодно раз,
 ничего не сломается и не задвоится.
@@ -59,6 +53,7 @@ text`), поэтому автостатусы квартир никогда не
 | `024` | Индексы для скорости (списки, поиск, шахматка, журнал) |
 | `025` | Запрет нулевых/отрицательных платежей (RPC + ограничение таблицы) |
 | `026` | Название и логотип компании на странице входа |
+| `027` | Первый созданный пользователь автоматически становится админом |
 
 ## Переменные окружения
 
