@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RealEstate CRM
 
-## Getting Started
+CRM для строительных и риэлторских компаний: шахматка квартир, договоры и
+рассрочки, касса с расидами, роли сотрудников. Официальные документы
+(шартнома, расид) — на таджикском языке.
 
-First, run the development server:
+## Возможности
+
+- **Шахматка** — блоки/подъезды рядом, сквозная нумерация квартир, бронь
+  правой кнопкой без клиента, карточка квартиры при наведении (оплачено,
+  остаток, клиент, телефон)
+- **Договоры** — номер генерируется сам (`Б-157-ҲПХ`), текст фирменного
+  шартнома с автоподстановкой данных сделки, печать двух копий, подложка-логотип
+- **Касса** — быстрая оплата из карточки клиента, расиды с автонумерацией
+  (две копии на A4), график рассрочки с автоматическим разнесением платежей
+  по месяцам (FIFO — сначала гасятся старые)
+- **Роли** — админ / менеджер (только назначенные ЖК) / директор (только
+  просмотр); журнал всех действий; автовыход после 30 минут бездействия
+- **PWA** — ставится на рабочий стол Android и Windows как приложение
+
+## Стек
+
+Next.js (App Router) · Supabase (Postgres, схема `crm`, RLS) · Tailwind ·
+деплой на Vercel.
+
+## Установка
+
+1. **База**: Supabase → SQL Editor → выполнить `supabase/000_full_setup.sql`
+   (один файл — вся база). Подробности в [supabase/README.md](supabase/README.md).
+2. **Первый админ**: Authentication → Users → Add user (Auto Confirm) —
+   первый пользователь автоматически становится админом.
+3. **Закрыть регистрацию**: Authentication → Sign In / Providers →
+   Allow new users to sign up → **OFF**.
+4. **Переменные окружения**: см. `.env.local.example`. В Vercel задать
+   `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY` (все из одного проекта!) → Redeploy.
+
+## Разработка
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
