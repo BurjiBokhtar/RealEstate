@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [resetting, setResetting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   // Company branding for the header. The login page runs before auth, and
   // full settings are staff-only -- public_branding() (026) exposes exactly
@@ -102,12 +104,38 @@ export default function LoginPage() {
           />
         </label>
         {error && <p className="text-sm text-red-600">{error}</p>}
+        {notice && <p className="text-sm text-emerald-600">{notice}</p>}
         <button
           type="submit"
           disabled={submitting}
           className="mt-1 h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:bg-slate-800 hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {submitting ? t.common.loading : t.login.submit}
+        </button>
+        <button
+          type="button"
+          disabled={resetting}
+          onClick={async () => {
+            setError("");
+            setNotice("");
+            if (!email.trim()) {
+              setError(t.login.resetEnterEmail);
+              return;
+            }
+            setResetting(true);
+            const supabase = createClient();
+            // Sends only to addresses that exist in Supabase Auth; the
+            // wording never confirms whether an account exists, so the
+            // form can't be used to probe for staff e-mails.
+            await supabase.auth.resetPasswordForEmail(email.trim(), {
+              redirectTo: `${window.location.origin}/reset-password`,
+            });
+            setResetting(false);
+            setNotice(t.login.resetSent);
+          }}
+          className="self-center text-sm text-slate-500 underline-offset-2 transition-colors hover:text-slate-800 hover:underline disabled:opacity-50"
+        >
+          {t.login.forgot}
         </button>
       </form>
     </div>

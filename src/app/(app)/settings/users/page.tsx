@@ -166,6 +166,9 @@ export default function UsersPage() {
           {t.users.backToSettings}
         </Link>
         <p className="text-slate-500">{t.users.accessDenied}</p>
+        {/* Who the database thinks you are -- ends the guessing game when
+            a freshly granted admin doesn't see the page. */}
+        <WhoAmI />
       </div>
     );
   }
@@ -360,4 +363,27 @@ export default function UsersPage() {
       )}
     </div>
   );
+}
+
+function WhoAmI() {
+  const [info, setInfo] = useState<string | null>(null);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data }) => {
+      const u = data.user;
+      if (!u) {
+        setInfo(null);
+        return;
+      }
+      const { data: p } = await supabase
+        .schema("crm")
+        .from("profiles")
+        .select("role")
+        .eq("id", u.id)
+        .maybeSingle();
+      setInfo(`${u.email} — ${p?.role ?? "—"}`);
+    });
+  }, []);
+  if (!info) return null;
+  return <p className="text-xs text-slate-400">{info}</p>;
 }
