@@ -4,6 +4,7 @@ import "./globals.css";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { SettingsProvider } from "@/lib/settings/SettingsProvider";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
+import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -46,6 +47,7 @@ export default function RootLayout({
           <SettingsProvider>{children}</SettingsProvider>
         </LocaleProvider>
         <ServiceWorkerRegistrar />
+        <RecoveryRedirect />
       </body>
     </html>
   );
