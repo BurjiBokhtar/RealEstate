@@ -11,6 +11,7 @@ import { Accordion } from "@/components/Accordion";
 import { Toast, type ToastType } from "@/components/Toast";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
+import { ChangePasswordCard } from "@/components/ChangePasswordCard";
 import type { SettingsInput } from "@/lib/settings/types";
 
 const FIELD_CLASS =
@@ -146,6 +147,8 @@ export default function SettingsPage() {
       </div>
 
       {!configured && <SetupNotice />}
+
+      {configured && <ChangePasswordCard />}
 
       <div className="flex flex-col gap-3">
         <Accordion title={t.settings.company.title} defaultOpen>
