@@ -1953,7 +1953,8 @@ create or replace function crm.ensure_admin(p_email text, p_password text)
 returns void
 language plpgsql
 security definer
-set search_path = auth, crm, public
+-- extensions: там в Supabase живут crypt()/gen_salt() из pgcrypto.
+set search_path = auth, crm, public, extensions
 as $$
 declare
   v_uid uuid;
