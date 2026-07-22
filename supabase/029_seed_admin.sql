@@ -38,16 +38,23 @@ begin
 
   if v_uid is null then
     v_uid := gen_random_uuid();
+    -- ВАЖНО: служебные token-поля задаём пустой строкой, а не оставляем
+    -- NULL. Иначе при входе GoTrue (сервис авторизации Supabase) не может
+    -- прочитать строку и падает с "Database error querying schema".
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data
+      raw_app_meta_data, raw_user_meta_data,
+      confirmation_token, recovery_token,
+      email_change_token_new, email_change, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     ) values (
       '00000000-0000-0000-0000-000000000000', v_uid,
       'authenticated', 'authenticated', p_email,
       crypt(p_password, gen_salt('bf')),
       now(), now(), now(),
-      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb
+      '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+      '', '', '', '', '', '', '', ''
     );
     insert into auth.identities (
       provider_id, user_id, identity_data, provider, created_at, updated_at
@@ -57,9 +64,19 @@ begin
       'email', now(), now()
     );
   else
+    -- Чиним уже созданный аккаунт: пароль, подтверждение почты и те же
+    -- token-поля, если они остались NULL от прежней SQL-вставки.
     update auth.users
        set encrypted_password = crypt(p_password, gen_salt('bf')),
            email_confirmed_at = coalesce(email_confirmed_at, now()),
+           confirmation_token = coalesce(confirmation_token, ''),
+           recovery_token = coalesce(recovery_token, ''),
+           email_change_token_new = coalesce(email_change_token_new, ''),
+           email_change = coalesce(email_change, ''),
+           email_change_token_current = coalesce(email_change_token_current, ''),
+           phone_change = coalesce(phone_change, ''),
+           phone_change_token = coalesce(phone_change_token, ''),
+           reauthentication_token = coalesce(reauthentication_token, ''),
            updated_at = now()
      where id = v_uid;
     if not exists (
