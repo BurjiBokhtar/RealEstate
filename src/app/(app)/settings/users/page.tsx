@@ -7,10 +7,14 @@ import { createClient } from "@/lib/supabase/client";
 import { useRole, type Role } from "@/lib/auth/useRole";
 import type { Building } from "@/lib/buildings/types";
 
+// A user in the staff list can be role-less ("none") -- that's a person
+// created in Supabase Auth who hasn't been given a role yet. The whole
+// point of this page is to turn those into managers/directors/admins.
+type StaffRole = Role | "none";
 type StaffUser = {
   id: string;
   email: string | null;
-  role: Role;
+  role: StaffRole;
   created_at: string;
 };
 
@@ -31,34 +35,38 @@ export default function UsersPage() {
 
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
-  // userId -> set of building ids the manager is allowed to see
   const [assignments, setAssignments] = useState<Record<string, Set<string>>>({});
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Optional convenience: create straight from here. Needs the server
+  // service key; when it isn't set this simply fails with a clear message
+  // and the admin uses the Supabase-Dashboard path instead. The LIST and
+  // ROLE assignment below never touch the service key.
+  const [showCreate, setShowCreate] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newRole, setNewRole] = useState<Role>("manager");
-  // Buildings ticked in the create form -- assigned right after the account
-  // is created, so a manager never exists in a "sees nothing yet" limbo the
-  // admin has to remember to fix.
-  const [newBuildings, setNewBuildings] = useState<Set<string>>(new Set());
   const [creating, setCreating] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     const supabase = createClient();
-    const [res, buildingsRes, assignmentsRes] = await Promise.all([
-      fetch("/api/admin/users", { headers: await authHeaders() }),
+    // Users come from an in-database RPC (list_staff), not the service-key
+    // API -- so this page works even when SUPABASE_SERVICE_ROLE_KEY is
+    // wrong or unset.
+    const [staffRes, buildingsRes, assignmentsRes] = await Promise.all([
+      supabase.schema("crm").rpc("list_staff"),
       supabase.schema("crm").from("buildings").select("*").order("name"),
       supabase.schema("crm").from("manager_buildings").select("user_id, building_id"),
     ]);
-    const data = await res.json();
-    if (res.ok) {
-      setUsers(data.users);
+    if (staffRes.error) {
+      setError(staffRes.error.message);
+      setUsers([]);
     } else {
-      setError(data.error);
+      setUsers((staffRes.data ?? []) as StaffUser[]);
     }
     setBuildings((buildingsRes.data ?? []) as Building[]);
     const map: Record<string, Set<string>> = {};
@@ -86,18 +94,10 @@ export default function UsersPage() {
     });
     const data = await res.json();
     if (res.ok) {
-      if (newRole === "manager" && newBuildings.size > 0 && data.id) {
-        const supabase = createClient();
-        const { error: assignError } = await supabase
-          .schema("crm")
-          .from("manager_buildings")
-          .insert([...newBuildings].map((b) => ({ user_id: data.id, building_id: b })));
-        if (assignError) setError(assignError.message);
-      }
       setEmail("");
       setPassword("");
       setNewRole("manager");
-      setNewBuildings(new Set());
+      setShowCreate(false);
       await load();
     } else {
       setError(data.error);
@@ -105,21 +105,24 @@ export default function UsersPage() {
     setCreating(false);
   };
 
-  const handleRoleChange = async (userId: string, newUserRole: Role) => {
-    setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newUserRole } : u)));
-    await fetch("/api/admin/users", {
-      method: "PATCH",
-      headers: await authHeaders(),
-      body: JSON.stringify({ userId, role: newUserRole }),
-    });
+  // Role changes go through the set_user_role RPC (admin-guarded in the DB).
+  const handleRoleChange = async (userId: string, newUserRole: StaffRole) => {
+    setError(null);
+    const prev = users;
+    setUsers((us) => us.map((u) => (u.id === userId ? { ...u, role: newUserRole } : u)));
+    const supabase = createClient();
+    const { error: rpcError } = await supabase
+      .schema("crm")
+      .rpc("set_user_role", { p_user: userId, p_role: newUserRole });
+    if (rpcError) {
+      setError(rpcError.message);
+      setUsers(prev); // revert
+    }
   };
 
-  // Assignments write straight to crm.manager_buildings -- RLS lets only
-  // admins insert/delete there, and this page is already admin-gated.
   const toggleAssignment = async (userId: string, buildingId: string) => {
     const supabase = createClient();
     const has = assignments[userId]?.has(buildingId) ?? false;
-    // Optimistic flip; reload on error.
     setAssignments((prev) => {
       const next = { ...prev, [userId]: new Set(prev[userId] ?? []) };
       if (has) next[userId].delete(buildingId);
@@ -143,21 +146,6 @@ export default function UsersPage() {
     }
   };
 
-  const handleDelete = async (userId: string) => {
-    if (!window.confirm(t.users.confirmDelete)) return;
-    const res = await fetch("/api/admin/users", {
-      method: "DELETE",
-      headers: await authHeaders(),
-      body: JSON.stringify({ userId }),
-    });
-    if (res.ok) {
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-    } else {
-      const data = await res.json();
-      setError(data.error);
-    }
-  };
-
   if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
   if (role !== "admin") {
     return (
@@ -166,103 +154,91 @@ export default function UsersPage() {
           {t.users.backToSettings}
         </Link>
         <p className="text-slate-500">{t.users.accessDenied}</p>
-        {/* Who the database thinks you are -- ends the guessing game when
-            a freshly granted admin doesn't see the page. */}
         <WhoAmI />
       </div>
     );
   }
 
+  const roleOptions: { value: StaffRole; label: string }[] = [
+    { value: "none", label: t.users.roleNone },
+    { value: "manager", label: t.users.roleManager },
+    { value: "director", label: t.users.roleDirector },
+    { value: "admin", label: t.users.roleAdmin },
+  ];
+
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex max-w-3xl flex-col gap-5">
       <Link href="/settings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
         {t.users.backToSettings}
       </Link>
       <h1 className="text-2xl font-semibold">{t.users.title}</h1>
 
-      {/* Create form: one row -- email, password, role, button. The hints
-          live in placeholders/tooltips instead of paragraphs so the card
-          stays two lines tall. */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-wrap items-end gap-2.5">
-          <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs">
-            <span className="font-semibold text-slate-600">{t.users.email}</span>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@mail.com"
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-            />
-          </label>
-          <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs">
-            <span className="font-semibold text-slate-600">{t.users.password}</span>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••"
-              title={t.users.passwordHint}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs">
-            <span className="font-semibold text-slate-600">{t.users.role}</span>
-            <select
-              value={newRole}
-              onChange={(e) => setNewRole(e.target.value as Role)}
-              title={t.users.rolesHint}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
-            >
-              <option value="manager">{t.users.roleManager}</option>
-              <option value="admin">{t.users.roleAdmin}</option>
-              <option value="director">{t.users.roleDirector}</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            onClick={handleCreate}
-            disabled={creating || !email || password.length < 6}
-            className="h-10 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
-          >
-            {creating ? t.users.creating : t.users.create}
-          </button>
-        </div>
-        {newRole === "manager" && buildings.length > 0 && (
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            <span className="mr-1 text-xs font-semibold text-slate-600">
-              {t.users.assignBuildings}:
-            </span>
-            {buildings.map((b) => {
-              const on = newBuildings.has(b.id);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() =>
-                    setNewBuildings((prev) => {
-                      const next = new Set(prev);
-                      if (on) next.delete(b.id);
-                      else next.add(b.id);
-                      return next;
-                    })
-                  }
-                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-[0.97] ${
-                    on
-                      ? "border-[#5b3468] bg-[#5b3468] text-white shadow-sm"
-                      : "border-slate-300 text-slate-600 hover:border-[#5b3468]/50 hover:text-[#5b3468]"
-                  }`}
-                >
-                  {on ? "✓ " : ""}
-                  {b.name}
-                </button>
-              );
-            })}
-          </div>
-        )}
-        <p className="mt-2 text-xs text-slate-400">{t.users.rolesHint}</p>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+      {/* How-to: the reliable path is create-in-Supabase, assign-here. */}
+      <div className="rounded-xl border border-[#5b3468]/25 bg-[#5b3468]/5 p-4 text-sm text-slate-600">
+        <p className="font-semibold text-[#5b3468]">{t.users.howToTitle}</p>
+        <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
+          <li>{t.users.howTo1}</li>
+          <li>{t.users.howTo2}</li>
+          <li>{t.users.howTo3}</li>
+        </ol>
+        <button
+          type="button"
+          onClick={() => setShowCreate((s) => !s)}
+          className="mt-2 text-xs font-medium text-[#5b3468] underline-offset-2 hover:underline"
+        >
+          {showCreate ? t.users.hideCreate : t.users.showCreate}
+        </button>
       </div>
+
+      {/* Optional direct-create form (needs the service key). */}
+      {showCreate && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-end gap-2.5">
+            <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs">
+              <span className="font-semibold text-slate-600">{t.users.email}</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@mail.com"
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              />
+            </label>
+            <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs">
+              <span className="font-semibold text-slate-600">{t.users.password}</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••"
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              <span className="font-semibold text-slate-600">{t.users.role}</span>
+              <select
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value as Role)}
+                className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+              >
+                <option value="manager">{t.users.roleManager}</option>
+                <option value="director">{t.users.roleDirector}</option>
+                <option value="admin">{t.users.roleAdmin}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={handleCreate}
+              disabled={creating || !email || password.length < 6}
+              className="h-10 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+            >
+              {creating ? t.users.creating : t.users.create}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <p className="text-slate-400">{t.common.loading}</p>
@@ -278,90 +254,128 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                    {t.users.empty}
+                  </td>
+                </tr>
+              )}
               {users.map((u) => (
-                <>
-                  <tr key={u.id} className="border-b border-slate-100 last:border-0">
-                    <td className="px-4 py-2.5">{u.email}</td>
-                    <td className="px-4 py-2.5">
-                      <select
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value as Role)}
-                        className="rounded-md border border-slate-300 px-2 py-1"
-                      >
-                        <option value="manager">{t.users.roleManager}</option>
-                        <option value="admin">{t.users.roleAdmin}</option>
-                        <option value="director">{t.users.roleDirector}</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-500">
-                      {new Date(u.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-3">
-                        {u.role === "manager" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedUser((prev) => (prev === u.id ? null : u.id))
-                            }
-                            className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
-                          >
-                            {t.users.assignBuildings} ({assignments[u.id]?.size ?? 0})
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(u.id)}
-                          className="text-xs font-medium text-red-600 hover:underline"
-                        >
-                          {t.users.delete}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  {expandedUser === u.id && u.role === "manager" && (
-                    <tr key={`${u.id}-buildings`} className="border-b border-slate-100">
-                      <td colSpan={4} className="bg-slate-50 px-4 py-3">
-                        <p className="mb-2 text-xs font-medium text-slate-500">
-                          {t.users.assignHint}
-                        </p>
-                        {buildings.length === 0 ? (
-                          <p className="text-xs text-slate-400">{t.buildings.empty}</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-2">
-                            {buildings.map((b) => {
-                              const checked = assignments[u.id]?.has(b.id) ?? false;
-                              return (
-                                <label
-                                  key={b.id}
-                                  className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${
-                                    checked
-                                      ? "border-slate-900 bg-slate-900 text-white"
-                                      : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={() => toggleAssignment(u.id, b.id)}
-                                    className="sr-only"
-                                  />
-                                  {b.name}
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </>
+                <UserRow
+                  key={u.id}
+                  user={u}
+                  roleOptions={roleOptions}
+                  buildings={buildings}
+                  assigned={assignments[u.id]}
+                  expanded={expandedUser === u.id}
+                  onToggleExpand={() =>
+                    setExpandedUser((prev) => (prev === u.id ? null : u.id))
+                  }
+                  onRoleChange={(r) => handleRoleChange(u.id, r)}
+                  onToggleBuilding={(bId) => toggleAssignment(u.id, bId)}
+                  t={t}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
     </div>
+  );
+}
+
+function UserRow({
+  user,
+  roleOptions,
+  buildings,
+  assigned,
+  expanded,
+  onToggleExpand,
+  onRoleChange,
+  onToggleBuilding,
+  t,
+}: {
+  user: StaffUser;
+  roleOptions: { value: StaffRole; label: string }[];
+  buildings: Building[];
+  assigned: Set<string> | undefined;
+  expanded: boolean;
+  onToggleExpand: () => void;
+  onRoleChange: (r: StaffRole) => void;
+  onToggleBuilding: (buildingId: string) => void;
+  t: ReturnType<typeof useLocale>["t"];
+}) {
+  const roleTone: Record<StaffRole, string> = {
+    none: "border-slate-300 text-slate-400",
+    manager: "border-sky-300 text-sky-700",
+    director: "border-amber-300 text-amber-700",
+    admin: "border-[#5b3468]/40 text-[#5b3468]",
+  };
+  return (
+    <>
+      <tr className="border-b border-slate-100 last:border-0">
+        <td className="px-4 py-2.5">{user.email}</td>
+        <td className="px-4 py-2.5">
+          <select
+            value={user.role}
+            onChange={(e) => onRoleChange(e.target.value as StaffRole)}
+            className={`rounded-md border bg-white px-2 py-1 font-medium ${roleTone[user.role]}`}
+          >
+            {roleOptions.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </td>
+        <td className="px-4 py-2.5 text-slate-500">
+          {new Date(user.created_at).toLocaleDateString()}
+        </td>
+        <td className="px-4 py-2.5">
+          {user.role === "manager" && (
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
+            >
+              {t.users.assignBuildings} ({assigned?.size ?? 0})
+            </button>
+          )}
+        </td>
+      </tr>
+      {expanded && user.role === "manager" && (
+        <tr className="border-b border-slate-100">
+          <td colSpan={4} className="bg-slate-50 px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-slate-500">{t.users.assignHint}</p>
+            {buildings.length === 0 ? (
+              <p className="text-xs text-slate-400">{t.buildings.empty}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {buildings.map((b) => {
+                  const checked = assigned?.has(b.id) ?? false;
+                  return (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => onToggleBuilding(b.id)}
+                      className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 ${
+                        checked
+                          ? "border-[#5b3468] bg-[#5b3468] text-white"
+                          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                      }`}
+                    >
+                      {checked ? "✓ " : ""}
+                      {b.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
