@@ -10,6 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
 import { ManagerSales } from "@/components/ManagerSales";
+import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
@@ -43,9 +44,14 @@ type ObjectRow = {
   building_id: string | null;
   price: number | null;
   currency: Currency;
+  area: number | null;
 };
 
 type MoneyPair = { tjs: number; usd: number };
+
+function formatArea(m2: number) {
+  return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
+}
 
 function formatPair(v: MoneyPair) {
   const parts: string[] = [];
@@ -100,7 +106,7 @@ export default function DashboardPage() {
       supabase
         .schema("crm")
         .from("objects")
-        .select("id, status, building_id, price, currency"),
+        .select("id, status, building_id, price, currency, area"),
       supabase
         .schema("crm")
         .from("contracts")
@@ -326,6 +332,18 @@ export default function DashboardPage() {
     return v;
   }, [objects]);
 
+  // Floor area: how much is built and how much is still available to sell.
+  const area = useMemo(() => {
+    let total = 0;
+    let availableArea = 0;
+    for (const o of objects) {
+      const a = o.area ?? 0;
+      total += a;
+      if (o.status === "available") availableArea += a;
+    }
+    return { total, available: availableArea };
+  }, [objects]);
+
   const revenueByBuilding = useMemo(() => {
     const objectToBuilding = new Map(allObjects.map((o) => [o.id, o.building_id]));
     const map = new Map<string, MoneyPair>();
@@ -373,48 +391,66 @@ export default function DashboardPage() {
       {/* Only what the hero doesn't already say: total/available/sold and
           paid revenue live up there now, so this row carries just the
           three numbers that don't. */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-          <div className="text-sm text-slate-500">{t.dashboard.inProgress}</div>
-          <div className="mt-1 text-2xl font-semibold">
-            {loading ? "…" : counts.in_progress}
-          </div>
-        </div>
-        <div
-          style={{ animationDelay: "40ms" }}
-          className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <div className="text-sm text-slate-500">{t.dashboard.totalDebt}</div>
-          <div className="mt-1 text-2xl font-semibold text-rose-600">
-            {loading ? "…" : formatPair(totalDebt)}
-          </div>
-        </div>
-        <Link
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <StatCard
+          label={t.dashboard.totalArea}
+          value={formatArea(area.total)}
+          sub={t.dashboard.totalAreaSub}
+          icon={StatIcons.area}
+          tone="indigo"
+          delay={0}
+          loading={loading}
+        />
+        <StatCard
+          label={t.dashboard.areaForSale}
+          value={formatArea(area.available)}
+          sub={
+            area.total > 0
+              ? `${Math.round((area.available / area.total) * 100)}%`
+              : undefined
+          }
+          icon={StatIcons.tag}
+          tone="emerald"
+          delay={40}
+          loading={loading}
+        />
+        <StatCard
+          label={t.dashboard.inProgress}
+          value={counts.in_progress}
+          icon={StatIcons.hammer}
+          tone="amber"
+          delay={80}
+          loading={loading}
+        />
+        <StatCard
+          label={t.dashboard.totalDebt}
+          value={formatPair(totalDebt)}
+          icon={StatIcons.debt}
+          tone="rose"
+          delay={120}
+          loading={loading}
+        />
+        <StatCard
+          label={t.dashboard.overdueTile}
+          value={overdue.tjs || overdue.usd ? formatPair(overdue) : "—"}
+          icon={StatIcons.warning}
+          tone="rose"
           href="/debtors"
-          style={{ animationDelay: "60ms" }}
-          className="animate-fade-up rounded-lg border border-rose-200 bg-rose-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <div className="flex items-center gap-1.5 text-sm text-rose-500">
-            <span aria-hidden="true">⚠</span>
-            {t.dashboard.overdueTile}
-          </div>
-          <div className="mt-1 text-2xl font-semibold text-rose-700">
-            {loading ? "…" : overdue.tjs || overdue.usd ? formatPair(overdue) : "—"}
-          </div>
-        </Link>
-        <div
-          style={{ animationDelay: "80ms" }}
-          className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-        >
-          <div className="text-sm text-slate-500">{t.dashboard.potentialRevenue}</div>
-          <div className="mt-1 text-2xl font-semibold text-slate-700">
-            {loading ? "…" : formatPair(potentialRevenue)}
-          </div>
-        </div>
+          delay={160}
+          loading={loading}
+        />
+        <StatCard
+          label={t.dashboard.potentialRevenue}
+          value={formatPair(potentialRevenue)}
+          icon={StatIcons.wallet}
+          tone="plum"
+          delay={200}
+          loading={loading}
+        />
       </div>
 
       {(periodFilter === "today" || periodFilter === "month") && (
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-slate-700">
             {t.dashboard.revenueByDay}
           </p>
@@ -426,7 +462,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.revenueByMonth}
         </p>
@@ -437,7 +473,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.occupancyByBuilding}
         </p>
@@ -474,7 +510,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.revenueByBuilding}
         </p>
@@ -506,7 +542,7 @@ export default function DashboardPage() {
         )}
       </div>
 
-      <div className="rounded-lg border border-slate-200 bg-white p-4">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.topDebtors}</p>
         {debtors.length > 0 ? (
           <table className="w-full text-left text-sm">

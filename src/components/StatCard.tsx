@@ -1,0 +1,92 @@
+"use client";
+
+import Link from "next/link";
+import type { ReactNode } from "react";
+
+// A modern metric card: a soft tinted icon chip, a quiet label, a big value,
+// and an optional sub-line. Hover lifts it slightly. Renders as a link when
+// `href` is given (e.g. the overdue card jumps to Debtors). One component for
+// the whole dashboard row so every tile shares the same rhythm.
+type Tone = "slate" | "emerald" | "rose" | "amber" | "indigo" | "plum";
+
+const TONES: Record<Tone, { chip: string; value: string; ring: string }> = {
+  slate: { chip: "bg-slate-100 text-slate-500", value: "text-slate-900", ring: "border-slate-200" },
+  emerald: { chip: "bg-emerald-100 text-emerald-600", value: "text-emerald-600", ring: "border-slate-200" },
+  rose: { chip: "bg-rose-100 text-rose-600", value: "text-rose-600", ring: "border-rose-200" },
+  amber: { chip: "bg-amber-100 text-amber-600", value: "text-amber-600", ring: "border-amber-200" },
+  indigo: { chip: "bg-indigo-100 text-indigo-600", value: "text-indigo-700", ring: "border-slate-200" },
+  plum: { chip: "bg-purple-100 text-[#5b3468]", value: "text-[#5b3468]", ring: "border-slate-200" },
+};
+
+export function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+  tone = "slate",
+  href,
+  delay = 0,
+  loading,
+}: {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  icon: ReactNode;
+  tone?: Tone;
+  href?: string;
+  delay?: number;
+  loading?: boolean;
+}) {
+  const c = TONES[tone];
+  const inner = (
+    <>
+      <div className="flex items-start justify-between">
+        <span className="text-[13px] font-medium text-slate-500">{label}</span>
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c.chip}`}>
+          {icon}
+        </span>
+      </div>
+      <div className={`mt-2 text-[26px] font-bold leading-tight tracking-tight ${c.value}`}>
+        {loading ? "…" : value}
+      </div>
+      {sub && <div className="mt-0.5 text-xs text-slate-400">{sub}</div>}
+    </>
+  );
+
+  const cls = `animate-fade-up block rounded-2xl border ${c.ring} bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`;
+
+  if (href) {
+    return (
+      <Link href={href} style={{ animationDelay: `${delay}ms` }} className={cls}>
+        {inner}
+      </Link>
+    );
+  }
+  return (
+    <div style={{ animationDelay: `${delay}ms` }} className={cls}>
+      {inner}
+    </div>
+  );
+}
+
+// Small inline outline icons for the cards (currentColor, one stroke weight).
+export const StatIcons = {
+  hammer: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M14 6l4 4M3 21l7-7M13 5l6 6-2 2-6-6zM10 10l-6 6"/></svg>
+  ),
+  debt: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+  ),
+  warning: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></svg>
+  ),
+  wallet: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M16 12h3M3 9h18"/></svg>
+  ),
+  area: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h4M17 3v4M9 21v-4M21 15h-4"/></svg>
+  ),
+  tag: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M3 12l8-8h9v9l-8 8z"/><circle cx="16" cy="8" r="1.5"/></svg>
+  ),
+};
