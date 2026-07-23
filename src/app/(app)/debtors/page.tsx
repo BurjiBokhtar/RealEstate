@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { formatCurrency, type Currency } from "@/lib/currency";
-import { downloadCsv, todayStamp } from "@/lib/export/csv";
+import { ExportMenu } from "@/components/ExportMenu";
 
 // A single overdue installment: an unpaid schedule row whose due date has
 // already passed. Building status/paid_amount aren't touched here -- this is
@@ -91,31 +91,18 @@ export default function DebtorsPage() {
     return Object.entries(v).filter(([, n]) => n > 0);
   }, [rows]);
 
-  const exportToExcel = () => {
+  const getExportRows = async () => {
     const num = (n: number) => n.toFixed(2).replace(".", ",");
-    downloadCsv(
-      `debtors-${todayStamp()}`,
-      [
-        t.debtors.client,
-        t.clients.table.phone,
-        t.debtors.object,
-        "№",
-        t.debtors.dueDate,
-        `${t.debtors.overdue} (${t.debtors.days})`,
-        t.debtors.amount,
-        "Валюта",
-      ],
-      rows.map((r) => [
-        r.clientName,
-        r.clientPhone ?? "",
-        r.objectName ?? "",
-        r.contractNumber ?? "",
-        r.due_date,
-        r.daysOverdue,
-        num(r.amount),
-        r.currency,
-      ])
-    );
+    return rows.map((r) => [
+      r.clientName,
+      r.clientPhone ?? "",
+      r.objectName ?? "",
+      r.contractNumber ?? "",
+      r.due_date,
+      r.daysOverdue,
+      num(r.amount),
+      r.currency,
+    ]);
   };
 
   return (
@@ -126,14 +113,21 @@ export default function DebtorsPage() {
           <p className="text-sm text-slate-500">{t.debtors.subtitle}</p>
         </div>
         {rows.length > 0 && (
-          <button
-            type="button"
-            onClick={exportToExcel}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-sm font-medium text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 active:scale-[0.98]"
-          >
-            <span aria-hidden="true">⤓</span>
-            {t.debtors.export}
-          </button>
+          <ExportMenu
+            getData={getExportRows}
+            headers={[
+              t.debtors.client,
+              t.clients.table.phone,
+              t.debtors.object,
+              "№",
+              t.debtors.dueDate,
+              `${t.debtors.overdue} (${t.debtors.days})`,
+              t.debtors.amount,
+              "Валюта",
+            ]}
+            filenameBase="debtors"
+            title={t.debtors.title}
+          />
         )}
       </div>
 

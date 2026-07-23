@@ -114,7 +114,7 @@ export function ReceiptDocument({
           className="rounded-r-lg bg-slate-50 px-3 py-2 print:bg-transparent"
         >
           <p className="text-[9.5px] font-semibold uppercase tracking-wide text-slate-400">
-            Пардозанда
+            Пардохткунанда
           </p>
           <p className="text-[14px] font-bold leading-tight">
             {contract.client?.name ?? "—"}
