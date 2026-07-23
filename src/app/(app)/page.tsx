@@ -78,6 +78,11 @@ export default function DashboardPage() {
   const [allObjects, setAllObjects] = useState<ObjectRow[]>([]);
   const [allContracts, setAllContracts] = useState<ContractRow[]>([]);
   const [allPayments, setAllPayments] = useState<PaymentRow[]>([]);
+  // Unpaid installments whose due date has passed -- powers the "overdue"
+  // tile that links to the Debtors page.
+  const [overdueRows, setOverdueRows] = useState<
+    Array<{ amount: number; currency: Currency; objectId: string; cancelled: boolean }>
+  >([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
@@ -108,11 +113,30 @@ export default function DashboardPage() {
         .from("contract_payments")
         .select("paid, paid_date, amount, contract:contracts(currency, object_id)")
         .eq("paid", true),
-    ]).then(([objectsRes, contractsRes, buildingsRes, paymentsRes]) => {
+      supabase
+        .schema("crm")
+        .from("contract_payments")
+        .select("amount, contract:contracts(currency, object_id, status)")
+        .eq("paid", false)
+        .lt("due_date", new Date().toISOString().slice(0, 10)),
+    ]).then(([objectsRes, contractsRes, buildingsRes, paymentsRes, overdueRes]) => {
       setAllObjects((objectsRes.data ?? []) as ObjectRow[]);
       setAllContracts((contractsRes.data ?? []) as unknown as ContractRow[]);
       setBuildings((buildingsRes.data ?? []) as Building[]);
       setAllPayments((paymentsRes.data ?? []) as unknown as PaymentRow[]);
+      setOverdueRows(
+        ((overdueRes.data ?? []) as unknown as Array<{
+          amount: number;
+          contract: { currency: Currency; object_id: string; status: string } | null;
+        }>)
+          .filter((r) => r.contract)
+          .map((r) => ({
+            amount: r.amount,
+            currency: r.contract!.currency,
+            objectId: r.contract!.object_id,
+            cancelled: r.contract!.status === "cancelled",
+          }))
+      );
       setLoading(false);
     });
   }, [configured]);
@@ -278,6 +302,19 @@ export default function DashboardPage() {
     return v;
   }, [periodContracts]);
 
+  // Overdue total, respecting the building filter but not the period filter
+  // (a debt is overdue regardless of which reporting period you're viewing).
+  const overdue: MoneyPair = useMemo(() => {
+    const v: MoneyPair = { tjs: 0, usd: 0 };
+    overdueRows.forEach((r) => {
+      if (r.cancelled) return;
+      if (scopedObjectIds && !scopedObjectIds.has(r.objectId)) return;
+      if (r.currency === "USD") v.usd += r.amount;
+      else v.tjs += r.amount;
+    });
+    return v;
+  }, [overdueRows, scopedObjectIds]);
+
   const potentialRevenue: MoneyPair = useMemo(() => {
     const v: MoneyPair = { tjs: 0, usd: 0 };
     objects
@@ -352,6 +389,19 @@ export default function DashboardPage() {
             {loading ? "…" : formatPair(totalDebt)}
           </div>
         </div>
+        <Link
+          href="/debtors"
+          style={{ animationDelay: "60ms" }}
+          className="animate-fade-up rounded-lg border border-rose-200 bg-rose-50 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <div className="flex items-center gap-1.5 text-sm text-rose-500">
+            <span aria-hidden="true">⚠</span>
+            {t.dashboard.overdueTile}
+          </div>
+          <div className="mt-1 text-2xl font-semibold text-rose-700">
+            {loading ? "…" : overdue.tjs || overdue.usd ? formatPair(overdue) : "—"}
+          </div>
+        </Link>
         <div
           style={{ animationDelay: "80ms" }}
           className="animate-fade-up rounded-lg border border-slate-200 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
