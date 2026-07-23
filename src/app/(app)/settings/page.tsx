@@ -126,25 +126,38 @@ export default function SettingsPage() {
 
   return (
     <div className="flex max-w-2xl flex-col gap-5">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
-        {role === "admin" && (
-          <div className="flex items-center gap-4">
-            <Link
-              href="/settings/audit-log"
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
-            >
-              {t.settings.auditLogLink}
-            </Link>
-            <Link
-              href="/settings/users"
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
-            >
-              {t.settings.usersLink}
-            </Link>
-          </div>
-        )}
-      </div>
+      <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
+
+      {role === "admin" && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Link
+            href="/settings/users"
+            className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5b3468]/10 text-[#5b3468]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16 15.2c2.6.3 4.6 1.8 5.5 4.3"/></svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-slate-800">{t.settings.usersLink}</span>
+              <span className="block text-xs text-slate-400">{t.settings.usersHint}</span>
+            </span>
+            <span className="text-slate-300 transition-transform group-hover:translate-x-0.5">→</span>
+          </Link>
+          <Link
+            href="/settings/audit-log"
+            className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 5h16M4 12h16M4 19h10"/><circle cx="19" cy="19" r="2"/></svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block font-semibold text-slate-800">{t.settings.auditLogLink}</span>
+              <span className="block text-xs text-slate-400">{t.settings.auditHint}</span>
+            </span>
+            <span className="text-slate-300 transition-transform group-hover:translate-x-0.5">→</span>
+          </Link>
+        </div>
+      )}
 
       {!configured && <SetupNotice />}
 
@@ -197,10 +210,6 @@ export default function SettingsPage() {
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
             />
           </label>
-        </Accordion>
-
-        <Accordion title={t.settings.template.title}>
-          <span className="text-xs text-slate-400">{t.settings.template.locked}</span>
         </Accordion>
 
         <Accordion title={t.settings.sms.title}>
