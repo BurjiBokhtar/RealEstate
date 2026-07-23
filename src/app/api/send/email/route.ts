@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import nodemailer from "nodemailer";
 import {
   fetchContract,
   fetchPayment,
@@ -48,10 +49,17 @@ export async function POST(request: Request) {
   const callerDb = getUserScopedClient(request);
   if (!callerDb) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Email is sent via the company's own SMTP (e.g. Gmail) when configured,
+  // so documents go out from the company address the admin set up. Resend
+  // stays as a fallback if SMTP isn't set.
+  const smtpHost = process.env.SMTP_HOST;
   const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  if (!smtpHost && !apiKey) {
     return NextResponse.json(
-      { error: "RESEND_API_KEY is not configured on the server" },
+      {
+        error:
+          "Отправка email не настроена: задайте SMTP_HOST/SMTP_USER/SMTP_PASS (почта компании) на Vercel и сделайте Redeploy.",
+      },
       { status: 500 }
     );
   }
@@ -106,8 +114,34 @@ export async function POST(request: Request) {
   }
 
   const html = emailShell(companyName, settings.company_logo_url, bodyHtml);
-  const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
+  // Preferred: company SMTP (Gmail etc.). Same credentials as Supabase SMTP.
+  if (smtpHost) {
+    const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || "";
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: Number(process.env.SMTP_PORT) || 465,
+        secure: (Number(process.env.SMTP_PORT) || 465) === 465,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+      await transporter.sendMail({
+        from: `${companyName} <${fromAddress}>`,
+        to: contract.client.email,
+        subject,
+        html,
+      });
+      return NextResponse.json({ ok: true });
+    } catch (e) {
+      return NextResponse.json(
+        { error: `SMTP error: ${e instanceof Error ? e.message : String(e)}` },
+        { status: 502 }
+      );
+    }
+  }
+
+  // Fallback: Resend.
+  const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -121,11 +155,9 @@ export async function POST(request: Request) {
       html,
     }),
   });
-
   if (!res.ok) {
     const text = await res.text();
     return NextResponse.json({ error: `Resend error: ${text}` }, { status: 502 });
   }
-
   return NextResponse.json({ ok: true });
 }
