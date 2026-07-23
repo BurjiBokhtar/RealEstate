@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
+import { ManagerSales } from "@/components/ManagerSales";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
@@ -487,6 +488,7 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
+      <ManagerSales />
     </div>
   );
 }
