@@ -36,12 +36,16 @@ const NAV_ICONS: Record<string, React.ReactNode> = {
   settings: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3"/></svg>
   ),
+  debtors: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-[18px] w-[18px]"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5v.5"/></svg>
+  ),
 };
 
 const navItems = [
   { href: "/", key: "dashboard" as const },
   { href: "/objects", key: "objects" as const },
   { href: "/clients", key: "clients" as const },
+  { href: "/debtors", key: "debtors" as const },
   { href: "/tasks", key: "tasks" as const },
   { href: "/buildings", key: "buildings" as const },
   { href: "/settings", key: "settings" as const },
