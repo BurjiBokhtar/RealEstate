@@ -114,6 +114,7 @@ export const dictionaries = {
     clients: {
       title: "Клиенты",
       newClient: "Новый клиент",
+      exportExcel: "Экспорт в Excel",
       search: "Поиск по имени или телефону",
       empty: "Клиентов пока нет",
       table: {
@@ -742,6 +743,7 @@ export const dictionaries = {
     clients: {
       title: "Мизоҷон",
       newClient: "Мизоҷи нав",
+      exportExcel: "Содирот ба Excel",
       search: "Ҷустуҷӯ аз рӯи ном ё телефон",
       empty: "Ҳоло мизоҷ нест",
       table: {

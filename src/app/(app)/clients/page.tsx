@@ -9,6 +9,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { downloadCsv, todayStamp } from "@/lib/export/csv";
 import type { Client } from "@/lib/clients/types";
 
 // Paid/total across a client's active contracts, per currency -- fetched
@@ -27,6 +28,7 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [debts, setDebts] = useState<Record<string, ClientDebt>>({});
   const [totalCount, setTotalCount] = useState(0);
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -87,18 +89,113 @@ export default function ClientsPage() {
     });
   }, [configured, page, search]);
 
+  // Export EVERY client (not just the visible page) with their per-currency
+  // paid/debt totals, as a CSV that opens in Excel. Fetched fresh on click so
+  // it always reflects the current database, and streamed in pages so a big
+  // client base doesn't hit the row cap.
+  const exportToExcel = async () => {
+    setExporting(true);
+    const supabase = createClient();
+    const all: Client[] = [];
+    const step = 1000;
+    for (let from = 0; ; from += step) {
+      const { data } = await supabase
+        .schema("crm")
+        .from("clients")
+        .select("id, name, phone, email")
+        .order("name")
+        .range(from, from + step - 1);
+      const chunk = (data ?? []) as Client[];
+      all.push(...chunk);
+      if (chunk.length < step) break;
+    }
+    const { data: contractRows } = await supabase
+      .schema("crm")
+      .from("contracts")
+      .select("client_id, amount, paid_amount, currency, status")
+      .neq("status", "cancelled");
+    const byClient: Record<
+      string,
+      { count: number; tjsPaid: number; tjsDebt: number; usdPaid: number; usdDebt: number }
+    > = {};
+    for (const c of (contractRows ?? []) as Array<{
+      client_id: string;
+      amount: number;
+      paid_amount: number;
+      currency: Currency;
+    }>) {
+      const e = (byClient[c.client_id] ??= {
+        count: 0,
+        tjsPaid: 0,
+        tjsDebt: 0,
+        usdPaid: 0,
+        usdDebt: 0,
+      });
+      e.count += 1;
+      const paid = Math.min(c.paid_amount, c.amount);
+      const debt = Math.max(0, c.amount - c.paid_amount);
+      if (c.currency === "USD") {
+        e.usdPaid += paid;
+        e.usdDebt += debt;
+      } else {
+        e.tjsPaid += paid;
+        e.tjsDebt += debt;
+      }
+    }
+    const num = (n: number) => (n ? n.toFixed(2).replace(".", ",") : "");
+    const rows = all.map((cl) => {
+      const e = byClient[cl.id];
+      return [
+        cl.name,
+        cl.phone ?? "",
+        cl.email ?? "",
+        e?.count ?? 0,
+        num(e?.tjsPaid ?? 0),
+        num(e?.tjsDebt ?? 0),
+        num(e?.usdPaid ?? 0),
+        num(e?.usdDebt ?? 0),
+      ];
+    });
+    downloadCsv(
+      `clients-${todayStamp()}`,
+      [
+        t.clients.table.name,
+        t.clients.table.phone,
+        t.clients.form.email,
+        t.clients.stats.bought,
+        "Оплачено TJS",
+        "Долг TJS",
+        "Оплачено USD",
+        "Долг USD",
+      ],
+      rows
+    );
+    setExporting(false);
+  };
+
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
-        <Link
-          href="/clients/new"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
-        >
-          + {t.clients.newClient}
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={exportToExcel}
+            disabled={exporting}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3.5 py-2 text-sm font-medium text-emerald-700 shadow-sm transition-all hover:bg-emerald-50 active:scale-[0.98] disabled:opacity-50"
+          >
+            <span aria-hidden="true">⤓</span>
+            {exporting ? t.common.loading : t.clients.exportExcel}
+          </button>
+          <Link
+            href="/clients/new"
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
+          >
+            + {t.clients.newClient}
+          </Link>
+        </div>
       </div>
 
       {!configured && <SetupNotice />}
