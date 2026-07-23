@@ -4,6 +4,7 @@ export const OBJECT_TYPES = [
   "apartment",
   "house",
   "commercial",
+  "office",
   "land",
   "construction_site",
   "parking",

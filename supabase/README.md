@@ -31,6 +31,7 @@
 9. `028_staff_management_no_service_key.sql`
 10. `029_seed_admin.sql`
 11. `030_sales_by_manager.sql`
+12. `031_office_type.sql`
 
 Все файлы идемпотентные — их можно запускать повторно сколько угодно раз,
 ничего не сломается и не задвоится.

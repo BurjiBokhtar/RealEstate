@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
+import { waLink } from "@/lib/whatsapp";
 
 // A single overdue installment: an unpaid schedule row whose due date has
 // already passed. Building status/paid_amount aren't touched here -- this is
@@ -160,19 +161,20 @@ export default function DebtorsPage() {
               <th className="px-4 py-3 font-medium">{t.debtors.dueDate}</th>
               <th className="px-4 py-3 text-right font-medium">{t.debtors.overdue}</th>
               <th className="px-4 py-3 text-right font-medium">{t.debtors.amount}</th>
+              <th className="px-4 py-3 text-right font-medium"></th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-emerald-600">
+                <td colSpan={6} className="px-4 py-8 text-center text-emerald-600">
                   {t.debtors.empty}
                 </td>
               </tr>
@@ -209,6 +211,32 @@ export default function DebtorsPage() {
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-rose-600">
                   {formatCurrency(r.amount, r.currency)}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {r.clientPhone ? (
+                    <a
+                      href={waLink(
+                        r.clientPhone,
+                        t.debtors.reminderMsg
+                          .replace("{name}", r.clientName)
+                          .replace("{contract}", r.contractNumber ?? "—")
+                          .replace(
+                            "{amount}",
+                            formatCurrency(r.amount, r.currency)
+                          )
+                          .replace("{days}", String(r.daysOverdue))
+                      )}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={t.debtors.whatsapp}
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-95"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1a13 13 0 0 1-1.5-.5c-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c0 .2.1.3 0 .5l-.3.5-.4.5c-.2.1-.3.3-.1.6.1.3.7 1.1 1.4 1.8.9.9 1.7 1.1 2 1.3.2.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.1.1.6-.1 1.1Z" /></svg>
+                      {t.debtors.whatsapp}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-slate-300">{t.debtors.noPhone}</span>
+                  )}
                 </td>
               </tr>
             ))}
