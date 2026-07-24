@@ -38,6 +38,7 @@ function UnitCell({
   readOnly,
   onViewUnit,
   statusFilter,
+  editMode,
 }: {
   unit: PropertyObject;
   apartmentNumber: number | undefined;
@@ -52,6 +53,7 @@ function UnitCell({
   readOnly: boolean;
   onViewUnit: (unit: PropertyObject) => void;
   statusFilter: ObjectStatus | null;
+  editMode: boolean;
 }) {
   const { t } = useLocale();
   const router = useRouter();
@@ -72,6 +74,11 @@ function UnitCell({
   // admins, since that means editing the raw unit record.
   const handlePrimaryAction = () => {
     if (isPending) return;
+    // Edit mode: any cell opens its editor (rooms/area/price), never books.
+    if (editMode) {
+      onViewUnit(unit);
+      return;
+    }
     if (readOnly) {
       // Director: everything opens as a view -- the cash desk page is
       // already read-only for this role, unit cells never open write forms.
@@ -265,6 +272,7 @@ export function ShakhmatkaGrid({
   canEditSold,
   readOnly = false,
   onViewUnit,
+  editMode = false,
 }: {
   units: PropertyObject[];
   contractsByUnit: Record<string, UnitContractInfo>;
@@ -277,6 +285,7 @@ export function ShakhmatkaGrid({
   canEditSold: boolean;
   readOnly?: boolean;
   onViewUnit: (unit: PropertyObject) => void;
+  editMode?: boolean;
 }) {
   const { t } = useLocale();
   const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
@@ -445,6 +454,7 @@ export function ShakhmatkaGrid({
                             readOnly={readOnly}
                             onViewUnit={onViewUnit}
                             statusFilter={statusFilter}
+                            editMode={editMode}
                           />
                         ) : canEditSold ? (
                           <button

@@ -12,6 +12,7 @@ import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGr
 import { Modal } from "@/components/Modal";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
+import { UnitEditModal } from "@/components/UnitEditModal";
 import { Toast, type ToastType } from "@/components/Toast";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
@@ -39,6 +40,7 @@ export default function BuildingDetailPage() {
   } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [resyncing, setResyncing] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
@@ -310,6 +312,18 @@ export default function BuildingDetailPage() {
                   </span>
                   {resyncing ? t.common.loading : t.buildings.resyncStatuses}
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setEditMode((v) => !v)}
+                  className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98] ${
+                    editMode
+                      ? "border-amber-400 bg-amber-100 text-amber-800"
+                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span aria-hidden="true" className="text-base leading-none">✎</span>
+                  {editMode ? t.buildings.editModeOn : t.buildings.editMode}
+                </button>
                 <Link
                   href={`/buildings/${building.id}/edit`}
                   className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
@@ -321,7 +335,14 @@ export default function BuildingDetailPage() {
             )}
           </div>
 
+          {editMode && (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              {t.buildings.editModeHint}
+            </div>
+          )}
+
           <ShakhmatkaGrid
+            editMode={editMode}
             units={units}
             contractsByUnit={contractsByUnit}
             readOnly={role === "director"}
@@ -360,54 +381,16 @@ export default function BuildingDetailPage() {
           )}
 
           {viewingUnit && (
-            <Modal title={viewingUnit.name} onClose={() => setViewingUnit(null)}>
-              <div className="flex flex-col gap-3 text-sm">
-                <p className="text-xs text-slate-400">{t.buildings.viewOnlyHint}</p>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">{t.objects.form.status}</span>
-                  <span className="font-medium text-slate-900">
-                    {t.buildings.legend[viewingUnit.status]}
-                  </span>
-                </div>
-                {viewingUnit.rooms != null && (
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">{t.buildings.hover.rooms}</span>
-                    <span className="font-medium text-slate-900">{viewingUnit.rooms}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-slate-500">{t.buildings.hover.area}</span>
-                  <span className="font-medium text-slate-900">
-                    {formatArea(viewingUnit.area)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">{t.buildings.hover.price}</span>
-                  <span className="font-medium text-slate-900">
-                    {formatCurrency(viewingUnit.price, viewingUnit.currency)}
-                  </span>
-                </div>
-                {contractsByUnit[viewingUnit.id] && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">{t.buildings.hover.owner}</span>
-                      <span className="font-medium text-slate-900">
-                        {contractsByUnit[viewingUnit.id].clientName}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">{t.buildings.hover.remaining}</span>
-                      <span className="font-medium text-slate-900">
-                        {formatCurrency(
-                          contractsByUnit[viewingUnit.id].remaining,
-                          contractsByUnit[viewingUnit.id].currency
-                        )}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </Modal>
+            <UnitEditModal
+              unit={viewingUnit}
+              allUnits={units}
+              apartmentNumber={apartmentNumbers.get(viewingUnit.id)}
+              canEdit={role === "admin"}
+              onClose={() => setViewingUnit(null)}
+              onSaved={() => {
+                loadUnits();
+              }}
+            />
           )}
         </>
       )}
