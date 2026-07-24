@@ -39,7 +39,6 @@ export default function BuildingDetailPage() {
     position: number;
   } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
-  const [resyncing, setResyncing] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
@@ -251,30 +250,6 @@ export default function BuildingDetailPage() {
     }
   };
 
-  // Manual escape hatch: the DB trigger that keeps a unit's status in sync
-  // with its contract's paid_amount is supposed to make this automatic and
-  // instant, but in case that trigger is ever missing, mid-deploy, or just
-  // hasn't been applied to this Supabase project yet, this recomputes every
-  // unit's status from its actual contracts server-side and re-fetches --
-  // a reliable way out that doesn't depend on the trigger having worked.
-  const handleResyncStatuses = async () => {
-    setResyncing(true);
-    const supabase = createClient();
-    try {
-      const { error } = await supabase.schema("crm").rpc("resync_all_object_statuses");
-      if (error) throw new Error(error.message);
-      await loadUnits();
-      setToast({ message: t.buildings.resyncDone, type: "success" });
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : t.common.error,
-        type: "error",
-      });
-    } finally {
-      setResyncing(false);
-    }
-  };
-
   return (
     <div className="flex flex-col gap-5">
       <BackLink href="/buildings">{t.buildings.backToList}</BackLink>
@@ -297,21 +272,6 @@ export default function BuildingDetailPage() {
             </div>
             {role === "admin" && (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleResyncStatuses}
-                  disabled={resyncing}
-                  title={t.buildings.resyncHint}
-                  className="group inline-flex items-center gap-2 rounded-lg border border-[#5b3468]/40 bg-white px-4 py-2 text-sm font-medium text-[#5b3468] shadow-sm transition-all hover:border-[#5b3468] hover:bg-purple-50 hover:shadow active:scale-[0.98] disabled:opacity-50"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`text-base leading-none transition-transform duration-500 ${resyncing ? "animate-spin" : "group-hover:rotate-180"}`}
-                  >
-                    ⟳
-                  </span>
-                  {resyncing ? t.common.loading : t.buildings.resyncStatuses}
-                </button>
                 <button
                   type="button"
                   onClick={() => setEditMode((v) => !v)}
@@ -385,6 +345,7 @@ export default function BuildingDetailPage() {
               unit={viewingUnit}
               allUnits={units}
               apartmentNumber={apartmentNumbers.get(viewingUnit.id)}
+              pricePerSqm={building.price_per_sqm}
               canEdit={role === "admin"}
               onClose={() => setViewingUnit(null)}
               onSaved={() => {

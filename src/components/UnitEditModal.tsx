@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
+import { formatCurrency } from "@/lib/currency";
 import type { PropertyObject } from "@/lib/objects/types";
 
 // Edit one apartment's own rooms / area / price, then optionally copy those
@@ -14,6 +15,7 @@ export function UnitEditModal({
   unit,
   allUnits,
   apartmentNumber,
+  pricePerSqm,
   canEdit,
   onClose,
   onSaved,
@@ -21,6 +23,7 @@ export function UnitEditModal({
   unit: PropertyObject;
   allUnits: PropertyObject[];
   apartmentNumber?: number;
+  pricePerSqm?: number | null;
   canEdit: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -28,16 +31,29 @@ export function UnitEditModal({
   const { t } = useLocale();
   const [rooms, setRooms] = useState(unit.rooms?.toString() ?? "");
   const [area, setArea] = useState(unit.area?.toString() ?? "");
-  const [price, setPrice] = useState(unit.price?.toString() ?? "");
+  // Enter the price PER m²; the unit's total price is computed from it and the
+  // area. Seeded from this unit's own rate (price/area) if it has one, else
+  // the building's default rate.
+  const initialRate =
+    unit.price != null && unit.area
+      ? unit.price / unit.area
+      : (pricePerSqm ?? null);
+  const [rate, setRate] = useState(
+    initialRate != null ? String(Math.round(initialRate * 100) / 100) : ""
+  );
   const [copyFrom, setCopyFrom] = useState("");
   const [copyTo, setCopyTo] = useState("");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
+  const areaNum = area === "" ? null : Number(area);
+  const rateNum = rate === "" ? null : Number(rate);
+  const totalPrice = areaNum != null && rateNum != null ? areaNum * rateNum : null;
+
   const values = () => ({
     rooms: rooms === "" ? null : Number(rooms),
-    area: area === "" ? null : Number(area),
-    price: price === "" ? null : Number(price),
+    area: areaNum,
+    price: totalPrice,
   });
 
   const save = async () => {
@@ -149,15 +165,29 @@ export function UnitEditModal({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium text-slate-600">{t.buildings.hover.price}</span>
+            <span className="font-medium text-slate-600">
+              {t.buildings.unitEdit.pricePerSqm}
+            </span>
             <input
               type="number"
               min="0"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
               className={FIELD}
             />
           </label>
+        </div>
+
+        {/* Total is computed from area × price/m², never typed directly. */}
+        <div className="flex items-baseline justify-between rounded-lg bg-slate-50 px-3 py-2">
+          <span className="text-xs font-medium text-slate-500">
+            {t.buildings.unitEdit.totalPrice}
+          </span>
+          <span className="text-lg font-bold text-[#5b3468]">
+            {totalPrice != null
+              ? formatCurrency(totalPrice, unit.currency)
+              : "—"}
+          </span>
         </div>
 
         <button

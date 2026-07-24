@@ -360,10 +360,18 @@ export function ShakhmatkaGrid({
 
   type Slot = { kind: "unit"; unit: PropertyObject } | { kind: "ghost"; position: number };
   function floorSlots(block: string, floor: number, cellUnits: PropertyObject[]): Slot[] {
-    const maxPosition = maxPositionByBlock.get(block) ?? 0;
+    // Pad only up to THIS floor's own rightmost unit -- not to the widest
+    // floor in the whole block. Otherwise one oddly-wide floor made every
+    // other floor sprout a wall of empty "+" cells (the confusing glitch).
+    // Ghost "+" cells still appear for internal gaps (a deleted unit sitting
+    // between two existing ones), so restoring a specific slot still works.
+    const floorMax = cellUnits.reduce(
+      (max, u) => Math.max(max, (u.position_in_floor ?? 0) + (u.span || 1) - 1),
+      0
+    );
     const slots: Slot[] = [];
     let p = 1;
-    while (p <= maxPosition) {
+    while (p <= floorMax) {
       const unit = cellUnits.find((u) => (u.position_in_floor ?? 0) === p);
       if (unit) {
         slots.push({ kind: "unit", unit });
