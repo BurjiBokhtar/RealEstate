@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -150,9 +151,7 @@ export default function UsersPage() {
   if (role !== "admin") {
     return (
       <div className="flex flex-col gap-3">
-        <Link href="/settings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-          {t.users.backToSettings}
-        </Link>
+        <BackLink href="/settings">{t.users.backToSettings}</BackLink>
         <p className="text-slate-500">{t.users.accessDenied}</p>
         <WhoAmI />
       </div>
@@ -168,9 +167,7 @@ export default function UsersPage() {
 
   return (
     <div className="flex max-w-3xl flex-col gap-5">
-      <Link href="/settings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        {t.users.backToSettings}
-      </Link>
+      <BackLink href="/settings">{t.users.backToSettings}</BackLink>
       <h1 className="text-2xl font-semibold">{t.users.title}</h1>
 
       {/* How-to: the reliable path is create-in-Supabase, assign-here. */}

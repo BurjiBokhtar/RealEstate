@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -44,9 +45,7 @@ export default function NewClientPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/clients" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.clients.backToList}
-      </Link>
+      <BackLink href="/clients">{t.clients.backToList}</BackLink>
       <h1 className="text-2xl font-semibold">{t.clients.newClient}</h1>
       {!configured && <SetupNotice />}
       <ClientForm submitting={submitting} onSubmit={handleSubmit} />

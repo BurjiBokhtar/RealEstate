@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -152,9 +153,7 @@ export default function NewBuildingPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/objects" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.objects.title}
-      </Link>
+      <BackLink href="/objects">{t.objects.title}</BackLink>
       <h1 className="text-2xl font-semibold">{t.buildings.newBuilding}</h1>
       {!configured && <SetupNotice />}
 

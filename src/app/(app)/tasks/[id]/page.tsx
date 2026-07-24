@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -65,9 +66,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/tasks" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.tasks.backToList}
-      </Link>
+      <BackLink href="/tasks">{t.tasks.backToList}</BackLink>
 
       {!configured && <SetupNotice />}
 

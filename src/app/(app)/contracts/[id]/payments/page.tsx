@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -85,9 +86,7 @@ export default function ContractPaymentsPage() {
           ← {t.contracts.backToClient}
         </Link>
       ) : (
-        <Link href="/clients" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-          ← {t.clients.backToList}
-        </Link>
+        <BackLink href="/clients">{t.clients.backToList}</BackLink>
       )}
 
       {!configured && <SetupNotice />}

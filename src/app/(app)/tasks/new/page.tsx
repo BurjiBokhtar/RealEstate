@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -42,9 +43,7 @@ export default function NewTaskPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/tasks" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        ← {t.tasks.backToList}
-      </Link>
+      <BackLink href="/tasks">{t.tasks.backToList}</BackLink>
       <h1 className="text-2xl font-semibold">{t.tasks.newTask}</h1>
       {!configured && <SetupNotice />}
       <TaskForm submitting={submitting} onSubmit={handleSubmit} />

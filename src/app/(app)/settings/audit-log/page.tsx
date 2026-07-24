@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BackLink } from "@/components/BackLink";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -103,9 +104,7 @@ export default function AuditLogPage() {
   if (role !== "admin") {
     return (
       <div className="flex flex-col gap-3">
-        <Link href="/settings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-          {t.auditLog.backToSettings}
-        </Link>
+        <BackLink href="/settings">{t.auditLog.backToSettings}</BackLink>
         <p className="text-slate-500">{t.users.accessDenied}</p>
       </div>
     );
@@ -113,9 +112,7 @@ export default function AuditLogPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <Link href="/settings" className="w-fit text-sm text-slate-500 hover:text-slate-900">
-        {t.auditLog.backToSettings}
-      </Link>
+      <BackLink href="/settings">{t.auditLog.backToSettings}</BackLink>
       <div>
         <h1 className="text-2xl font-semibold">{t.auditLog.title}</h1>
         <p className="text-sm text-slate-500">{t.auditLog.subtitle}</p>
