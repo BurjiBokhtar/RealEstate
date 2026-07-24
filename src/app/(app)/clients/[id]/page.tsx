@@ -300,13 +300,27 @@ export default function ClientDetailPage() {
                   </div>
                 </div>
                 {!readOnly && (
-                  <button
-                    type="button"
-                    onClick={() => setEditing((v) => !v)}
-                    className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-                  >
-                    {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing((v) => !v)}
+                      className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                    >
+                      {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                    </button>
+                    {/* Prominent delete for admins -- the cascade-delete modal
+                        (client + contracts + payments) was previously buried
+                        inside the edit form. */}
+                    {role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        className="rounded-lg border border-red-300 px-3.5 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-50 active:scale-[0.98]"
+                      >
+                        {t.clients.form.delete}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
 

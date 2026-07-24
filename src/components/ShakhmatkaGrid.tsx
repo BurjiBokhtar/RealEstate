@@ -23,6 +23,18 @@ export type UnitContractInfo = {
 const CELL = 64;
 const GAP = 8;
 
+// Non-residential units are marked visually distinct from flats: a coloured
+// ring, a slight separation, and a purpose prefix on the number so a
+// ground-floor shop reads "М1", a parking bay "П1", an office "О1" -- never
+// confused with apartment "1". Apartments/houses have no prefix or ring.
+const TYPE_META: Record<string, { prefix: string; ring: string }> = {
+  commercial: { prefix: "М", ring: "ring-2 ring-amber-400" },
+  office: { prefix: "О", ring: "ring-2 ring-sky-400" },
+  parking: { prefix: "П", ring: "ring-2 ring-slate-400" },
+  land: { prefix: "З", ring: "ring-2 ring-lime-400" },
+  construction_site: { prefix: "С", ring: "ring-2 ring-orange-400" },
+};
+
 
 function UnitCell({
   unit,
@@ -65,6 +77,7 @@ function UnitCell({
   );
   const canMerge = unit.status === "available" && nextUnit && nextUnit.status === "available";
   const dimmed = statusFilter !== null && unit.status !== statusFilter;
+  const typeMeta = TYPE_META[unit.type ?? "apartment"];
 
   // Left click: available -> open the full contract-drafting dialog.
   // Already booked/sold -> a client paying their installment is routine
@@ -127,9 +140,14 @@ function UnitCell({
         style={{ width }}
         className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 ${
           isPending ? "animate-pulse opacity-60" : ""
-        } ${dimmed ? "opacity-20 saturate-0" : ""} ${STATUS_COLORS[unit.status]}`}
+        } ${dimmed ? "opacity-20 saturate-0" : ""} ${
+          typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
+        } ${STATUS_COLORS[unit.status]}`}
       >
-        <span>{apartmentNumber ?? "—"}</span>
+        <span>
+          {typeMeta?.prefix}
+          {apartmentNumber ?? "—"}
+        </span>
       </button>
 
       {canMerge && (
@@ -149,7 +167,10 @@ function UnitCell({
       {/* Hover card: everything the front desk asks about a unit at a
           glance -- price, how much is paid (with a progress bar), what's
           left, who the buyer is and their phone. */}
-      <div className="pointer-events-none invisible absolute left-1/2 top-full z-30 mt-2 w-64 -translate-x-1/2 overflow-hidden rounded-xl border border-slate-200 bg-white text-xs shadow-xl group-hover:visible">
+      {/* Anchored to the cell's LEFT edge, opening rightward -- so the card
+          for a leftmost cell never extends left under the sidebar (where it
+          used to get clipped and "disappear"). */}
+      <div className="pointer-events-none invisible absolute left-0 top-full z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white text-xs shadow-xl group-hover:visible">
         <div className="flex items-start justify-between gap-2 px-3.5 pb-1.5 pt-3">
           <div>
             <p className="text-[15px] font-bold leading-tight text-slate-900">
