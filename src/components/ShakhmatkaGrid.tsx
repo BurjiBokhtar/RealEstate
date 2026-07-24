@@ -296,7 +296,20 @@ export function ShakhmatkaGrid({
     (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
   );
 
-  const blocks = Array.from(new Set(units.map((u) => u.block ?? ""))).sort();
+  // Blocks/entrances ordered left→right by when they were first created, so
+  // the first entrance you made sits leftmost and each new one appears to its
+  // right -- the way a real shakhmatka grows -- instead of an alphabetical
+  // order that reshuffles them.
+  const blockFirstCreated = new Map<string, string>();
+  for (const u of units) {
+    const b = u.block ?? "";
+    const ts = u.created_at ?? "";
+    const seen = blockFirstCreated.get(b);
+    if (seen === undefined || ts < seen) blockFirstCreated.set(b, ts);
+  }
+  const blocks = Array.from(blockFirstCreated.keys()).sort((a, b) =>
+    (blockFirstCreated.get(a) ?? "").localeCompare(blockFirstCreated.get(b) ?? "")
+  );
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
   const floors = Array.from(new Set(units.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
   const apartmentNumbers = computeApartmentNumbers(units);
