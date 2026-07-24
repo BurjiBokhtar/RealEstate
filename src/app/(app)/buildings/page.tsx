@@ -8,6 +8,9 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import type { Building } from "@/lib/buildings/types";
 
+// Card grid instead of a table: each ЖК shows its facade photo (or an atlas
+// placeholder), name, address and floor count. Buildings are few, so this
+// loads fast and reads far better than a row of text.
 export default function BuildingsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
@@ -38,51 +41,60 @@ export default function BuildingsPage() {
 
       {!configured && <SetupNotice />}
 
-      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t.buildings.table.name}</th>
-              <th className="px-4 py-3 font-medium">{t.buildings.table.address}</th>
-              <th className="px-4 py-3 font-medium">{t.buildings.table.floors}</th>
-              <th className="px-4 py-3 font-medium">{t.buildings.table.unitsPerFloor}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  {t.common.loading}
-                </td>
-              </tr>
-            )}
-            {!loading && buildings.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                  {t.buildings.empty}
-                </td>
-              </tr>
-            )}
-            {buildings.map((building) => (
-              <tr
-                key={building.id}
-                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
-              >
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  <Link href={`/buildings/${building.id}`} className="block">
-                    {building.name}
-                  </Link>
-                </td>
-                <td className="px-4 py-3 text-slate-600">{building.address || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{building.floors_count ?? "—"}</td>
-                <td className="px-4 py-3 text-slate-600">
-                  {building.units_per_floor ?? "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {loading ? (
+        <p className="text-slate-400">{t.common.loading}</p>
+      ) : buildings.length === 0 ? (
+        <p className="text-slate-400">{t.buildings.empty}</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {buildings.map((building, i) => (
+            <Link
+              key={building.id}
+              href={`/buildings/${building.id}`}
+              style={{ animationDelay: `${i * 40}ms` }}
+              className="animate-fade-up group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <div className="relative h-40 w-full overflow-hidden">
+                {building.facade_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={building.facade_url}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  // Atlas-gradient placeholder with a simple tower mark.
+                  <div className="hero-gradient flex h-full w-full items-center justify-center">
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.2"
+                      className="h-14 w-14 opacity-80"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M9 3v18M15 3v18M3 9h18M3 15h18" />
+                    </svg>
+                  </div>
+                )}
+                {building.floors_count != null && (
+                  <span className="absolute right-2 top-2 rounded-full bg-black/45 px-2.5 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
+                    {building.floors_count} {t.buildings.floorBuilder.floorsShort}
+                  </span>
+                )}
+              </div>
+              <div className="p-4">
+                <p className="truncate text-[15px] font-semibold text-slate-900">
+                  {building.name}
+                </p>
+                <p className="mt-0.5 truncate text-sm text-slate-500">
+                  {building.address || "—"}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
