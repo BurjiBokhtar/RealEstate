@@ -134,12 +134,18 @@ export default function EditBuildingPage() {
       {building && (
         <>
           <h1 className="text-2xl font-semibold">{building.name}</h1>
+          {/* Floors count / units-per-floor are hidden: they assume the same
+              number of units on every floor, which is wrong for multi-entrance
+              buildings. The real structure is defined by the constructor below
+              (blocks + floor ranges + per-range type). */}
           <BuildingForm
             values={values}
             onChange={setValues}
             submitting={submitting}
             onSubmit={handleSubmit}
             onDelete={handleDelete}
+            hideFloorsCount
+            hideUnitsPerFloor
           />
           {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
 
