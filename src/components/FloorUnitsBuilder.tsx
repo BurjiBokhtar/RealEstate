@@ -11,6 +11,18 @@ import type { PropertyObject } from "@/lib/objects/types";
 // Atlas accents, same as the hero and the contract.
 const PLUM = "#5b3468";
 
+// Preview badge colour per unit type, so a shop/office floor is visibly
+// different from a residential one at a glance.
+const TYPE_TINT: Record<string, string> = {
+  apartment: "bg-emerald-200 text-emerald-800",
+  house: "bg-emerald-200 text-emerald-800",
+  commercial: "bg-amber-200 text-amber-800",
+  office: "bg-sky-200 text-sky-800",
+  parking: "bg-slate-300 text-slate-700",
+  land: "bg-lime-200 text-lime-800",
+  construction_site: "bg-orange-200 text-orange-800",
+};
+
 const FIELD =
   "h-9 rounded-lg border border-slate-300 px-2.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
 
@@ -129,19 +141,22 @@ export function FloorUnitsBuilder({
   // Live shakhmatka preview: existing structure in grey, planned additions
   // in green, per block per floor. What the plan LOOKS like, before it runs.
   const previewGrid = useMemo(() => {
-    const byBlock = new Map<string, Map<number, { existing: number; added: number }>>();
-    const bump = (block: string, floor: number, kind: "existing" | "added", by: number) => {
-      const floors = byBlock.get(block) ?? new Map();
-      const cell = floors.get(floor) ?? { existing: 0, added: 0 };
-      cell[kind] += by;
+    type Cell = { existing: number; added: number; addedType: ObjectType | null };
+    const byBlock = new Map<string, Map<number, Cell>>();
+    const cellFor = (block: string, floor: number) => {
+      const floors = byBlock.get(block) ?? new Map<number, Cell>();
+      const cell = floors.get(floor) ?? { existing: 0, added: 0, addedType: null };
       floors.set(floor, cell);
       byBlock.set(block, floors);
+      return cell;
     };
     for (const u of existingUnits) {
-      if (u.floor != null) bump(u.block?.trim() || "", u.floor, "existing", 1);
+      if (u.floor != null) cellFor(u.block?.trim() || "", u.floor).existing += 1;
     }
     for (const r of expandBlocks(blocks)) {
-      bump(r.block, Number(r.floor), "added", Number(r.count));
+      const cell = cellFor(r.block, Number(r.floor));
+      cell.added += Number(r.count);
+      cell.addedType = r.type; // one type per floor range; last wins
     }
     return [...byBlock.entries()].map(([name, floors]) => ({
       name,
@@ -416,10 +431,22 @@ export function FloorUnitsBuilder({
                         </span>
                       )}
                       {f.added > 0 && (
-                        <span className="flex h-5 min-w-10 items-center justify-center rounded bg-emerald-200 px-1.5 text-[10px] font-semibold text-emerald-800">
+                        <span
+                          className={`flex h-5 min-w-10 items-center justify-center rounded px-1.5 text-[10px] font-semibold ${
+                            f.addedType ? TYPE_TINT[f.addedType] ?? "bg-emerald-200 text-emerald-800" : "bg-emerald-200 text-emerald-800"
+                          }`}
+                        >
                           +{f.added}
                         </span>
                       )}
+                      {f.added > 0 &&
+                        f.addedType &&
+                        f.addedType !== "apartment" &&
+                        f.addedType !== "house" && (
+                          <span className="text-[9px] text-slate-400">
+                            {t.objects.types[f.addedType]}
+                          </span>
+                        )}
                     </div>
                   ))}
                 </div>
