@@ -29,6 +29,12 @@ export default function ObjectsPage() {
   const [objects, setObjects] = useState<PropertyObject[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [buildings, setBuildings] = useState<Building[]>([]);
+  // Per-building roll-up of its child units: how many are still available and
+  // the total free area, so the list can show a live "В продаже" status and
+  // the remaining square metres instead of a dash.
+  const [buildingStats, setBuildingStats] = useState<
+    Record<string, { available: number; availableArea: number; total: number }>
+  >({});
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -79,6 +85,55 @@ export default function ObjectsPage() {
       .order("created_at", { ascending: false })
       .then(({ data }) => setBuildings((data ?? []) as Building[]));
   }, [configured]);
+
+  // Roll up each building's units (available count + free area). Paged in
+  // 1000-row batches so it stays correct even for large developments.
+  useEffect(() => {
+    if (!configured || buildings.length === 0) return;
+    const supabase = createClient();
+    const ids = buildings.map((b) => b.id);
+    let cancelled = false;
+
+    (async () => {
+      const stats: Record<
+        string,
+        { available: number; availableArea: number; total: number }
+      > = {};
+      const BATCH = 1000;
+      for (let from = 0; ; from += BATCH) {
+        const { data, error } = await supabase
+          .schema("crm")
+          .from("objects")
+          .select("building_id,status,area")
+          .in("building_id", ids)
+          .range(from, from + BATCH - 1);
+        if (error || !data || data.length === 0) break;
+        for (const row of data as Array<{
+          building_id: string | null;
+          status: string;
+          area: number | null;
+        }>) {
+          if (!row.building_id) continue;
+          const s = (stats[row.building_id] ??= {
+            available: 0,
+            availableArea: 0,
+            total: 0,
+          });
+          s.total += 1;
+          if (row.status === "available") {
+            s.available += 1;
+            s.availableArea += row.area ?? 0;
+          }
+        }
+        if (data.length < BATCH) break;
+      }
+      if (!cancelled) setBuildingStats(stats);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, buildings]);
 
   const filteredBuildings = useMemo(() => {
     if (typeFilter !== "all" || statusFilter !== "all") return [];
@@ -179,12 +234,30 @@ export default function ObjectsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-600">{building.address || "—"}</td>
                 <td className="px-4 py-3 text-slate-600">{t.objects.buildingRowType}</td>
+                <td className="px-4 py-3">
+                  {(() => {
+                    const s = buildingStats[building.id];
+                    if (!s || s.total === 0)
+                      return <span className="text-slate-600">—</span>;
+                    const sold = s.available === 0;
+                    return (
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          sold ? STATUS_COLORS.sold : STATUS_COLORS.available
+                        }`}
+                      >
+                        {sold
+                          ? t.objects.buildingSoldOut
+                          : `${t.objects.buildingInSale} · ${s.available}`}
+                      </span>
+                    );
+                  })()}
+                </td>
                 <td className="px-4 py-3 text-slate-600">
-                  {building.floors_count && building.units_per_floor
-                    ? `${building.floors_count} × ${building.units_per_floor}`
+                  {buildingStats[building.id]?.availableArea
+                    ? formatArea(buildingStats[building.id].availableArea)
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-slate-600">—</td>
                 <td className="px-4 py-3 text-slate-600">
                   {building.price_per_sqm
                     ? `${formatCurrency(building.price_per_sqm, "TJS")}/м²`

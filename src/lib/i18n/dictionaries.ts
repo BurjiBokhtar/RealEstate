@@ -69,6 +69,8 @@ export const dictionaries = {
       search: "Поиск по названию или адресу",
       empty: "Объектов пока нет",
       buildingRowType: "Здание / ЖК",
+      buildingInSale: "В продаже",
+      buildingSoldOut: "Продано",
       table: {
         name: "Название",
         address: "Адрес",
@@ -716,6 +718,8 @@ export const dictionaries = {
       search: "Ҷустуҷӯ аз рӯи ном ё суроға",
       empty: "Ҳоло объект нест",
       buildingRowType: "Бино / МИ",
+      buildingInSale: "Дар фурӯш",
+      buildingSoldOut: "Фурӯхта шуд",
       table: {
         name: "Ном",
         address: "Суроға",
