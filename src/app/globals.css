@@ -125,6 +125,49 @@
   }
 }
 
+/* ---- Hero ornament overlay ----
+   An optional woven-texture pattern laid over the gradient. Only surfaces
+   that opt in with `.hero-surface` get it (so tiny .hero-gradient avatars
+   stay clean). The pattern itself is a white SVG tile chosen by
+   data-hero-pattern on <html>; it reads as texture over any colour theme. */
+.hero-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--hero-pattern, none);
+  background-size: var(--hero-pattern-size, 40px 40px);
+  opacity: var(--hero-pattern-opacity, 0);
+  pointer-events: none;
+}
+
+/* Атлас нақш — an ikat-style diamond lattice with a centre knot. */
+:root[data-hero-pattern="ikat"] {
+  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='46' height='46'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M23 1 L45 23 L23 45 L1 23 Z'/%3E%3C/g%3E%3Ccircle cx='23' cy='23' r='2' fill='%23fff'/%3E%3C/svg%3E");
+  --hero-pattern-size: 46px 46px;
+  --hero-pattern-opacity: 0.16;
+}
+
+/* Панҷара — a geometric trellis (diamond + cross). */
+:root[data-hero-pattern="trellis"] {
+  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M0 20 L20 0 L40 20 L20 40 Z'/%3E%3Cpath d='M20 0 V40 M0 20 H40'/%3E%3C/g%3E%3C/svg%3E");
+  --hero-pattern-size: 40px 40px;
+  --hero-pattern-opacity: 0.13;
+}
+
+/* Нуқтаҳо — a quiet dot grid. */
+:root[data-hero-pattern="dots"] {
+  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='%23fff'/%3E%3C/svg%3E");
+  --hero-pattern-size: 22px 22px;
+  --hero-pattern-opacity: 0.2;
+}
+
+/* Мавҷ — flowing waves. */
+:root[data-hero-pattern="waves"] {
+  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='20'%3E%3Cpath d='M0 10 Q15 0 30 10 T60 10' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3C/svg%3E");
+  --hero-pattern-size: 60px 20px;
+  --hero-pattern-opacity: 0.16;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes fade-up {
     from {
