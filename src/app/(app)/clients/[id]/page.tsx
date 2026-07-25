@@ -230,10 +230,18 @@ export default function ClientDetailPage() {
     return acc;
   }, {});
 
-  const profileFields: Array<{ label: string; value: string | null }> = client
+  const profileFields: Array<{ label: string; value: string | null; href?: string }> = client
     ? [
-        { label: t.clients.form.phone, value: client.phone },
-        { label: t.clients.form.email, value: client.email },
+        {
+          label: t.clients.form.phone,
+          value: client.phone,
+          href: client.phone ? `tel:${client.phone.replace(/\s/g, "")}` : undefined,
+        },
+        {
+          label: t.clients.form.email,
+          value: client.email,
+          href: client.email ? `mailto:${client.email}` : undefined,
+        },
         { label: t.clients.form.passport, value: client.passport },
         { label: t.clients.form.passportIssuedBy, value: client.passport_issued_by },
         { label: t.clients.form.birthDate, value: client.birth_date },
@@ -286,16 +294,15 @@ export default function ClientDetailPage() {
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-3.5">
-                  <span className="hero-gradient flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white">
+                  <span className="hero-gradient flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white ring-2 ring-white ring-offset-2 ring-offset-slate-50">
                     {client.name.trim().charAt(0).toUpperCase() || "?"}
                   </span>
-                  <div>
+                  <div className="min-w-0">
                     <h1 className="text-xl font-semibold leading-tight">{client.name}</h1>
-                    {totalDebt > 0 && (
-                      <span className="mt-1 inline-block rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-600">
-                        {t.clients.purchases.totalDebt}:{" "}
-                        {formatCurrency(totalDebt, contracts[0]?.currency ?? "TJS")}
-                      </span>
+                    {(client.phone || client.source) && (
+                      <p className="mt-0.5 truncate text-sm text-slate-400">
+                        {[client.phone, client.source].filter(Boolean).join(" · ")}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -315,7 +322,7 @@ export default function ClientDetailPage() {
                       <button
                         type="button"
                         onClick={handleDelete}
-                        className="rounded-lg border border-red-300 px-3.5 py-2 text-sm font-medium text-red-600 transition-all hover:bg-red-50 active:scale-[0.98]"
+                        className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
                       >
                         {t.clients.form.delete}
                       </button>
@@ -325,21 +332,32 @@ export default function ClientDetailPage() {
               </div>
 
               {!editing && (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-3">
                   {profileFields.map((f) => (
-                    <div key={f.label} className="flex flex-col gap-0.5">
-                      <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <div key={f.label} className="flex min-w-0 flex-col gap-1">
+                      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
                         {f.label}
                       </span>
-                      <span className="text-sm text-slate-800">{f.value || "—"}</span>
+                      {f.href && f.value ? (
+                        <a
+                          href={f.href}
+                          className="truncate text-sm font-medium text-slate-800 hover:text-[#5b3468] hover:underline"
+                        >
+                          {f.value}
+                        </a>
+                      ) : (
+                        <span className="truncate text-sm font-medium text-slate-800">
+                          {f.value || "—"}
+                        </span>
+                      )}
                     </div>
                   ))}
                   {client.notes && (
-                    <div className="col-span-2 flex flex-col gap-0.5 sm:col-span-3">
-                      <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                    <div className="col-span-2 flex flex-col gap-1 sm:col-span-3">
+                      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
                         {t.clients.form.notes}
                       </span>
-                      <span className="text-sm text-slate-800">{client.notes}</span>
+                      <span className="text-sm text-slate-700">{client.notes}</span>
                     </div>
                   )}
                 </div>
