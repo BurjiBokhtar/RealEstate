@@ -186,6 +186,7 @@ export function ContractBookingModal({
               buildingName,
               apartmentNumber: apartmentNumber ?? null,
             }}
+            objectArea={unit.area}
             submitting={submitting}
             onSubmit={handleSubmit}
           />
