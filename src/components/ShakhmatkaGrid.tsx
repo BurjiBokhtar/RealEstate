@@ -344,52 +344,45 @@ export function ShakhmatkaGrid({
   const floors = Array.from(new Set(units.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
   const apartmentNumbers = computeApartmentNumbers(units);
 
-  // Deleting a unit leaves a hole at its position that the grid used to
-  // just silently close up around -- nothing suggested a slot ever existed
-  // there or offered a way back. Pad each floor's row out to the widest
-  // position any floor in this block actually reaches, and render a ghost
-  // "+" cell at every gap so restoring (or adding) a specific unit is one
-  // click on the exact slot it belongs in.
-  const maxPositionByBlock = new Map<string, number>();
+  // Widest floor of each block, measured by how many units it actually has
+  // (not by stored position values). This is what pins the block's column
+  // width. Measuring by position let a stray high-position unit -- left by a
+  // construction glitch -- reserve a huge empty column and shove the next
+  // entrance far to the right.
+  const maxUnitsByBlock = new Map<string, number>();
   for (const block of blocks) {
-    const rightEdges = units
-      .filter((u) => (u.block ?? "") === block)
-      .map((u) => (u.position_in_floor ?? 0) + (u.span || 1) - 1);
-    maxPositionByBlock.set(block, rightEdges.length > 0 ? Math.max(...rightEdges) : 0);
+    const perFloor = new Map<number, number>();
+    for (const u of units) {
+      if ((u.block ?? "") !== block) continue;
+      const f = u.floor ?? 0;
+      perFloor.set(f, (perFloor.get(f) ?? 0) + (u.span || 1));
+    }
+    maxUnitsByBlock.set(block, Math.max(0, ...perFloor.values()));
   }
 
   type Slot = { kind: "unit"; unit: PropertyObject } | { kind: "ghost"; position: number };
   function floorSlots(block: string, floor: number, cellUnits: PropertyObject[]): Slot[] {
-    // Pad only up to THIS floor's own rightmost unit -- not to the widest
-    // floor in the whole block. Otherwise one oddly-wide floor made every
-    // other floor sprout a wall of empty "+" cells (the confusing glitch).
-    // Ghost "+" cells still appear for internal gaps (a deleted unit sitting
-    // between two existing ones), so restoring a specific slot still works.
-    const floorMax = cellUnits.reduce(
-      (max, u) => Math.max(max, (u.position_in_floor ?? 0) + (u.span || 1) - 1),
-      0
+    // Pack the floor's units left-to-right in order, ignoring gaps in their
+    // stored positions -- so a floor always shows exactly as many cells as it
+    // has units, side by side, with no confusing empty holes. One trailing
+    // "+" add-slot (unless read-only) lets you append a unit.
+    const sorted = [...cellUnits].sort(
+      (a, b) => (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0)
     );
-    const slots: Slot[] = [];
-    let p = 1;
-    while (p <= floorMax) {
-      const unit = cellUnits.find((u) => (u.position_in_floor ?? 0) === p);
-      if (unit) {
-        slots.push({ kind: "unit", unit });
-        p += unit.span || 1;
-      } else {
-        slots.push({ kind: "ghost", position: p });
-        p += 1;
-      }
+    const slots: Slot[] = sorted.map((unit) => ({ kind: "unit" as const, unit }));
+    if (!readOnly) {
+      const last = sorted[sorted.length - 1];
+      const nextPos = last ? (last.position_in_floor ?? sorted.length) + 1 : 1;
+      slots.push({ kind: "ghost", position: nextPos });
     }
     return slots;
   }
 
-  // Header labels and each floor's cell group live in separate flex rows, so
-  // without a shared width per block column their gaps drift out of sync --
-  // pin every block to the widest row it needs so columns stay aligned.
+  // Pin every block's column to its widest floor (units + a trailing add-slot)
+  // so entrances line up cleanly and sit right next to each other.
   const blockWidths = new Map<string, number>();
   for (const block of blocks) {
-    const slotCount = maxPositionByBlock.get(block) ?? 0;
+    const slotCount = (maxUnitsByBlock.get(block) ?? 0) + (readOnly ? 0 : 1);
     blockWidths.set(block, slotCount * CELL + Math.max(0, slotCount - 1) * GAP);
   }
 
@@ -435,7 +428,7 @@ export function ShakhmatkaGrid({
           {hasBlocks && (
             <div className="flex items-center gap-3">
               <span className="w-16 shrink-0" />
-              <div className="flex gap-6">
+              <div className="flex gap-4">
                 {blocks.map((block) => (
                   <p
                     key={block}
@@ -454,7 +447,7 @@ export function ShakhmatkaGrid({
               <span className="w-16 shrink-0 text-xs font-medium text-slate-500">
                 {t.buildings.floorLabel} {floor}
               </span>
-              <div className="flex gap-6">
+              <div className="flex gap-4">
                 {blocks.map((block) => {
                   const cellUnits = units
                     .filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor)
