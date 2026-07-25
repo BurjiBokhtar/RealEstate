@@ -30,6 +30,31 @@ type ClientContract = {
   object: { name: string; building: { name: string } | null } | null;
 };
 
+// Small outline icons for the profile info tiles (currentColor, one weight).
+const FIELD_ICONS: Record<string, ReactNode> = {
+  phone: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="M6.5 3h3l1.5 4-2 1.5a12 12 0 0 0 4.5 4.5l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16 16 0 0 1 4.5 5.2 2 2 0 0 1 6.5 3z"/></svg>
+  ),
+  email: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M4 7l8 6 8-6"/></svg>
+  ),
+  passport: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="2.5"/><path d="M9 16h6"/></svg>
+  ),
+  office: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h2M8 11h2M8 15h2M14 7h2M14 11h2M14 15h2"/></svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+  ),
+  pin: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="M12 21s7-5.5 7-11a7 7 0 0 0-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+  ),
+  note: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5M8 13h8M8 17h5"/></svg>
+  ),
+};
+
 // Everything front-desk work with one client needs, on one screen: who they
 // are (compact card, edit tucked away behind a button), take a payment and
 // print its receipt, their apartments with contract print / cash-desk
@@ -230,22 +255,33 @@ export default function ClientDetailPage() {
     return acc;
   }, {});
 
-  const profileFields: Array<{ label: string; value: string | null; href?: string }> = client
+  const profileFields: Array<{
+    label: string;
+    value: string | null;
+    href?: string;
+    icon: ReactNode;
+  }> = client
     ? [
         {
           label: t.clients.form.phone,
           value: client.phone,
           href: client.phone ? `tel:${client.phone.replace(/\s/g, "")}` : undefined,
+          icon: FIELD_ICONS.phone,
         },
         {
           label: t.clients.form.email,
           value: client.email,
           href: client.email ? `mailto:${client.email}` : undefined,
+          icon: FIELD_ICONS.email,
         },
-        { label: t.clients.form.passport, value: client.passport },
-        { label: t.clients.form.passportIssuedBy, value: client.passport_issued_by },
-        { label: t.clients.form.birthDate, value: client.birth_date },
-        { label: t.clients.form.address, value: client.address },
+        { label: t.clients.form.passport, value: client.passport, icon: FIELD_ICONS.passport },
+        {
+          label: t.clients.form.passportIssuedBy,
+          value: client.passport_issued_by,
+          icon: FIELD_ICONS.office,
+        },
+        { label: t.clients.form.birthDate, value: client.birth_date, icon: FIELD_ICONS.calendar },
+        { label: t.clients.form.address, value: client.address, icon: FIELD_ICONS.pin },
       ]
     : [];
 
@@ -332,32 +368,45 @@ export default function ClientDetailPage() {
               </div>
 
               {!editing && (
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-100 pt-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 sm:grid-cols-2 xl:grid-cols-3">
                   {profileFields.map((f) => (
-                    <div key={f.label} className="flex min-w-0 flex-col gap-1">
-                      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                        {f.label}
+                    <div
+                      key={f.label}
+                      className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-slate-50"
+                    >
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
+                        {f.icon}
                       </span>
-                      {f.href && f.value ? (
-                        <a
-                          href={f.href}
-                          className="truncate text-sm font-medium text-slate-800 hover:text-[#5b3468] hover:underline"
-                        >
-                          {f.value}
-                        </a>
-                      ) : (
-                        <span className="truncate text-sm font-medium text-slate-800">
-                          {f.value || "—"}
+                      <div className="flex min-w-0 flex-col">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                          {f.label}
                         </span>
-                      )}
+                        {f.href && f.value ? (
+                          <a
+                            href={f.href}
+                            className="truncate text-sm font-semibold text-slate-800 hover:text-[#5b3468] hover:underline"
+                          >
+                            {f.value}
+                          </a>
+                        ) : (
+                          <span className="truncate text-sm font-semibold text-slate-800">
+                            {f.value || "—"}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {client.notes && (
-                    <div className="col-span-2 flex flex-col gap-1 sm:col-span-3">
-                      <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                        {t.clients.form.notes}
+                    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 sm:col-span-2 xl:col-span-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
+                        {FIELD_ICONS.note}
                       </span>
-                      <span className="text-sm text-slate-700">{client.notes}</span>
+                      <div className="flex min-w-0 flex-col">
+                        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                          {t.clients.form.notes}
+                        </span>
+                        <span className="text-sm text-slate-700">{client.notes}</span>
+                      </div>
                     </div>
                   )}
                 </div>

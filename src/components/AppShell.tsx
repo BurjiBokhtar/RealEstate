@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
+import { applyStoredHeroTheme } from "@/components/HeroThemeSwitcher";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 // No "Договоры" item: the contracts list duplicated what the client card
@@ -65,6 +66,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const brandName = settings.company_name || t.appName;
+
+  // Re-apply the saved hero theme on load so the choice survives a full
+  // reload and its accent-color reaches every page, not just the dashboard.
+  useEffect(() => {
+    applyStoredHeroTheme();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();

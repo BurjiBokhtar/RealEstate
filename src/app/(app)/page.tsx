@@ -13,6 +13,7 @@ import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
+import { CountUp } from "@/components/CountUp";
 import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
@@ -408,7 +409,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.inProgress}
-          value={counts.in_progress}
+          value={<CountUp value={counts.in_progress} enabled={!loading} />}
           icon={StatIcons.hammer}
           tone="amber"
           delay={80}
@@ -416,7 +417,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.totalDebt}
-          value={<MoneyPairValue value={totalDebt} />}
+          value={<MoneyPairValue value={totalDebt} animate />}
           icon={StatIcons.debt}
           tone="rose"
           delay={120}
@@ -424,7 +425,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.overdueTile}
-          value={<MoneyPairValue value={overdue} />}
+          value={<MoneyPairValue value={overdue} animate />}
           icon={StatIcons.warning}
           tone="rose"
           href="/debtors"
@@ -433,7 +434,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.potentialRevenue}
-          value={<MoneyPairValue value={potentialRevenue} />}
+          value={<MoneyPairValue value={potentialRevenue} animate />}
           icon={StatIcons.wallet}
           tone="plum"
           delay={200}

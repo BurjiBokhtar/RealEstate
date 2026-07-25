@@ -57,6 +57,37 @@
   --atlas-apricot: #f0c47a;
   /* Checkboxes, radios, range inputs pick up the brand color natively. */
   accent-color: var(--atlas-plum);
+
+  /* Hero gradient stops -- swappable by theme. Default = "atlas" (indigo →
+     plum → saffron). Other themes below re-point these three variables, so a
+     one-line data attribute on <html> restyles the whole hero. */
+  --hero-1: var(--atlas-indigo);
+  --hero-2: var(--atlas-plum);
+  --hero-3: var(--atlas-saffron);
+}
+
+/* Зумуррад — a deep emerald/teal theme. */
+:root[data-hero-theme="emerald"] {
+  --hero-1: #06302b;
+  --hero-2: #0f766e;
+  --hero-3: #6ee7b7;
+  accent-color: #0f766e;
+}
+
+/* Шафақ — a dusk rose/amber theme. */
+:root[data-hero-theme="sunset"] {
+  --hero-1: #3b0764;
+  --hero-2: #be185d;
+  --hero-3: #f59e0b;
+  accent-color: #be185d;
+}
+
+/* Уқёнус — an ocean blue theme. */
+:root[data-hero-theme="ocean"] {
+  --hero-1: #0c1e4a;
+  --hero-2: #1d4ed8;
+  --hero-3: #38bdf8;
+  accent-color: #1d4ed8;
 }
 
 ::selection {
@@ -67,9 +98,9 @@
 .hero-gradient {
   background: linear-gradient(
     115deg,
-    var(--atlas-indigo) 0%,
-    var(--atlas-plum) 45%,
-    var(--atlas-saffron) 100%
+    var(--hero-1) 0%,
+    var(--hero-2) 45%,
+    var(--hero-3) 100%
   );
   /* Oversized and slowly panned so the gradient itself breathes -- the
      colours drift a few degrees back and forth over half a minute. Cheap:

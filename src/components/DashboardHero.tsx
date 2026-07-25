@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Building } from "@/lib/buildings/types";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
+import { CountUp } from "@/components/CountUp";
+import { HeroThemeSwitcher } from "@/components/HeroThemeSwitcher";
+import { useCountUp } from "@/lib/useCountUp";
 
 type PeriodFilter = "all" | "today" | "month" | "year";
 
@@ -51,7 +54,7 @@ export function DashboardHero({
   // The headline number counts up to its value instead of appearing -- an
   // eased ~0.9s run, re-triggered when the figure itself changes (filters,
   // fresh data). rAF-driven, cancelled on unmount.
-  const displaySold = useCountUp(soldCount, loading);
+  const displaySold = Math.round(useCountUp(soldCount, !loading));
 
   // Bars fill from zero on mount so the existing width transition has
   // something to animate on first paint, not only on filter changes.
@@ -99,6 +102,7 @@ export function DashboardHero({
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{brandName}</h1>
           <div className="flex flex-wrap items-center gap-2">
+            <HeroThemeSwitcher />
             <select
               value={selectedBuildingId}
               onChange={(e) => onBuildingChange(e.target.value)}
@@ -197,7 +201,7 @@ export function DashboardHero({
                 {t.dashboard.paidRevenue}
               </p>
               <div className="mt-1 text-2xl">
-                {loading ? "…" : <MoneyPairValue value={paidRevenue} />}
+                {loading ? "…" : <MoneyPairValue value={paidRevenue} animate />}
               </div>
             </div>
             <Link
@@ -217,7 +221,9 @@ export function DashboardHero({
                 className="animate-fade-up rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
                 style={{ animationDelay: `${180 + i * 40}ms` }}
               >
-                <p className="text-3xl font-bold tabular-nums sm:text-4xl">{stat.value}</p>
+                <p className="text-3xl font-bold tabular-nums sm:text-4xl">
+                  <CountUp value={stat.value} enabled={!loading} />
+                </p>
                 <p className="mt-0.5 text-xs text-white/60">{stat.label}</p>
               </div>
             ))}
@@ -226,28 +232,4 @@ export function DashboardHero({
       </div>
     </div>
   );
-}
-
-// Eased count-up to `target` over ~0.9s; shows the final value straight
-// away while data is still loading (no fake zero flashes).
-function useCountUp(target: number, loading: boolean): number {
-  const [value, setValue] = useState(0);
-  const frame = useRef(0);
-
-  useEffect(() => {
-    if (loading) return;
-    const from = 0;
-    const start = performance.now();
-    const duration = 900;
-    const tick = (now: number) => {
-      const p = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(from + (target - from) * eased));
-      if (p < 1) frame.current = requestAnimationFrame(tick);
-    };
-    frame.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame.current);
-  }, [target, loading]);
-
-  return value;
 }
