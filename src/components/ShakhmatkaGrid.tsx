@@ -23,6 +23,17 @@ export type UnitContractInfo = {
 const CELL = 64;
 const GAP = 8;
 
+// Apartments and houses are the "main" shakhmatka. Everything else (shops,
+// offices, parking, land, construction) is non-residential and lives in its
+// own section below -- so a basement full of parking bays, or a strip of
+// shops, can never stretch the apartment grid or shove entrances apart.
+const RESIDENTIAL_TYPES = new Set(["apartment", "house"]);
+function isResidential(u: PropertyObject): boolean {
+  return RESIDENTIAL_TYPES.has(u.type ?? "apartment");
+}
+// Order non-residential groups predictably.
+const NON_RES_ORDER = ["commercial", "office", "parking", "land", "construction_site"];
+
 // Non-residential units are marked visually distinct from flats: a coloured
 // ring, a slight separation, and a purpose prefix on the number so a
 // ground-floor shop reads "М1", a parking bay "П1", an office "О1" -- never
@@ -326,12 +337,23 @@ export function ShakhmatkaGrid({
     (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
   );
 
+  // Split the main residential grid from everything else. The main grid's
+  // blocks, floors and column widths are computed from residential units ONLY,
+  // so parking/shops never widen or space out the apartment shakhmatka.
+  const residentialUnits = units.filter(isResidential);
+  const otherUnits = units.filter((u) => !isResidential(u));
+
+  // Numbering still runs over ALL units, so per-type sequences (П1, М1…) stay
+  // consistent whether a unit is shown in the main grid or the section below.
+  const apartmentNumbers = computeApartmentNumbers(units);
+
   // Blocks/entrances ordered left→right by when they were first created, so
   // the first entrance you made sits leftmost and each new one appears to its
   // right -- the way a real shakhmatka grows -- instead of an alphabetical
   // order that reshuffles them.
+  const gridUnits = residentialUnits.length > 0 ? residentialUnits : units;
   const blockFirstCreated = new Map<string, string>();
-  for (const u of units) {
+  for (const u of gridUnits) {
     const b = u.block ?? "";
     const ts = u.created_at ?? "";
     const seen = blockFirstCreated.get(b);
@@ -341,8 +363,7 @@ export function ShakhmatkaGrid({
     (blockFirstCreated.get(a) ?? "").localeCompare(blockFirstCreated.get(b) ?? "")
   );
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
-  const floors = Array.from(new Set(units.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
-  const apartmentNumbers = computeApartmentNumbers(units);
+  const floors = Array.from(new Set(gridUnits.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
 
   // Widest floor of each block, measured by how many units it actually has
   // (not by stored position values). This is what pins the block's column
@@ -352,7 +373,7 @@ export function ShakhmatkaGrid({
   const maxUnitsByBlock = new Map<string, number>();
   for (const block of blocks) {
     const perFloor = new Map<number, number>();
-    for (const u of units) {
+    for (const u of gridUnits) {
       if ((u.block ?? "") !== block) continue;
       const f = u.floor ?? 0;
       perFloor.set(f, (perFloor.get(f) ?? 0) + (u.span || 1));
@@ -449,7 +470,7 @@ export function ShakhmatkaGrid({
               </span>
               <div className="flex gap-4">
                 {blocks.map((block) => {
-                  const cellUnits = units
+                  const cellUnits = gridUnits
                     .filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor)
                     .sort((a, b) => (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0));
                   const slots = floorSlots(block, floor, cellUnits);
@@ -503,6 +524,68 @@ export function ShakhmatkaGrid({
           ))}
         </div>
       </div>
+
+      {/* Non-residential units (shops, offices, parking, land, construction)
+          live in their own section so they never stretch or space out the main
+          apartment shakhmatka above. Each type wraps freely, so a basement of
+          40 parking bays just flows onto more rows instead of widening a
+          column. */}
+      {otherUnits.length > 0 && (
+        <div className="flex flex-col gap-4 border-t border-slate-200 pt-4">
+          {NON_RES_ORDER.map((type) => {
+            const group = otherUnits
+              .filter((u) => (u.type ?? "apartment") === type)
+              .sort((a, b) => {
+                const bc = (a.block ?? "").localeCompare(b.block ?? "");
+                if (bc !== 0) return bc;
+                const fa = a.floor ?? 0;
+                const fb = b.floor ?? 0;
+                if (fa !== fb) return fa - fb;
+                return (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0);
+              });
+            if (group.length === 0) return null;
+            const meta = TYPE_META[type];
+            return (
+              <div key={type} className="flex flex-col gap-2">
+                <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  {meta && (
+                    <span
+                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-[11px] ${meta.ring} ring-offset-1`}
+                    >
+                      {meta.prefix}
+                    </span>
+                  )}
+                  {t.objects.types[type as keyof typeof t.objects.types] ?? type}
+                  <span className="text-xs font-normal text-slate-400">
+                    ({group.length})
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {group.map((unit) => (
+                    <UnitCell
+                      key={unit.id}
+                      unit={unit}
+                      apartmentNumber={apartmentNumbers.get(unit.id)}
+                      floorUnits={group}
+                      contractInfo={contractsByUnit[unit.id]}
+                      onBookUnit={onBookUnit}
+                      onQuickBook={onQuickBook}
+                      onCancelQuickBook={onCancelQuickBook}
+                      isPending={pendingUnitIds.has(unit.id)}
+                      onMergeUnits={onMergeUnits}
+                      canEditSold={canEditSold}
+                      readOnly={readOnly}
+                      onViewUnit={onViewUnit}
+                      statusFilter={statusFilter}
+                      editMode={editMode}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
