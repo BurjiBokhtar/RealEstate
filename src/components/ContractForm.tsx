@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, CURRENCIES } from "@/lib/currency";
+import { formatArea } from "@/lib/objects/format";
 import { CONTRACT_STATUSES, PAYMENT_TYPES, type ContractInput } from "@/lib/contracts/types";
 import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
 import { ClientAutocomplete } from "@/components/ClientAutocomplete";
@@ -330,6 +331,11 @@ export function ContractForm({
               {lockedObject.buildingName && (
                 <span className="truncate text-xs text-slate-400">
                   · {lockedObject.buildingName}
+                </span>
+              )}
+              {objectArea != null && (
+                <span className="shrink-0 text-xs font-medium text-slate-500">
+                  · {formatArea(objectArea)}
                 </span>
               )}
             </div>

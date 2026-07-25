@@ -2,7 +2,9 @@ import type { ObjectStatus } from "./types";
 
 export function formatArea(area: number | null) {
   if (area === null) return "—";
-  return `${area} м²`;
+  // Round to at most 2 decimals and group thousands, so a stored 55.2999999
+  // reads "55.3 м²" instead of a long tail of digits.
+  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(area)} м²`;
 }
 
 export const STATUS_COLORS: Record<ObjectStatus, string> = {

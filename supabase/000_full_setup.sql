@@ -1038,19 +1038,21 @@ drop policy if exists "objects_delete" on crm.objects;
 create policy "objects_select" on crm.objects
   for select to authenticated
   using (building_id is null or crm.can_view_building(building_id));
+-- Objects are admin-only for create/edit (managers/directors can still view
+-- and book them; the reservation RPC and contract triggers set status, not a
+-- direct object write). See migration 032.
 create policy "objects_insert" on crm.objects
   for insert to authenticated
   with check (
-    crm.can_write() and (building_id is null or crm.can_view_building(building_id))
+    crm.is_admin() and (building_id is null or crm.can_view_building(building_id))
   );
 create policy "objects_update" on crm.objects
   for update to authenticated
   using (
-    (status = 'available' or crm.is_admin())
-    and crm.can_write()
+    crm.is_admin()
     and (building_id is null or crm.can_view_building(building_id))
   )
-  with check (crm.can_write());
+  with check (crm.is_admin());
 create policy "objects_delete" on crm.objects
   for delete to authenticated using (crm.is_admin());
 

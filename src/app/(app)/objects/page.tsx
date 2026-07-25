@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { AddMenu } from "@/components/AddMenu";
+import { useRole } from "@/lib/auth/useRole";
 import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
@@ -25,6 +26,7 @@ const PAGE_SIZE = 25;
 export default function ObjectsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
+  const { role } = useRole();
 
   const [objects, setObjects] = useState<PropertyObject[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -151,13 +153,15 @@ export default function ObjectsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.objects.title}</h1>
-        <AddMenu
-          label={t.objects.add}
-          items={[
-            { href: "/objects/new", label: t.objects.newObject },
-            { href: "/buildings/new", label: t.objects.newBuilding },
-          ]}
-        />
+        {role === "admin" && (
+          <AddMenu
+            label={t.objects.add}
+            items={[
+              { href: "/objects/new", label: t.objects.newObject },
+              { href: "/buildings/new", label: t.objects.newBuilding },
+            ]}
+          />
+        )}
       </div>
 
       {!configured && <SetupNotice />}

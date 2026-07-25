@@ -9,12 +9,14 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ObjectForm } from "@/components/ObjectForm";
+import { useRole } from "@/lib/auth/useRole";
 import type { PropertyObjectInput } from "@/lib/objects/types";
 
 export default function NewObjectPage() {
   const { t } = useLocale();
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  const { role, loading: roleLoading } = useRole();
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (values: PropertyObjectInput) => {
@@ -42,6 +44,15 @@ export default function NewObjectPage() {
       router.push(`/objects/${data.id}`);
     }
   };
+
+  if (!roleLoading && role !== "admin") {
+    return (
+      <div className="flex flex-col gap-3">
+        <BackLink href="/objects">{t.objects.backToList}</BackLink>
+        <p className="text-slate-500">{t.users.accessDenied}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

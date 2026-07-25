@@ -25,11 +25,15 @@ export function ObjectForm({
   submitting,
   onSubmit,
   onDelete,
+  readOnly = false,
 }: {
   initial?: Partial<PropertyObjectInput>;
   submitting: boolean;
   onSubmit: (values: PropertyObjectInput) => void;
   onDelete?: () => void;
+  // View-only for non-admins: inputs are disabled and there's no Save button,
+  // so managers/directors can look at a unit but never create or edit it.
+  readOnly?: boolean;
 }) {
   const { t } = useLocale();
   const [values, setValues] = useState<PropertyObjectInput>({
@@ -50,6 +54,7 @@ export function ObjectForm({
       }}
       className="flex max-w-xl flex-col gap-4"
     >
+      <fieldset disabled={readOnly} className="m-0 flex flex-col gap-4 border-0 p-0">
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700">{t.objects.form.name}</span>
         <input
@@ -170,25 +175,28 @@ export function ObjectForm({
         uploadLabel={t.objects.form.upload}
         uploadingLabel={t.objects.form.uploading}
       />
+      </fieldset>
 
-      <div className="flex items-center gap-3 pt-2">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {submitting ? t.objects.form.saving : t.objects.form.save}
-        </button>
-        {onDelete && (
+      {!readOnly && (
+        <div className="flex items-center gap-3 pt-2">
           <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            type="submit"
+            disabled={submitting}
+            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
-            {t.objects.form.delete}
+            {submitting ? t.objects.form.saving : t.objects.form.save}
           </button>
-        )}
-      </div>
+          {onDelete && (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            >
+              {t.objects.form.delete}
+            </button>
+          )}
+        </div>
+      )}
     </form>
   );
 }

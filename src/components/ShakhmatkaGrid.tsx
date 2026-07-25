@@ -86,7 +86,9 @@ function UnitCell({
   const nextUnit = floorUnits.find(
     (u) => u.position_in_floor === (unit.position_in_floor ?? 0) + span
   );
-  const canMerge = unit.status === "available" && nextUnit && nextUnit.status === "available";
+  // Merging is a structural edit -- admins only (canEditSold gates that).
+  const canMerge =
+    canEditSold && unit.status === "available" && nextUnit && nextUnit.status === "available";
   const dimmed = statusFilter !== null && unit.status !== statusFilter;
   const typeMeta = TYPE_META[unit.type ?? "apartment"];
 

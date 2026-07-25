@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { BuildingForm } from "@/components/BuildingForm";
+import { useRole } from "@/lib/auth/useRole";
 import { emptyBuildingInput } from "@/lib/buildings/types";
 
 // Creating a building is now a single clean step: its details. The floors
@@ -20,6 +21,7 @@ export default function NewBuildingPage() {
   const { t } = useLocale();
   const router = useRouter();
   const configured = isSupabaseConfigured();
+  const { role, loading: roleLoading } = useRole();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [values, setValues] = useState(emptyBuildingInput);
@@ -51,6 +53,15 @@ export default function NewBuildingPage() {
     // Straight into the floor constructor for the fresh building.
     router.push(`/buildings/${data.id}/edit`);
   };
+
+  if (!roleLoading && role !== "admin") {
+    return (
+      <div className="flex flex-col gap-3">
+        <BackLink href="/objects">{t.objects.title}</BackLink>
+        <p className="text-slate-500">{t.users.accessDenied}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">

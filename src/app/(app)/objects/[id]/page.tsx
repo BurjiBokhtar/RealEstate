@@ -105,6 +105,7 @@ export default function ObjectDetailPage() {
             submitting={submitting}
             onSubmit={handleSubmit}
             onDelete={role === "admin" ? handleDelete : undefined}
+            readOnly={role !== "admin"}
           />
           {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
         </>
