@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { BackLink } from "@/components/BackLink";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { ClientForm } from "@/components/ClientForm";
 import { ClientQuickPayment } from "@/components/ClientQuickPayment";
 import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { useRole } from "@/lib/auth/useRole";
@@ -189,9 +190,9 @@ export default function ClientDetailPage() {
     return sum + Math.max(0, c.amount - c.paid_amount);
   }, 0);
 
-  // Contracts can be in TJS or USD -- sum each currency separately and
-  // print both when both occur (same convention as the dashboard).
-  const moneyPair = (pick: (c: ClientContract) => number) => {
+  // Contracts can be in TJS or USD -- sum each currency separately and show
+  // both when both occur (same convention as the dashboard).
+  const moneyPair = (pick: (c: ClientContract) => number): MoneyPair => {
     const v = { tjs: 0, usd: 0 };
     contracts
       .filter((c) => c.status !== "cancelled")
@@ -199,13 +200,10 @@ export default function ClientDetailPage() {
         if (c.currency === "USD") v.usd += pick(c);
         else v.tjs += pick(c);
       });
-    const parts: string[] = [];
-    if (v.tjs > 0) parts.push(formatCurrency(v.tjs, "TJS"));
-    if (v.usd > 0) parts.push(formatCurrency(v.usd, "USD"));
-    return parts.length ? parts.join(" + ") : "—";
+    return v;
   };
   const activeContracts = contracts.filter((c) => c.status !== "cancelled");
-  const statTiles = [
+  const statTiles: Array<{ label: string; value: ReactNode; tone: string }> = [
     {
       label: t.clients.stats.bought,
       value: String(activeContracts.length),
@@ -213,12 +211,14 @@ export default function ClientDetailPage() {
     },
     {
       label: t.clients.stats.paidTotal,
-      value: moneyPair((c) => c.paid_amount),
+      value: <MoneyPairValue value={moneyPair((c) => c.paid_amount)} />,
       tone: "text-emerald-600",
     },
     {
       label: t.clients.stats.debt,
-      value: moneyPair((c) => Math.max(0, c.amount - c.paid_amount)),
+      value: (
+        <MoneyPairValue value={moneyPair((c) => Math.max(0, c.amount - c.paid_amount))} />
+      ),
       tone: totalDebt > 0 ? "text-rose-600" : "text-emerald-600",
     },
   ];
@@ -267,9 +267,9 @@ export default function ClientDetailPage() {
                 <p className="text-[11px] uppercase tracking-wide text-slate-400">
                   {tile.label}
                 </p>
-                <p className={`mt-1 text-2xl font-bold tabular-nums ${tile.tone}`}>
+                <div className={`mt-1 text-2xl font-bold tabular-nums ${tile.tone}`}>
                   {tile.value}
-                </p>
+                </div>
               </div>
             ))}
           </div>

@@ -12,6 +12,7 @@ import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
@@ -47,17 +48,8 @@ type ObjectRow = {
   area: number | null;
 };
 
-type MoneyPair = { tjs: number; usd: number };
-
 function formatArea(m2: number) {
   return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
-}
-
-function formatPair(v: MoneyPair) {
-  const parts: string[] = [];
-  if (v.tjs > 0) parts.push(formatCurrency(v.tjs, "TJS"));
-  if (v.usd > 0) parts.push(formatCurrency(v.usd, "USD"));
-  return parts.length ? parts.join(" + ") : "—";
 }
 
 type ContractRow = {
@@ -378,7 +370,7 @@ export default function DashboardPage() {
         availableCount={counts.available}
         reservedCount={counts.reserved}
         soldCount={counts.sold}
-        paidRevenueLabel={formatPair(paidRevenue)}
+        paidRevenue={paidRevenue}
         buildings={buildings}
         selectedBuildingId={selectedBuildingId}
         onBuildingChange={setSelectedBuildingId}
@@ -424,7 +416,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.totalDebt}
-          value={formatPair(totalDebt)}
+          value={<MoneyPairValue value={totalDebt} />}
           icon={StatIcons.debt}
           tone="rose"
           delay={120}
@@ -432,7 +424,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.overdueTile}
-          value={overdue.tjs || overdue.usd ? formatPair(overdue) : "—"}
+          value={<MoneyPairValue value={overdue} />}
           icon={StatIcons.warning}
           tone="rose"
           href="/debtors"
@@ -441,7 +433,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t.dashboard.potentialRevenue}
-          value={formatPair(potentialRevenue)}
+          value={<MoneyPairValue value={potentialRevenue} />}
           icon={StatIcons.wallet}
           tone="plum"
           delay={200}
@@ -530,8 +522,8 @@ export default function DashboardPage() {
                       {b.name}
                     </Link>
                   </td>
-                  <td className="py-2 font-medium text-slate-700">
-                    {formatPair({ tjs: b.tjs, usd: b.usd })}
+                  <td className="py-2 text-base font-medium text-slate-700">
+                    <MoneyPairValue value={{ tjs: b.tjs, usd: b.usd }} />
                   </td>
                 </tr>
               ))}

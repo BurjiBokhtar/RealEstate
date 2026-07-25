@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Building } from "@/lib/buildings/types";
+import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 
 type PeriodFilter = "all" | "today" | "month" | "year";
 
@@ -24,7 +25,7 @@ export function DashboardHero({
   availableCount,
   reservedCount,
   soldCount,
-  paidRevenueLabel,
+  paidRevenue,
   buildings,
   selectedBuildingId,
   onBuildingChange,
@@ -38,7 +39,7 @@ export function DashboardHero({
   availableCount: number;
   reservedCount: number;
   soldCount: number;
-  paidRevenueLabel: string;
+  paidRevenue: MoneyPair;
   buildings: Building[];
   selectedBuildingId: string;
   onBuildingChange: (id: string) => void;
@@ -195,7 +196,9 @@ export function DashboardHero({
               <p className="text-[11px] uppercase tracking-wide text-white/60">
                 {t.dashboard.paidRevenue}
               </p>
-              <p className="mt-0.5 text-xl font-semibold">{loading ? "…" : paidRevenueLabel}</p>
+              <div className="mt-1 text-2xl">
+                {loading ? "…" : <MoneyPairValue value={paidRevenue} />}
+              </div>
             </div>
             <Link
               href="/buildings"
