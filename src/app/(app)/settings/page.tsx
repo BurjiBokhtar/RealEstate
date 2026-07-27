@@ -9,6 +9,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { FileUploadField } from "@/components/FileUploadField";
 import { Accordion } from "@/components/Accordion";
 import { Toast, type ToastType } from "@/components/Toast";
+import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { ChangePasswordCard } from "@/components/ChangePasswordCard";
@@ -44,6 +45,8 @@ export default function SettingsPage() {
     company_address: "",
     company_bank_details: "",
     company_logo_url: "",
+    hero_theme: "atlas",
+    hero_pattern: "none",
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -73,6 +76,8 @@ export default function SettingsPage() {
           company_address: data.company_address ?? "",
           company_bank_details: data.company_bank_details ?? "",
           company_logo_url: data.company_logo_url ?? "",
+          hero_theme: data.hero_theme ?? "atlas",
+          hero_pattern: data.hero_pattern ?? "none",
         });
       });
   }, [role, configured]);
@@ -98,6 +103,8 @@ export default function SettingsPage() {
         company_address: values.company_address || null,
         company_bank_details: values.company_bank_details || null,
         company_logo_url: values.company_logo_url || null,
+        hero_theme: values.hero_theme || null,
+        hero_pattern: values.hero_pattern || null,
       })
       .eq("id", true)
       .select("id");
@@ -293,6 +300,71 @@ export default function SettingsPage() {
             </div>
           </label>
         </Accordion>
+      </div>
+
+      {/* Company-wide dashboard look. Applies to everyone who hasn't set a
+          personal override from the dashboard swatches. */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-semibold text-slate-700">{t.settings.appearance.title}</p>
+        <p className="mt-0.5 text-xs text-slate-400">{t.settings.appearance.hint}</p>
+
+        <div className="mt-4 flex flex-col gap-4">
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              {t.settings.appearance.theme}
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {HERO_THEMES.map((th) => (
+                <button
+                  key={th.id}
+                  type="button"
+                  onClick={() => update("hero_theme", th.id)}
+                  title={th.label}
+                  className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs font-medium transition-all ${
+                    values.hero_theme === th.id
+                      ? "border-slate-900 text-slate-900"
+                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  <span
+                    className="h-5 w-5 rounded-full"
+                    style={{
+                      background: `linear-gradient(120deg, ${th.swatch[0]}, ${th.swatch[1]} 55%, ${th.swatch[2]})`,
+                    }}
+                  />
+                  {th.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              {t.settings.appearance.pattern}
+            </p>
+            <div className="flex flex-wrap gap-2.5">
+              {HERO_PATTERNS.map((pt) => (
+                <button
+                  key={pt.id}
+                  type="button"
+                  onClick={() => update("hero_pattern", pt.id)}
+                  title={pt.label}
+                  className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs font-medium transition-all ${
+                    values.hero_pattern === pt.id
+                      ? "border-slate-900 text-slate-900"
+                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                  }`}
+                >
+                  <span
+                    className="h-5 w-5 rounded-md border border-slate-200 bg-slate-700"
+                    style={pt.css ? { backgroundImage: pt.css } : undefined}
+                  />
+                  {pt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <button

@@ -51,15 +51,16 @@ export type HeroPatternId = (typeof HERO_PATTERNS)[number]["id"];
 const THEME_KEY = "heroTheme";
 const PATTERN_KEY = "heroPattern";
 
-// Apply the saved theme + pattern as early as possible. Called from AppShell
-// on mount so the choices survive a full reload and apply app-wide.
-export function applyStoredHeroTheme() {
+// Apply the effective theme + pattern app-wide. A per-user local choice wins;
+// otherwise the company-wide value (from admin Settings) is used. Called from
+// AppShell so it survives reloads and reaches every page.
+export function applyHeroTheme(companyTheme?: string | null, companyPattern?: string | null) {
   if (typeof window === "undefined") return;
-  const theme = window.localStorage.getItem(THEME_KEY);
+  const theme = window.localStorage.getItem(THEME_KEY) || companyTheme || "atlas";
   if (theme && theme !== "atlas") document.documentElement.dataset.heroTheme = theme;
   else delete document.documentElement.dataset.heroTheme;
 
-  const pattern = window.localStorage.getItem(PATTERN_KEY);
+  const pattern = window.localStorage.getItem(PATTERN_KEY) || companyPattern || "none";
   if (pattern && pattern !== "none") document.documentElement.dataset.heroPattern = pattern;
   else delete document.documentElement.dataset.heroPattern;
 }

@@ -473,6 +473,10 @@ where contract_template is null;
 alter table crm.settings add column if not exists company_logo_url text;
 alter table crm.settings add column if not exists sms_payment_template text;
 alter table crm.settings add column if not exists sms_task_template text;
+-- Company-wide dashboard hero look (admin-set; users may still override
+-- locally). See migration 033.
+alter table crm.settings add column if not exists hero_theme text;
+alter table crm.settings add column if not exists hero_pattern text;
 
 alter table crm.objects add column if not exists block text;
 

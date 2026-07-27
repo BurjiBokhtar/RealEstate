@@ -10,6 +10,10 @@ export type Settings = {
   company_address: string | null;
   company_bank_details: string | null;
   company_logo_url: string | null;
+  // Company-wide dashboard hero look (admin-set). Each user may still override
+  // locally; when they haven't, this is what everyone sees.
+  hero_theme: string | null;
+  hero_pattern: string | null;
   updated_at: string;
 };
 
@@ -24,4 +28,6 @@ export type SettingsInput = {
   company_address: string;
   company_bank_details: string;
   company_logo_url: string;
+  hero_theme: string;
+  hero_pattern: string;
 };

@@ -11,7 +11,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PinLock } from "@/components/PinLock";
-import { applyStoredHeroTheme } from "@/components/HeroThemeSwitcher";
+import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
 // No "Договоры" item: the contracts list duplicated what the client card
@@ -69,11 +69,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const brandName = settings.company_name || t.appName;
 
-  // Re-apply the saved hero theme on load so the choice survives a full
-  // reload and its accent-color reaches every page, not just the dashboard.
+  // Apply the hero theme app-wide: the company-wide default (admin Settings)
+  // unless this user set a personal override. Re-runs when the company value
+  // loads/changes so its accent-color reaches every page.
   useEffect(() => {
-    applyStoredHeroTheme();
-  }, []);
+    applyHeroTheme(settings.hero_theme, settings.hero_pattern);
+  }, [settings.hero_theme, settings.hero_pattern]);
 
   useEffect(() => {
     const supabase = createClient();
