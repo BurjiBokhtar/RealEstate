@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export type Role = "admin" | "manager" | "director";
+// A signed-in user who has NOT been given a role yet (no profiles row) is
+// "none": they can authenticate but must not see or touch anything until an
+// admin assigns them a role. Distinct from the assignable staff roles.
+export type RoleOrNone = Role | "none";
 
 // The user's role, kept LIVE: re-read on every sign-in/sign-out and token
 // refresh, not just once on first mount. The old version fetched once, so
@@ -11,8 +15,8 @@ export type Role = "admin" | "manager" | "director";
 // reload -- which read as "the program is broken" every single time.
 // RLS enforces the real limits server-side either way; this hook only
 // decides what UI to show.
-export function useRole(): { role: Role; loading: boolean } {
-  const [role, setRole] = useState<Role>("manager");
+export function useRole(): { role: RoleOrNone; loading: boolean } {
+  const [role, setRole] = useState<RoleOrNone>("none");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,11 +39,11 @@ export function useRole(): { role: Role; loading: boolean } {
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      setRole(
-        profile?.role === "admin" || profile?.role === "director"
-          ? (profile.role as Role)
-          : "manager"
-      );
+      // Only an explicit, recognised role grants access. No profile row (or an
+      // unknown value) means "none" -- the app is blocked for them until an
+      // admin assigns a role. Never silently fall back to "manager".
+      const r = profile?.role;
+      setRole(r === "admin" || r === "director" || r === "manager" ? r : "none");
       setLoading(false);
     };
 

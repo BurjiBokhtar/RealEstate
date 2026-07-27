@@ -55,7 +55,7 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useLocale();
   const { settings } = useSettings();
-  const { role } = useRole();
+  const { role, loading: roleLoading } = useRole();
   // Settings (company data, staff accounts, audit log) is admin territory --
   // the pages themselves refuse non-admins, but showing the menu item just
   // leads staff to an "access denied" dead end. RLS stays the real lock.
@@ -84,6 +84,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
     router.refresh();
   };
+
+  // A signed-in user with no assigned role gets NO app -- just a "waiting for
+  // access" screen and a sign-out button. Server-side RLS already denies them
+  // data; this stops the shell (and any readable list) from showing at all
+  // until an admin grants them a role.
+  if (!roleLoading && role === "none") {
+    return (
+      <div className="hero-gradient flex min-h-screen w-full items-center justify-center p-6 text-white">
+        <div className="w-full max-w-md rounded-2xl bg-white/10 p-8 text-center backdrop-blur-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-7 w-7"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+          <h1 className="text-xl font-semibold">{t.access.pendingTitle}</h1>
+          <p className="mt-2 text-sm text-white/80">{t.access.pendingBody}</p>
+          {userEmail && <p className="mt-3 text-xs text-white/60">{userEmail}</p>}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mt-6 w-full rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 transition-all hover:shadow-md active:scale-[0.98]"
+          >
+            {t.login.logout}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     // h-screen + overflow-hidden pins the shell to the viewport: the

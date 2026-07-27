@@ -4,6 +4,11 @@ export type Locale = (typeof locales)[number];
 export const dictionaries = {
   ru: {
     appName: "RealEstate CRM",
+    access: {
+      pendingTitle: "Доступ не выдан",
+      pendingBody:
+        "Ваш аккаунт создан, но администратор ещё не назначил вам права (менеджер, директор или админ). Обратитесь к администратору — как только он выдаст доступ, всё появится.",
+    },
     nav: {
       dashboard: "Дашборд",
       objects: "Объекты",
@@ -668,6 +673,11 @@ export const dictionaries = {
   },
   tj: {
     appName: "RealEstate CRM",
+    access: {
+      pendingTitle: "Дастрасӣ дода нашудааст",
+      pendingBody:
+        "Аккаунти шумо сохта шуд, вале маъмур ҳанӯз ба шумо ҳуқуқ (менеҷер, директор ё админ) надодааст. Ба маъмур муроҷиат кунед — ҳамин ки дастрасӣ дод, ҳама чиз намоён мешавад.",
+    },
     nav: {
       dashboard: "Дашборд",
       objects: "Объектҳо",
