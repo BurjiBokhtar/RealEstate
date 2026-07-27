@@ -149,6 +149,12 @@ export const dictionaries = {
       exportExcel: "Экспорт в Excel",
       search: "Поиск по имени или телефону",
       empty: "Клиентов пока нет",
+      sort: {
+        newest: "Новые",
+        oldest: "Старые",
+        az: "А–Я",
+        za: "Я–А",
+      },
       table: {
         name: "Имя",
         phone: "Телефон",
@@ -249,6 +255,8 @@ export const dictionaries = {
       dueDate: "Срок оплаты",
       overdue: "Просрочка",
       days: "дн.",
+      since: "с",
+      paymentsShort: "плат.",
       amount: "Сумма",
       totalOverdue: "Всего просрочено",
       export: "Экспорт в Excel",
@@ -838,6 +846,12 @@ export const dictionaries = {
       exportExcel: "Содирот ба Excel",
       search: "Ҷустуҷӯ аз рӯи ном ё телефон",
       empty: "Ҳоло мизоҷ нест",
+      sort: {
+        newest: "Нав",
+        oldest: "Кӯҳна",
+        az: "А–Я",
+        za: "Я–А",
+      },
       table: {
         name: "Ном",
         phone: "Телефон",
@@ -938,6 +952,8 @@ export const dictionaries = {
       dueDate: "Мӯҳлати пардохт",
       overdue: "Таъхир",
       days: "рӯз",
+      since: "аз",
+      paymentsShort: "пард.",
       amount: "Маблағ",
       totalOverdue: "Ҳамагӣ таъхир",
       export: "Содирот ба Excel",

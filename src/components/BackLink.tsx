@@ -10,10 +10,13 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   return (
     <Link
       href={href}
-      className="group inline-flex w-fit items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-all hover:border-slate-300 hover:text-slate-900 hover:shadow active:scale-95"
+      className="group inline-flex w-fit items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-4 text-sm font-medium text-slate-600 shadow-sm transition-all hover:-translate-x-0.5 hover:border-[#5b3468]/30 hover:text-[#5b3468] hover:shadow-md active:scale-95"
     >
-      <span aria-hidden="true" className="transition-transform group-hover:-translate-x-0.5">
-        ←
+      <span
+        aria-hidden="true"
+        className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition-colors group-hover:bg-[#5b3468] group-hover:text-white"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5"><path d="M15 5l-7 7 7 7" /></svg>
       </span>
       {children}
     </Link>

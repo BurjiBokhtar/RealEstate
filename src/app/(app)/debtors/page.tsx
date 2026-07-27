@@ -10,19 +10,26 @@ import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
 import { waLink } from "@/lib/whatsapp";
 
-// A single overdue installment: an unpaid schedule row whose due date has
-// already passed. Building status/paid_amount aren't touched here -- this is
-// a read-only lens over the schedule the app already keeps.
-type OverdueRow = {
-  id: string;
-  due_date: string;
-  amount: number;
-  currency: Currency;
+// One reminder PER CONTRACT, not per missed installment. A long installment
+// plan with nothing paid used to spill one row per overdue month (9, 20, 30
+// rows for the same flat); now it's a single line summing what's overdue.
+// Paid installments drop out on their own, so recording a payment shrinks the
+// reminder and fully closing the plan removes it entirely.
+type ContractDebt = {
+  contractId: string;
   clientId: string | null;
   clientName: string;
   clientPhone: string | null;
   objectName: string | null;
   contractNumber: string | null;
+  currency: Currency;
+  missedCount: number;
+  totalOverdue: number;
+  // Earliest missed date = since when in arrears; latest = the current period
+  // to chase. Days overdue is measured from the latest, so it reflects the
+  // present cycle and rolls forward each month instead of ballooning to 785.
+  earliestDue: string;
+  latestDue: string;
   daysOverdue: number;
 };
 
@@ -31,7 +38,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 export default function DebtorsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
-  const [rows, setRows] = useState<OverdueRow[]>([]);
+  const [rows, setRows] = useState<ContractDebt[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,51 +51,67 @@ export default function DebtorsPage() {
       .schema("crm")
       .from("contract_payments")
       .select(
-        "id, due_date, amount, contract:contracts(number, currency, status, client:clients(id, name, phone), object:objects(name))"
+        "id, due_date, amount, contract:contracts(id, number, currency, status, client:clients(id, name, phone), object:objects(name))"
       )
       .eq("paid", false)
       .lt("due_date", today())
       .order("due_date", { ascending: true })
       .then(({ data }) => {
         const now = Date.now();
-        const mapped: OverdueRow[] = ((data ?? []) as unknown as Array<{
+        const byContract = new Map<string, ContractDebt>();
+        for (const p of (data ?? []) as unknown as Array<{
           id: string;
           due_date: string;
           amount: number;
           contract: {
+            id: string;
             number: string | null;
             currency: Currency;
             status: string;
             client: { id: string; name: string; phone: string | null } | null;
             object: { name: string } | null;
           } | null;
-        }>)
+        }>) {
+          const c = p.contract;
           // A cancelled contract's leftover schedule rows aren't real debt.
-          .filter((p) => p.contract && p.contract.status !== "cancelled")
-          .map((p) => ({
-            id: p.id,
-            due_date: p.due_date,
-            amount: p.amount,
-            currency: p.contract!.currency,
-            clientId: p.contract!.client?.id ?? null,
-            clientName: p.contract!.client?.name ?? "—",
-            clientPhone: p.contract!.client?.phone ?? null,
-            objectName: p.contract!.object?.name ?? null,
-            contractNumber: p.contract!.number ?? null,
-            daysOverdue: Math.floor(
-              (now - new Date(p.due_date).getTime()) / 86_400_000
-            ),
-          }));
-        // Most overdue first -- the ones to chase today.
-        mapped.sort((a, b) => b.daysOverdue - a.daysOverdue);
-        setRows(mapped);
+          if (!c || c.status === "cancelled") continue;
+          const existing = byContract.get(c.id);
+          if (existing) {
+            existing.missedCount += 1;
+            existing.totalOverdue += p.amount;
+            if (p.due_date < existing.earliestDue) existing.earliestDue = p.due_date;
+            if (p.due_date > existing.latestDue) existing.latestDue = p.due_date;
+          } else {
+            byContract.set(c.id, {
+              contractId: c.id,
+              clientId: c.client?.id ?? null,
+              clientName: c.client?.name ?? "—",
+              clientPhone: c.client?.phone ?? null,
+              objectName: c.object?.name ?? null,
+              contractNumber: c.number ?? null,
+              currency: c.currency,
+              missedCount: 1,
+              totalOverdue: p.amount,
+              earliestDue: p.due_date,
+              latestDue: p.due_date,
+              daysOverdue: 0,
+            });
+          }
+        }
+        const grouped = Array.from(byContract.values()).map((d) => ({
+          ...d,
+          daysOverdue: Math.floor((now - new Date(d.latestDue).getTime()) / 86_400_000),
+        }));
+        // Biggest debt first -- the ones to chase.
+        grouped.sort((a, b) => b.totalOverdue - a.totalOverdue);
+        setRows(grouped);
         setLoading(false);
       });
   }, [configured]);
 
   const totals = useMemo(() => {
     const v: Record<string, number> = {};
-    for (const r of rows) v[r.currency] = (v[r.currency] ?? 0) + r.amount;
+    for (const r of rows) v[r.currency] = (v[r.currency] ?? 0) + r.totalOverdue;
     return Object.entries(v).filter(([, n]) => n > 0);
   }, [rows]);
 
@@ -99,9 +122,9 @@ export default function DebtorsPage() {
       r.clientPhone ?? "",
       r.objectName ?? "",
       r.contractNumber ?? "",
-      r.due_date,
-      r.daysOverdue,
-      num(r.amount),
+      r.earliestDue,
+      r.missedCount,
+      num(r.totalOverdue),
       r.currency,
     ]);
   };
@@ -122,7 +145,7 @@ export default function DebtorsPage() {
               t.debtors.object,
               "№",
               t.debtors.dueDate,
-              `${t.debtors.overdue} (${t.debtors.days})`,
+              t.debtors.paymentsShort,
               t.debtors.amount,
               "Валюта",
             ]}
@@ -180,7 +203,7 @@ export default function DebtorsPage() {
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+              <tr key={r.contractId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                 <td className="px-4 py-3">
                   {r.clientId ? (
                     <Link
@@ -197,20 +220,28 @@ export default function DebtorsPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-slate-600">{r.objectName ?? "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{r.due_date}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  {r.earliestDue}
+                  {r.missedCount > 1 && (
+                    <span className="block text-xs text-slate-400">
+                      {t.debtors.since} · {r.latestDue}
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      r.daysOverdue > 30
+                      r.missedCount > 1
                         ? "bg-rose-100 text-rose-700"
                         : "bg-amber-100 text-amber-700"
                     }`}
+                    title={`${r.daysOverdue} ${t.debtors.days}`}
                   >
-                    {r.daysOverdue} {t.debtors.days}
+                    {r.missedCount} {t.debtors.paymentsShort}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right font-semibold text-rose-600">
-                  {formatCurrency(r.amount, r.currency)}
+                  {formatCurrency(r.totalOverdue, r.currency)}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {r.clientPhone ? (
@@ -222,7 +253,7 @@ export default function DebtorsPage() {
                           .replace("{contract}", r.contractNumber ?? "—")
                           .replace(
                             "{amount}",
-                            formatCurrency(r.amount, r.currency)
+                            formatCurrency(r.totalOverdue, r.currency)
                           )
                           .replace("{days}", String(r.daysOverdue))
                       )}

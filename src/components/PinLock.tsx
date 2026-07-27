@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 const PIN_KEY = "appPinHash";
-// Lock the screen after this much inactivity. A short window is deliberate --
-// the app is often left open on a shared front desk.
-const LOCK_AFTER_MS = 30_000;
+// Lock the screen after this much inactivity. The app is often left open on a
+// shared front desk, so it re-locks on its own.
+const LOCK_AFTER_MS = 3 * 60_000;
 const PIN_LEN = 4;
 
 async function hashPin(pin: string): Promise<string> {
@@ -19,9 +19,11 @@ async function hashPin(pin: string): Promise<string> {
 
 // A device-local PIN screen-lock layered on top of the login session. On first
 // open the user sets a 4-digit PIN; after that the app locks on every open and
-// after 30s of inactivity, and the PIN is required to get back in. This is a
-// privacy shade for a shared desk, not a replacement for the login -- the
-// Supabase session still gates the real data.
+// after a few minutes of inactivity, and the PIN is required to get back in.
+// Input works three ways: an on-screen keypad (mouse), the physical keyboard
+// (PC), and the phone's own numeric keyboard (a focused numeric input pops it
+// up automatically). This is a privacy shade for a shared desk, not a
+// replacement for the login -- the Supabase session still gates the real data.
 export function PinLock() {
   const { t } = useLocale();
   const [ready, setReady] = useState(false);
@@ -32,6 +34,7 @@ export function PinLock() {
   const [entry, setEntry] = useState("");
   const [error, setError] = useState("");
   const timer = useRef<number | undefined>(undefined);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(PIN_KEY);
@@ -56,37 +59,42 @@ export function PinLock() {
     };
   }, [hasPin, locked]);
 
-  const press = useCallback(
-    async (digit: string) => {
-      setError("");
-      const next = (entry + digit).slice(0, PIN_LEN);
-      setEntry(next);
-      if (next.length < PIN_LEN) return;
+  const showing = ready && (!hasPin || locked);
 
+  // Focus the hidden numeric field whenever the lock screen appears, so the
+  // phone's keyboard opens by itself and PC typing lands somewhere.
+  useEffect(() => {
+    if (showing) {
+      const id = window.setTimeout(() => inputRef.current?.focus(), 50);
+      return () => window.clearTimeout(id);
+    }
+  }, [showing, firstEntry]);
+
+  const complete = useCallback(
+    async (pin: string) => {
       // Setup flow: capture, then confirm.
       if (!hasPin) {
         if (firstEntry === null) {
-          setFirstEntry(next);
+          setFirstEntry(pin);
           setEntry("");
           return;
         }
-        if (firstEntry !== next) {
+        if (firstEntry !== pin) {
           setError(t.pin.mismatch);
           setFirstEntry(null);
           setEntry("");
           return;
         }
-        window.localStorage.setItem(PIN_KEY, await hashPin(next));
+        window.localStorage.setItem(PIN_KEY, await hashPin(pin));
         setHasPin(true);
         setLocked(false);
         setFirstEntry(null);
         setEntry("");
         return;
       }
-
       // Unlock flow.
       const stored = window.localStorage.getItem(PIN_KEY);
-      if ((await hashPin(next)) === stored) {
+      if ((await hashPin(pin)) === stored) {
         setLocked(false);
         setEntry("");
       } else {
@@ -94,11 +102,22 @@ export function PinLock() {
         setEntry("");
       }
     },
-    [entry, hasPin, firstEntry, t]
+    [hasPin, firstEntry, t]
+  );
+
+  // Single entry point used by the keypad, the physical keyboard and the phone
+  // keyboard alike.
+  const setDigits = useCallback(
+    (nextRaw: string) => {
+      const next = nextRaw.replace(/\D/g, "").slice(0, PIN_LEN);
+      setError("");
+      setEntry(next);
+      if (next.length === PIN_LEN) void complete(next);
+    },
+    [complete]
   );
 
   if (!ready) return null;
-  // Nothing to show once a PIN exists and the screen is unlocked.
   if (hasPin && !locked) return null;
 
   const inSetup = !hasPin;
@@ -107,6 +126,8 @@ export function PinLock() {
       ? t.pin.setNew
       : t.pin.repeatNew
     : t.pin.locked;
+
+  const keypad = (d: string) => setDigits(entry + d);
 
   return (
     <div className="hero-gradient fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 p-6 text-white">
@@ -118,8 +139,21 @@ export function PinLock() {
         {inSetup && <p className="text-xs text-white/70">{t.pin.setupHint}</p>}
       </div>
 
-      {/* Dots showing entered length */}
-      <div className="flex gap-3">
+      {/* Dots + an overlaid numeric input. The input is what opens the phone
+          keyboard and receives physical-keyboard typing; tapping the dots
+          focuses it. It's transparent, so only the dots show. */}
+      <label className="relative flex gap-3" aria-label={title}>
+        <input
+          ref={inputRef}
+          type="tel"
+          inputMode="numeric"
+          autoComplete="off"
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus
+          value={entry}
+          onChange={(e) => setDigits(e.target.value)}
+          className="absolute inset-0 h-full w-full cursor-default opacity-0"
+        />
         {Array.from({ length: PIN_LEN }).map((_, i) => (
           <span
             key={i}
@@ -128,17 +162,17 @@ export function PinLock() {
             }`}
           />
         ))}
-      </div>
+      </label>
 
       <p className="h-4 text-sm text-amber-200">{error}</p>
 
-      {/* Keypad */}
+      {/* On-screen keypad for mouse / touch. */}
       <div className="grid grid-cols-3 gap-3">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
           <button
             key={d}
             type="button"
-            onClick={() => press(d)}
+            onClick={() => keypad(d)}
             className="h-16 w-16 rounded-full bg-white/10 text-2xl font-semibold backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
           >
             {d}
@@ -147,17 +181,14 @@ export function PinLock() {
         <span />
         <button
           type="button"
-          onClick={() => press("0")}
+          onClick={() => keypad("0")}
           className="h-16 w-16 rounded-full bg-white/10 text-2xl font-semibold backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
         >
           0
         </button>
         <button
           type="button"
-          onClick={() => {
-            setError("");
-            setEntry((e) => e.slice(0, -1));
-          }}
+          onClick={() => setDigits(entry.slice(0, -1))}
           aria-label="⌫"
           className="flex h-16 w-16 items-center justify-center rounded-full text-2xl text-white/70 transition-colors hover:text-white"
         >

@@ -32,10 +32,11 @@ export default function ClientsPage() {
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
+  const [sort, setSort] = useState<"new" | "old" | "az" | "za">("new");
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, sort]);
 
   useEffect(() => {
     if (!configured) {
@@ -51,7 +52,13 @@ export default function ClientsPage() {
       query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
     }
     const from = (page - 1) * PAGE_SIZE;
-    query = query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+    const orderBy =
+      sort === "az" || sort === "za"
+        ? { col: "name", asc: sort === "az" }
+        : { col: "created_at", asc: sort === "old" };
+    query = query
+      .order(orderBy.col, { ascending: orderBy.asc })
+      .range(from, from + PAGE_SIZE - 1);
 
     query.then(async ({ data, count }) => {
       const rows = (data ?? []) as Client[];
@@ -86,7 +93,7 @@ export default function ClientsPage() {
       }
       setDebts(map);
     });
-  }, [configured, page, search]);
+  }, [configured, page, search, sort]);
 
   // Build the export rows on demand (every client, per-currency debt), fed
   // to the Excel/PDF menu.
@@ -159,13 +166,40 @@ export default function ClientsPage() {
 
       {!configured && <SetupNotice />}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <input
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           placeholder={t.clients.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
+        {/* Sort pills: a small segmented control with a sort glyph. */}
+        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+          <span className="pl-2 pr-1 text-slate-400" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="M3 6h13M3 12h9M3 18h5M17 8l3-3 3 3M20 5v14" /></svg>
+          </span>
+          {(
+            [
+              { id: "new", label: t.clients.sort.newest },
+              { id: "old", label: t.clients.sort.oldest },
+              { id: "az", label: t.clients.sort.az },
+              { id: "za", label: t.clients.sort.za },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setSort(opt.id)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                sort === opt.id
+                  ? "bg-[#1c1a3a] text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-100"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
