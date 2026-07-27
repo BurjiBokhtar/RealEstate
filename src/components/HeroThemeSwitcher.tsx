@@ -30,6 +30,11 @@ export const HERO_PATTERNS = [
     css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M0 10 L10 0 L20 10 L10 20 Z'/%3E%3Cpath d='M10 0 V20 M0 10 H20'/%3E%3C/g%3E%3C/svg%3E\")",
   },
   {
+    id: "star",
+    label: "Ситора",
+    css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Crect x='6' y='6' width='12' height='12'/%3E%3Crect x='6' y='6' width='12' height='12' transform='rotate(45 12 12)'/%3E%3C/g%3E%3C/svg%3E\")",
+  },
+  {
     id: "dots",
     label: "Нуқтаҳо",
     css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='%23fff'/%3E%3C/svg%3E\")",

@@ -9,6 +9,8 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
+import { InstallPrompt } from "@/components/InstallPrompt";
+import { PinLock } from "@/components/PinLock";
 import { applyStoredHeroTheme } from "@/components/HeroThemeSwitcher";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
@@ -199,7 +201,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
+      <PinLock />
       <div className="flex h-full min-w-0 flex-1 flex-col print:block print:h-auto">
+        <InstallPrompt />
         <OfflineBanner />
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:justify-end print:hidden">
           <Link

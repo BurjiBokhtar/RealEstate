@@ -161,6 +161,14 @@
   --hero-pattern-opacity: 0.2;
 }
 
+/* Ситора — an eight-point girih star (two overlaid squares), a nod to Tajik
+   khatam/girih geometry. */
+:root[data-hero-pattern="star"] {
+  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Crect x='13' y='13' width='22' height='22'/%3E%3Crect x='13' y='13' width='22' height='22' transform='rotate(45 24 24)'/%3E%3C/g%3E%3C/svg%3E");
+  --hero-pattern-size: 48px 48px;
+  --hero-pattern-opacity: 0.15;
+}
+
 /* Мавҷ — flowing waves. */
 :root[data-hero-pattern="waves"] {
   --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='20'%3E%3Cpath d='M0 10 Q15 0 30 10 T60 10' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3C/svg%3E");
