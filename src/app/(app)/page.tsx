@@ -13,7 +13,6 @@ import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
-import { CountUp } from "@/components/CountUp";
 import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
@@ -408,10 +407,10 @@ export default function DashboardPage() {
           loading={loading}
         />
         <StatCard
-          label={t.dashboard.inProgress}
-          value={<CountUp value={counts.in_progress} enabled={!loading} />}
-          icon={StatIcons.hammer}
-          tone="amber"
+          label={t.dashboard.totalIncome}
+          value={<MoneyPairValue value={paidRevenue} animate />}
+          icon={StatIcons.coins}
+          tone="emerald"
           delay={80}
           loading={loading}
         />

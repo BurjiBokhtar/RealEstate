@@ -163,7 +163,17 @@ export function ContractDocument({
   const director = settings.company_director || "____________";
   const buildingAddress =
     contract.object?.building?.address ?? contract.object?.address ?? "____________";
-  const pricePerSqm = contract.object?.building?.price_per_sqm ?? null;
+  // The price per m² printed on the contract is THIS deal's individually
+  // negotiated rate -- the contract's own total divided by the unit's area --
+  // not the building's default listing rate. So a client given a special
+  // price sees that price on paper, and re-editing the contract amount
+  // re-derives it. Falls back to the building default only when the deal has
+  // no usable amount/area yet.
+  const dealArea = contract.object?.area ?? null;
+  const pricePerSqm =
+    dealArea && dealArea > 0 && contract.amount > 0
+      ? Math.round((contract.amount / dealArea) * 100) / 100
+      : contract.object?.building?.price_per_sqm ?? null;
 
   const amountWords =
     contract.amount_words || amountToWordsTj(contract.amount, contract.currency);

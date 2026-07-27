@@ -57,6 +57,8 @@ function UnitCell({
   onCancelQuickBook,
   isPending,
   onMergeUnits,
+  onSplitUnit,
+  onDeleteUnit,
   canEditSold,
   readOnly,
   onViewUnit,
@@ -72,6 +74,8 @@ function UnitCell({
   onCancelQuickBook: (unit: PropertyObject, contractId: string) => void;
   isPending: boolean;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
+  onSplitUnit: (unit: PropertyObject) => void;
+  onDeleteUnit: (unit: PropertyObject) => void;
   canEditSold: boolean;
   readOnly: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -175,6 +179,37 @@ function UnitCell({
         >
           +
         </button>
+      )}
+
+      {/* Edit-mode cell tools (admin): split a merged cell back apart, or
+          delete the cell. Shown on hover so they don't clutter the grid. */}
+      {editMode && canEditSold && (
+        <div className="absolute -top-2 right-1 z-30 hidden gap-1 group-hover:flex">
+          {(unit.span || 1) > 1 && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSplitUnit(unit);
+              }}
+              title={t.buildings.cellActions.split}
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] text-white shadow hover:bg-slate-900"
+            >
+              ⤢
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeleteUnit(unit);
+            }}
+            title={t.buildings.cellActions.delete}
+            className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-[11px] font-bold text-white shadow hover:bg-rose-700"
+          >
+            ×
+          </button>
+        </div>
       )}
 
       {/* Hover card: everything the front desk asks about a unit at a
@@ -303,6 +338,8 @@ export function ShakhmatkaGrid({
   onAddUnit,
   pendingUnitIds,
   onMergeUnits,
+  onSplitUnit,
+  onDeleteUnit,
   canEditSold,
   readOnly = false,
   onViewUnit,
@@ -316,6 +353,8 @@ export function ShakhmatkaGrid({
   onAddUnit: (floor: number, block: string, position: number) => void;
   pendingUnitIds: Set<string>;
   onMergeUnits: (unitA: PropertyObject, unitB: PropertyObject) => void;
+  onSplitUnit: (unit: PropertyObject) => void;
+  onDeleteUnit: (unit: PropertyObject) => void;
   canEditSold: boolean;
   readOnly?: boolean;
   onViewUnit: (unit: PropertyObject) => void;
@@ -410,7 +449,7 @@ export function ShakhmatkaGrid({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 max-w-full flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {presentStatuses.map((status) => {
           const active = statusFilter === status;
@@ -495,6 +534,8 @@ export function ShakhmatkaGrid({
                             onCancelQuickBook={onCancelQuickBook}
                             isPending={pendingUnitIds.has(slot.unit.id)}
                             onMergeUnits={onMergeUnits}
+                            onSplitUnit={onSplitUnit}
+                            onDeleteUnit={onDeleteUnit}
                             canEditSold={canEditSold}
                             readOnly={readOnly}
                             onViewUnit={onViewUnit}
@@ -575,6 +616,8 @@ export function ShakhmatkaGrid({
                       onCancelQuickBook={onCancelQuickBook}
                       isPending={pendingUnitIds.has(unit.id)}
                       onMergeUnits={onMergeUnits}
+                      onSplitUnit={onSplitUnit}
+                      onDeleteUnit={onDeleteUnit}
                       canEditSold={canEditSold}
                       readOnly={readOnly}
                       onViewUnit={onViewUnit}

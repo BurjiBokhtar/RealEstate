@@ -40,20 +40,24 @@ export function StatCard({
   const c = TONES[tone];
   const inner = (
     <>
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span className="text-[13px] font-medium text-slate-500">{label}</span>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c.chip}`}>
           {icon}
         </span>
       </div>
-      <div className={`mt-2 text-[26px] font-bold leading-tight tracking-tight ${c.value}`}>
+      {/* Smaller on phones so long two-currency sums (e.g. "4 820 000 TJS")
+          never run past the card edge; full size from sm up. */}
+      <div
+        className={`mt-2 min-w-0 break-words text-[19px] font-bold leading-tight tracking-tight sm:text-[26px] ${c.value}`}
+      >
         {loading ? "…" : value}
       </div>
       {sub && <div className="mt-0.5 text-xs text-slate-400">{sub}</div>}
     </>
   );
 
-  const cls = `animate-fade-up block rounded-2xl border ${c.ring} bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`;
+  const cls = `animate-fade-up block overflow-hidden rounded-2xl border ${c.ring} bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`;
 
   if (href) {
     return (
@@ -88,5 +92,8 @@ export const StatIcons = {
   ),
   tag: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><path d="M3 12l8-8h9v9l-8 8z"/><circle cx="16" cy="8" r="1.5"/></svg>
+  ),
+  coins: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
   ),
 };

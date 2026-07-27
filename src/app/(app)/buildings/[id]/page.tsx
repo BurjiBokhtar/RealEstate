@@ -40,11 +40,41 @@ export default function BuildingDetailPage() {
   } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
+  // A stack of reversible structural edits (merge / split / delete / add) made
+  // this session, so a mis-click can be undone with one button -- the data is
+  // captured before each action and re-applied on undo.
+  const [undoStack, setUndoStack] = useState<Array<{ label: string; run: () => Promise<void> }>>(
+    []
+  );
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
   });
   const { role } = useRole();
+
+  const pushUndo = (label: string, run: () => Promise<void>) =>
+    setUndoStack((s) => [...s.slice(-9), { label, run }]);
+
+  // Columns we can safely re-insert to bring a deleted/merged-away unit back.
+  const reinsertPayload = (u: PropertyObject) => ({
+    id: u.id,
+    building_id: u.building_id,
+    name: u.name,
+    address: u.address ?? null,
+    type: u.type,
+    status: "available" as const,
+    area: u.area,
+    price: u.price,
+    currency: u.currency,
+    rooms: u.rooms,
+    floor: u.floor,
+    block: u.block,
+    position_in_floor: u.position_in_floor,
+    span: u.span ?? 1,
+    manual_reserved: false,
+    description: u.description ?? null,
+    plan_url: u.plan_url ?? null,
+  });
 
   const apartmentNumbers = useMemo(() => computeApartmentNumbers(units), [units]);
 
@@ -134,6 +164,9 @@ export default function BuildingDetailPage() {
         ? combinedArea * building.price_per_sqm
         : (unitA.price ?? 0) + (unitB.price ?? 0) || null;
     const supabase = createClient();
+    // Snapshot before so a merge can be fully undone (restore A, bring B back).
+    const aBefore = { name: unitA.name, area: unitA.area, price: unitA.price, span: unitA.span ?? 1 };
+    const bRow = reinsertPayload(unitB);
     await supabase
       .schema("crm")
       .from("objects")
@@ -148,6 +181,94 @@ export default function BuildingDetailPage() {
       .eq("id", unitA.id);
     await supabase.schema("crm").from("objects").delete().eq("id", unitB.id);
     await loadUnits();
+    pushUndo(t.buildings.cellActions.merge, async () => {
+      const sb = createClient();
+      await sb.schema("crm").from("objects").update(aBefore).eq("id", unitA.id);
+      await sb.schema("crm").from("objects").insert(bRow);
+    });
+    setToast({ message: t.buildings.cellActions.merged, type: "success" });
+  };
+
+  // Split a merged (span>1) cell back into individual cells: shrink it to
+  // span 1 and recreate the positions it had swallowed as fresh available
+  // units. This is the direct "undo my merge" the shakhmatka needed.
+  const handleSplitUnit = async (unit: PropertyObject) => {
+    const span = unit.span || 1;
+    if (span < 2 || role !== "admin") return;
+    const supabase = createClient();
+    const before = { area: unit.area, price: unit.price, name: unit.name, span };
+    const basePos = unit.position_in_floor ?? 0;
+    const newRows = [];
+    for (let k = 1; k < span; k++) {
+      newRows.push({
+        building_id: unit.building_id,
+        name: unit.block
+          ? `${unit.block} №${unit.floor}-${basePos + k}`
+          : `№${unit.floor}-${basePos + k}`,
+        type: unit.type,
+        status: "available" as const,
+        currency: unit.currency,
+        floor: unit.floor,
+        block: unit.block,
+        position_in_floor: basePos + k,
+        span: 1,
+      });
+    }
+    await supabase.schema("crm").from("objects").update({ span: 1 }).eq("id", unit.id);
+    const { data: created } = await supabase
+      .schema("crm")
+      .from("objects")
+      .insert(newRows)
+      .select("id");
+    await loadUnits();
+    const createdIds = ((created ?? []) as Array<{ id: string }>).map((r) => r.id);
+    pushUndo(t.buildings.cellActions.split, async () => {
+      const sb = createClient();
+      if (createdIds.length) await sb.schema("crm").from("objects").delete().in("id", createdIds);
+      await sb.schema("crm").from("objects").update({ span: before.span }).eq("id", unit.id);
+    });
+    setToast({ message: t.buildings.cellActions.splitDone, type: "success" });
+  };
+
+  // Delete one cell (admin, edit mode). Reversible via undo -- the row is
+  // captured and re-inserted with its original id.
+  const handleDeleteUnit = async (unit: PropertyObject) => {
+    if (role !== "admin") return;
+    if (contractsByUnit[unit.id]) {
+      setToast({ message: t.buildings.cellActions.cannotDeleteSold, type: "error" });
+      return;
+    }
+    if (!window.confirm(t.buildings.cellActions.confirmDelete)) return;
+    const supabase = createClient();
+    const row = reinsertPayload(unit);
+    const { error } = await supabase.schema("crm").from("objects").delete().eq("id", unit.id);
+    if (error) {
+      setToast({ message: error.message, type: "error" });
+      return;
+    }
+    await loadUnits();
+    pushUndo(t.buildings.cellActions.delete, async () => {
+      const sb = createClient();
+      await sb.schema("crm").from("objects").insert(row);
+    });
+    setToast({ message: t.buildings.cellActions.deleted, type: "success" });
+  };
+
+  const handleUndo = async () => {
+    const last = undoStack[undoStack.length - 1];
+    if (!last) return;
+    setUndoStack((s) => s.slice(0, -1));
+    try {
+      await last.run();
+      await loadUnits();
+      setToast({ message: t.buildings.cellActions.undone, type: "success" });
+    } catch (err) {
+      setToast({
+        message: err instanceof Error ? err.message : t.common.error,
+        type: "error",
+      });
+      await loadUnits();
+    }
   };
 
   // Right-click toggles a hand reservation on the unit itself -- no
@@ -296,8 +417,18 @@ export default function BuildingDetailPage() {
           </div>
 
           {editMode && (
-            <div className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-              {t.buildings.editModeHint}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+              <span>{t.buildings.editModeHint}</span>
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={undoStack.length === 0}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span aria-hidden="true">↶</span>
+                {t.buildings.cellActions.undo}
+                {undoStack.length > 0 && ` (${undoStack.length})`}
+              </button>
             </div>
           )}
 
@@ -312,6 +443,8 @@ export default function BuildingDetailPage() {
             onAddUnit={(floor, block, position) => setAddingUnit({ floor, block, position })}
             pendingUnitIds={pendingQuickBook}
             onMergeUnits={handleMergeUnits}
+            onSplitUnit={handleSplitUnit}
+            onDeleteUnit={handleDeleteUnit}
             canEditSold={role === "admin"}
             onViewUnit={setViewingUnit}
           />
