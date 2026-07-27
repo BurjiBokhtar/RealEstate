@@ -183,11 +183,18 @@ export function ContractDocument({
   const aptNo = apartmentNumber != null ? String(apartmentNumber) : "____";
   const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
 
-  const monthly =
-    contract.payment_type === "installment" && contract.installment_months
-      ? Math.floor(
-          ((contract.amount - contract.paid_amount) / contract.installment_months) * 100
-        ) / 100
+  // Schedule summary derived from the ACTUAL rows, not recomputed from
+  // amount/installment_months -- otherwise a hand-edited plan (irregular down
+  // payments, extra one-off payments) printed a headline that contradicted the
+  // table below it. Paid-so-far and the remaining count/typical monthly all
+  // come straight from the payment rows the table renders.
+  const paidRows = payments.filter((p) => p.paid);
+  const unpaidRows = payments.filter((p) => !p.paid);
+  const paidSoFar = paidRows.reduce((sum, p) => sum + p.amount, 0);
+  const remainingSchedule = unpaidRows.reduce((sum, p) => sum + p.amount, 0);
+  const typicalMonthly =
+    unpaidRows.length > 0
+      ? Math.round((remainingSchedule / unpaidRows.length) * 100) / 100
       : null;
 
   const worksList = [
@@ -448,13 +455,18 @@ export function ContractDocument({
               <p className="mt-4 text-center text-[14px] font-bold">
                 ҶАДВАЛИ ПАРДОХТҲО
               </p>
-              {monthly != null && (
-                <p className="text-justify">
-                  Пардохти аввал: <b>{docAmount(contract.paid_amount, contract.currency)}</b>
-                  ; боқимонда дар <b>{contract.installment_months}</b> моҳ, ҳар моҳ тақрибан{" "}
-                  <b>{docAmount(monthly, contract.currency)}</b>.
-                </p>
-              )}
+              <p className="text-justify">
+                Пардохтшуда: <b>{docAmount(paidSoFar, contract.currency)}</b>; боқимонда:{" "}
+                <b>{docAmount(remainingSchedule, contract.currency)}</b>
+                {unpaidRows.length > 0 && typicalMonthly != null && (
+                  <>
+                    {" "}
+                    дар <b>{unpaidRows.length}</b> қисм, ҳар моҳ тақрибан{" "}
+                    <b>{docAmount(typicalMonthly, contract.currency)}</b>
+                  </>
+                )}
+                .
+              </p>
               <table className="mt-1 w-full border-collapse text-[12px]">
                 <thead>
                   <tr className="border-b border-slate-400 text-left">
