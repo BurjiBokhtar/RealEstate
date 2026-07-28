@@ -62,13 +62,41 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center p-4">
+    <div className="relative flex min-h-screen flex-col lg:flex-row">
       <LoginScene />
+
+      {/* Brand panel -- the company's identity over the living scene. Desktop
+          only; on phones the form's own header carries the branding. */}
+      <div className="relative z-10 hidden flex-1 flex-col justify-between p-14 text-white lg:flex">
+        <div />
+        <div className="flex flex-col gap-5">
+          {brand.logo && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brand.logo}
+              alt=""
+              className="h-20 w-20 rounded-2xl border border-white/25 bg-white/90 object-contain p-1.5 shadow-lg"
+            />
+          )}
+          <div>
+            <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow">
+              {brand.name || t.appName}
+            </h1>
+            <p className="mt-2 max-w-md text-sm text-white/75">{t.login.title}</p>
+          </div>
+        </div>
+        <p className="text-xs tracking-wide text-white/60">
+          developed by <span className="font-semibold text-white/80">IMRON</span>
+        </p>
+      </div>
+
+      {/* Form side. */}
+      <div className="relative z-10 flex w-full flex-col items-center justify-center p-4 lg:w-[480px] lg:shrink-0 lg:p-10">
       <form
         onSubmit={handleSubmit}
-        className="relative z-10 flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-white/40 bg-white/85 p-7 shadow-2xl shadow-slate-900/30 backdrop-blur-md"
+        className="relative flex w-full max-w-sm flex-col gap-4 overflow-hidden rounded-2xl border border-white/40 bg-white/90 p-7 shadow-2xl shadow-slate-900/30 backdrop-blur-md"
       >
-        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[#1c1a3a] via-[#5b3468] to-[#e3a73b]" />
+        <div className="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-[var(--brand-strong)] via-[var(--brand)] to-[var(--hero-3)]" />
         {/* Language first: the person picking РУ/ТҶ hasn't logged in yet,
             so the login page itself must offer the choice. */}
         <div className="flex items-start justify-between gap-3">
@@ -78,11 +106,11 @@ export default function LoginPage() {
               <img
                 src={brand.logo}
                 alt=""
-                className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 shadow-sm"
+                className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 shadow-sm lg:hidden"
               />
             )}
             <div>
-              <h1 className="bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] bg-clip-text text-xl font-bold tracking-tight text-transparent">
+              <h1 className="bg-gradient-to-r from-[var(--brand-strong)] to-[var(--brand)] bg-clip-text text-xl font-bold tracking-tight text-transparent">
                 {brand.name || t.appName}
               </h1>
               <p className="text-sm text-slate-500">{t.login.title}</p>
@@ -96,7 +124,7 @@ export default function LoginPage() {
                 onClick={() => setLocale(l)}
                 className={`px-2.5 py-1 text-xs font-semibold uppercase transition-colors ${
                   locale === l
-                    ? "bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] text-white"
+                    ? "bg-brand-strong text-white"
                     : "bg-white text-slate-500 hover:text-slate-800"
                 }`}
               >
@@ -130,7 +158,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={submitting}
-          className="mt-1 h-11 rounded-lg bg-gradient-to-r from-[#1c1a3a] via-[#5b3468] to-[#8a4a7a] text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+          className="btn-brand mt-1 h-11 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {submitting ? t.common.loading : t.login.submit}
         </button>
@@ -160,6 +188,13 @@ export default function LoginPage() {
           {t.login.forgot}
         </button>
       </form>
+
+      {/* Credit -- shown under the form on phones (the desktop copy lives in
+          the brand panel). */}
+      <p className="mt-6 text-xs tracking-wide text-white/70 lg:hidden">
+        developed by <span className="font-semibold text-white/90">IMRON</span>
+      </p>
+      </div>
     </div>
   );
 }
