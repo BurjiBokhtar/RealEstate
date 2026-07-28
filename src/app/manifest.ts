@@ -30,7 +30,11 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: "CRM для риэлторских и строительных компаний",
     start_url: "/",
     scope: "/",
-    display: "standalone",
+    // Installed app runs with no browser chrome at all. `fullscreen` drops
+    // even the status strip; `display_override` lets capable browsers pick it,
+    // falling back to standalone/minimal-ui where fullscreen isn't allowed.
+    display: "fullscreen",
+    display_override: ["fullscreen", "standalone", "minimal-ui"],
     orientation: "any",
     background_color: "#1c1a3a",
     theme_color: "#1c1a3a",
