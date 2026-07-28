@@ -56,7 +56,7 @@ export default function TasksPage() {
         <h1 className="text-2xl font-semibold">{t.tasks.title}</h1>
         <Link
           href="/tasks/new"
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98]"
         >
           + {t.tasks.newTask}
         </Link>

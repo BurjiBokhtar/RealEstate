@@ -163,7 +163,7 @@ export function ClientQuickPayment({
           <button
             type="submit"
             disabled={submitting || !amount}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             {submitting ? t.common.loading : t.clients.quickPayment.submit}
           </button>

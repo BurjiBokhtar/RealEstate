@@ -155,7 +155,7 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 ${
+        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
@@ -175,7 +175,7 @@ function UnitCell({
             onMergeUnits(unit, nextUnit);
           }}
           title={t.buildings.merge}
-          className="absolute -right-2 top-1/2 z-20 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-slate-900 text-xs text-white group-hover:flex"
+          className="absolute -right-2 top-1/2 z-20 hidden h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-brand text-xs text-white group-hover:flex"
         >
           +
         </button>
@@ -193,7 +193,7 @@ function UnitCell({
                 onSplitUnit(unit);
               }}
               title={t.buildings.cellActions.split}
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] text-white shadow hover:bg-slate-900"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-700 text-[11px] text-white shadow hover:bg-brand"
             >
               ⤢
             </button>
@@ -460,7 +460,7 @@ export function ShakhmatkaGrid({
               onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
               className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all ${
                 active
-                  ? "border-slate-900 bg-slate-900 text-white"
+                  ? "border-slate-900 bg-brand text-white"
                   : "border-transparent text-slate-600 hover:bg-slate-100"
               }`}
             >

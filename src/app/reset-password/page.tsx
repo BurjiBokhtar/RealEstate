@@ -81,7 +81,7 @@ export default function ResetPasswordPage() {
             <button
               type="button"
               onClick={() => router.replace("/login")}
-              className="h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white transition-all hover:bg-slate-800 active:scale-[0.98]"
+              className="h-11 rounded-lg bg-brand text-sm font-semibold text-white transition-all hover:brightness-110 active:scale-[0.98]"
             >
               ← {t.login.title}
             </button>
@@ -117,7 +117,7 @@ export default function ResetPasswordPage() {
             <button
               type="submit"
               disabled={submitting || password.length < 6}
-              className="mt-1 h-11 rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:bg-slate-800 hover:shadow-lg active:scale-[0.98] disabled:opacity-50"
+              className="mt-1 h-11 rounded-lg bg-brand text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:brightness-110 hover:shadow-lg active:scale-[0.98] disabled:opacity-50"
             >
               {submitting ? t.login.resetDone : t.login.resetSubmit}
             </button>

@@ -232,7 +232,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => setLocale(l)}
                   className={`rounded-full px-3 py-1 font-medium transition-colors ${
                     locale === l
-                      ? "bg-slate-900 text-white"
+                      ? "bg-brand text-white"
                       : "text-slate-500 hover:bg-slate-100"
                   }`}
                 >

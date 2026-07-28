@@ -225,7 +225,7 @@ export function ContractPayments({
             type="button"
             onClick={handleRecordPayment}
             disabled={recording || !newAmount}
-            className="h-9 w-full rounded-lg bg-slate-900 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            className="h-9 w-full rounded-lg bg-brand text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             {recording ? t.common.loading : t.contracts.payments.record}
           </button>

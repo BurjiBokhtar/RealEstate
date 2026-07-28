@@ -372,9 +372,9 @@ export default function ClientDetailPage() {
                   {profileFields.map((f) => (
                     <div
                       key={f.label}
-                      className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition-colors hover:border-slate-200 hover:bg-slate-50"
+                      className="flex min-h-[60px] min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition-colors hover:border-brand-soft hover:bg-slate-50"
                     >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
                         {f.icon}
                       </span>
                       <div className="flex min-w-0 flex-col">
@@ -398,7 +398,7 @@ export default function ClientDetailPage() {
                   ))}
                   {client.notes && (
                     <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 sm:col-span-2 xl:col-span-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
                         {FIELD_ICONS.note}
                       </span>
                       <div className="flex min-w-0 flex-col">
@@ -525,7 +525,7 @@ export default function ClientDetailPage() {
                                 per-row print button here. */}
                             <Link
                               href={`/contracts/${c.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
+                              className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
                             >
                               {t.clients.purchases.open} →
                             </Link>

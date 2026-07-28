@@ -188,7 +188,7 @@ export default function ContractDetailPage() {
             </div>
             <Link
               href={`/contracts/${params.id}/print`}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
             >
               🖨 {t.contracts.print.button}
             </Link>

@@ -92,7 +92,7 @@ export default function ContractPrintPage() {
         <button
           type="button"
           onClick={() => printDocument()}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
+          className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98]"
         >
           {t.contracts.print.button}
         </button>
