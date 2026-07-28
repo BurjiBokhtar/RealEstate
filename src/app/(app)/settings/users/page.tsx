@@ -171,8 +171,8 @@ export default function UsersPage() {
       <h1 className="text-2xl font-semibold">{t.users.title}</h1>
 
       {/* How-to: the reliable path is create-in-Supabase, assign-here. */}
-      <div className="rounded-xl border border-[#5b3468]/25 bg-[#5b3468]/5 p-4 text-sm text-slate-600">
-        <p className="font-semibold text-[#5b3468]">{t.users.howToTitle}</p>
+      <div className="rounded-xl border border-brand-soft bg-brand-soft p-4 text-sm text-slate-600">
+        <p className="font-semibold text-brand">{t.users.howToTitle}</p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
           <li>{t.users.howTo1}</li>
           <li>{t.users.howTo2}</li>
@@ -181,7 +181,7 @@ export default function UsersPage() {
         <button
           type="button"
           onClick={() => setShowCreate((s) => !s)}
-          className="mt-2 text-xs font-medium text-[#5b3468] underline-offset-2 hover:underline"
+          className="mt-2 text-xs font-medium text-brand underline-offset-2 hover:underline"
         >
           {showCreate ? t.users.hideCreate : t.users.showCreate}
         </button>
@@ -227,7 +227,7 @@ export default function UsersPage() {
               type="button"
               onClick={handleCreate}
               disabled={creating || !email || password.length < 6}
-              className="h-10 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+              className="h-10 rounded-lg btn-brand px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
             >
               {creating ? t.users.creating : t.users.create}
             </button>
@@ -307,7 +307,7 @@ function UserRow({
     none: "border-slate-300 text-slate-400",
     manager: "border-sky-300 text-sky-700",
     director: "border-amber-300 text-amber-700",
-    admin: "border-[#5b3468]/40 text-[#5b3468]",
+    admin: "border-brand-soft text-brand",
   };
   return (
     <>
@@ -358,7 +358,7 @@ function UserRow({
                       onClick={() => onToggleBuilding(b.id)}
                       className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 ${
                         checked
-                          ? "border-[#5b3468] bg-[#5b3468] text-white"
+                          ? "border-brand bg-brand text-white"
                           : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
                       }`}
                     >

@@ -55,7 +55,7 @@ export function InstallPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-white/15 bg-[#1c1a3a] px-4 py-3 text-white shadow-2xl shadow-black/30 print:hidden sm:left-auto sm:right-4 sm:mx-0">
+    <div className="fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-white/15 bg-brand-strong px-4 py-3 text-white shadow-2xl shadow-black/30 print:hidden sm:left-auto sm:right-4 sm:mx-0">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon-192.png" alt="" className="h-10 w-10 shrink-0 rounded-lg" />
       <div className="min-w-0 flex-1">

@@ -141,7 +141,7 @@ export default function SettingsPage() {
             href="/settings/users"
             className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5b3468]/10 text-[#5b3468]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16 15.2c2.6.3 4.6 1.8 5.5 4.3"/></svg>
             </span>
             <span className="min-w-0 flex-1">

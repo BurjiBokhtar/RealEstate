@@ -66,7 +66,7 @@ export function ChangePasswordCard() {
           type="button"
           onClick={submit}
           disabled={saving || pw1.length < 6}
-          className="h-10 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
+          className="h-10 rounded-lg btn-brand px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
         >
           {saving ? "…" : t.password.save}
         </button>

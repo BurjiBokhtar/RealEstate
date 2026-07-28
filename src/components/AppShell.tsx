@@ -176,7 +176,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               >
                 <span
                   className={`shrink-0 transition-transform duration-200 ${
-                    active ? "text-[#5b3468]" : "group-hover:scale-110"
+                    active ? "text-brand" : "group-hover:scale-110"
                   }`}
                 >
                   {NAV_ICONS[item.key]}

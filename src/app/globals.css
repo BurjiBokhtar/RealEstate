@@ -90,6 +90,27 @@
   accent-color: #1d4ed8;
 }
 
+/* Brand accent for buttons/pills -- follows the company theme so switching to
+   green (etc.) recolours the primary buttons too, not just the hero. Printed
+   documents keep their own fixed plum and do NOT use these. */
+:root {
+  --brand: #5b3468;
+  --brand-strong: #1c1a3a;
+}
+:root[data-hero-theme="emerald"] { --brand: #0f766e; --brand-strong: #06302b; }
+:root[data-hero-theme="sunset"] { --brand: #be185d; --brand-strong: #3b0764; }
+:root[data-hero-theme="ocean"] { --brand: #1d4ed8; --brand-strong: #0c1e4a; }
+
+.btn-brand {
+  background-image: linear-gradient(to right, var(--brand-strong), var(--brand));
+}
+.bg-brand { background-color: var(--brand); }
+.bg-brand-strong { background-color: var(--brand-strong); }
+.text-brand { color: var(--brand); }
+.border-brand { border-color: var(--brand); }
+.bg-brand-soft { background-color: color-mix(in srgb, var(--brand) 8%, transparent); }
+.border-brand-soft { border-color: color-mix(in srgb, var(--brand) 28%, transparent); }
+
 ::selection {
   background: rgb(227 167 59 / 0.35);
   color: var(--atlas-indigo);

@@ -28,7 +28,7 @@ export function ContractTabs({
           href={tb.href}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all ${
             active === tb.key
-              ? "bg-[#1c1a3a] text-white shadow-sm"
+              ? "bg-brand-strong text-white shadow-sm"
               : "text-slate-500 hover:bg-slate-100"
           }`}
         >

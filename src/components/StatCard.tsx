@@ -15,7 +15,7 @@ const TONES: Record<Tone, { chip: string; value: string; ring: string }> = {
   rose: { chip: "bg-rose-100 text-rose-600", value: "text-rose-600", ring: "border-rose-200" },
   amber: { chip: "bg-amber-100 text-amber-600", value: "text-amber-600", ring: "border-amber-200" },
   indigo: { chip: "bg-indigo-100 text-indigo-600", value: "text-indigo-700", ring: "border-slate-200" },
-  plum: { chip: "bg-purple-100 text-[#5b3468]", value: "text-[#5b3468]", ring: "border-slate-200" },
+  plum: { chip: "bg-purple-100 text-brand", value: "text-brand", ring: "border-slate-200" },
 };
 
 export function StatCard({

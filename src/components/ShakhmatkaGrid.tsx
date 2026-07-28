@@ -485,7 +485,10 @@ export function ShakhmatkaGrid({
       {/* Blocks/entrances sit side by side as columns sharing the same floor
           rows, rather than stacked one under another -- lets you compare
           entrances at a glance the way a real shakhmatka is read. */}
-      <div className="overflow-x-auto">
+      {/* overflow-y-hidden: a horizontal-scroll container implicitly turns
+          overflow-y to auto, which spawns a second (phantom) vertical
+          scrollbar next to the page's own. Pin it so there's just one. */}
+      <div className="overflow-x-auto overflow-y-hidden">
         <div className="flex w-fit flex-col gap-2">
           {hasBlocks && (
             <div className="flex items-center gap-3">

@@ -515,28 +515,36 @@ export default function DashboardPage() {
           {t.dashboard.revenueByBuilding}
         </p>
         {revenueByBuilding.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
-              <tr>
-                <th className="pb-2 font-medium">{t.buildings.title}</th>
-                <th className="pb-2 font-medium">{t.dashboard.revenueByMonth}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {revenueByBuilding.map((b) => (
-                <tr key={b.id} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2">
-                    <Link href={`/buildings/${b.id}`} className="hover:underline">
-                      {b.name}
-                    </Link>
-                  </td>
-                  <td className="py-2 text-base font-medium text-slate-700">
-                    <MoneyPairValue value={{ tjs: b.tjs, usd: b.usd }} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          (() => {
+            // Bar length = this building's revenue relative to the top one
+            // (TJS + USD combined just for the visual proportion).
+            const peak = Math.max(...revenueByBuilding.map((b) => b.tjs + b.usd), 1);
+            return (
+              <div className="flex flex-col gap-3">
+                {revenueByBuilding.map((b) => (
+                  <div key={b.id} className="flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <Link
+                        href={`/buildings/${b.id}`}
+                        className="text-sm font-medium text-slate-700 hover:underline"
+                      >
+                        {b.name}
+                      </Link>
+                      <span className="text-sm text-slate-700">
+                        <MoneyPairValue value={{ tjs: b.tjs, usd: b.usd }} align="right" />
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-sky-400 transition-all duration-700"
+                        style={{ width: `${((b.tjs + b.usd) / peak) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}

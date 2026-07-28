@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { ReceiptDocument } from "@/components/ReceiptDocument";
+import { SendActions } from "@/components/SendActions";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -21,6 +22,7 @@ type ContractWithRelations = Contract & {
     name: string;
     area: number | null;
     floor: number | null;
+    block: string | null;
   } | null;
 };
 
@@ -41,7 +43,7 @@ export default function PaymentReceiptPage() {
     supabase
       .schema("crm")
       .from("contracts")
-      .select("*, client:clients(name), object:objects(id, building_id, name, area, floor)")
+      .select("*, client:clients(name), object:objects(id, building_id, name, area, floor, block)")
       .eq("id", params.id)
       .maybeSingle()
       .then(async ({ data }) => {
@@ -96,13 +98,16 @@ export default function PaymentReceiptPage() {
         >
           ← {t.common.back}
         </button>
-        <button
-          type="button"
-          onClick={() => printDocument()}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
-        >
-          🖨 {t.contracts.print.button}
-        </button>
+        <div className="flex items-center gap-2">
+          <SendActions contractId={params.id} kind="receipt" paymentId={params.paymentId} />
+          <button
+            type="button"
+            onClick={() => printDocument()}
+            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+          >
+            🖨 {t.contracts.print.button}
+          </button>
+        </div>
       </div>
 
       {/* Both copies share one A4 sheet, so each gets exactly half its

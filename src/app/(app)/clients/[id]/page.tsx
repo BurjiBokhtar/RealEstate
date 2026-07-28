@@ -384,7 +384,7 @@ export default function ClientDetailPage() {
                         {f.href && f.value ? (
                           <a
                             href={f.href}
-                            className="truncate text-sm font-semibold text-slate-800 hover:text-[#5b3468] hover:underline"
+                            className="truncate text-sm font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline"
                           >
                             {f.value}
                           </a>

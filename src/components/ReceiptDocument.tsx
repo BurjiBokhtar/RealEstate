@@ -12,7 +12,7 @@ export type ReceiptContractData = {
   paid_amount: number;
   currency: Currency;
   client: { name: string } | null;
-  object: { name: string; area: number | null; floor: number | null } | null;
+  object: { name: string; area: number | null; floor: number | null; block: string | null } | null;
 };
 
 // Same single accent as the contract document.
@@ -125,6 +125,7 @@ export function ReceiptDocument({
               nothing to the client. */}
           <p className="text-[11px] text-slate-500">
             {apartmentNumber != null ? `Хонаи №${apartmentNumber}` : (contract.object?.name ?? "—")}
+            {contract.object?.block && ` · ${contract.object.block}`}
             {contract.object?.area != null && ` · ${contract.object.area} м²`}
             {contract.object?.floor != null && ` · ${contract.object.floor}-ошёна`}
           </p>

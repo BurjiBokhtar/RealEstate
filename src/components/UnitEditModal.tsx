@@ -183,7 +183,7 @@ export function UnitEditModal({
           <span className="text-xs font-medium text-slate-500">
             {t.buildings.unitEdit.totalPrice}
           </span>
-          <span className="text-lg font-bold text-[#5b3468]">
+          <span className="text-lg font-bold text-brand">
             {totalPrice != null
               ? formatCurrency(totalPrice, unit.currency)
               : "—"}
@@ -194,7 +194,7 @@ export function UnitEditModal({
           type="button"
           onClick={save}
           disabled={saving}
-          className="h-10 rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+          className="h-10 rounded-lg btn-brand text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
           {saving ? "…" : t.buildings.unitEdit.save}
         </button>
@@ -230,7 +230,7 @@ export function UnitEditModal({
               type="button"
               onClick={copyToFloors}
               disabled={saving || !copyFrom || !copyTo}
-              className="h-10 rounded-lg border border-[#5b3468] px-3 text-sm font-medium text-[#5b3468] transition-all hover:bg-purple-50 active:scale-[0.98] disabled:opacity-40"
+              className="h-10 rounded-lg border border-brand px-3 text-sm font-medium text-brand transition-all hover:bg-purple-50 active:scale-[0.98] disabled:opacity-40"
             >
               {t.buildings.unitEdit.copyBtn}
             </button>

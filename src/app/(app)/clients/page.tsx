@@ -192,7 +192,7 @@ export default function ClientsPage() {
               onClick={() => setSort(opt.id)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                 sort === opt.id
-                  ? "bg-[#1c1a3a] text-white shadow-sm"
+                  ? "bg-brand-strong text-white shadow-sm"
                   : "text-slate-500 hover:bg-slate-100"
               }`}
             >

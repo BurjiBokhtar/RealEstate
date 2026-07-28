@@ -495,7 +495,7 @@ export function FloorUnitsBuilder({
           type="button"
           onClick={handleGenerate}
           disabled={generating || previewCount === 0}
-          className="rounded-lg bg-gradient-to-r from-[#1c1a3a] to-[#5b3468] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-40"
+          className="rounded-lg btn-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98] disabled:opacity-40"
         >
           {generating ? t.common.loading : t.buildings.floorBuilder.generate}
         </button>
