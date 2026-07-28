@@ -52,6 +52,24 @@ function formatArea(m2: number) {
   return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
 }
 
+// Occupancy segment shade: a tint of the company brand colour (darkest = sold),
+// with a readable text colour on top. Keeps the chart on-theme instead of a
+// fixed green/amber/red rainbow.
+function occShade(status: ObjectStatus): { background: string; color: string } {
+  const map: Record<string, { mix: number; dark: boolean }> = {
+    available: { mix: 16, dark: true },
+    reserved: { mix: 52, dark: false },
+    sold: { mix: 100, dark: false },
+    rented: { mix: 40, dark: false },
+    in_progress: { mix: 28, dark: true },
+  };
+  const m = map[status] ?? { mix: 40, dark: false };
+  return {
+    background: `color-mix(in srgb, var(--brand) ${m.mix}%, white)`,
+    color: m.dark ? "var(--brand-strong)" : "white",
+  };
+}
+
 type ContractRow = {
   object_id: string;
   amount: number;
@@ -483,20 +501,26 @@ export default function DashboardPage() {
                       {b.name}
                     </Link>
                     <span className="text-xs text-slate-400">
-                      <span className="font-semibold text-rose-500">{soldPct}%</span> продано ·{" "}
+                      <span className="font-semibold text-brand">{soldPct}%</span> продано ·{" "}
                       {b.total}
                     </span>
                   </div>
-                  <div className="flex h-6 w-full overflow-hidden rounded-lg bg-slate-100 text-[10px] font-semibold text-white">
+                  {/* Segments are shades of the company brand colour (darkest =
+                      sold), not a fixed rainbow, and the count sits in a
+                      readable colour on each shade. */}
+                  <div className="flex h-6 w-full overflow-hidden rounded-lg bg-slate-100 text-[11px] font-bold">
                     {(Object.keys(b.counts) as ObjectStatus[]).map((status) =>
                       b.counts[status] > 0 ? (
                         <div
                           key={status}
-                          style={{ width: `${(b.counts[status] / b.total) * 100}%` }}
-                          className={`flex items-center justify-center transition-all duration-200 hover:brightness-95 ${STATUS_COLORS[status].split(" ")[0]}`}
+                          style={{
+                            width: `${(b.counts[status] / b.total) * 100}%`,
+                            ...occShade(status),
+                          }}
+                          className="flex items-center justify-center transition-all duration-200 hover:brightness-95"
                           title={`${t.objects.statuses[status]}: ${b.counts[status]}`}
                         >
-                          {(b.counts[status] / b.total) * 100 > 8 ? b.counts[status] : ""}
+                          {(b.counts[status] / b.total) * 100 > 7 ? b.counts[status] : ""}
                         </div>
                       ) : null
                     )}
@@ -504,6 +528,18 @@ export default function DashboardPage() {
                 </div>
               );
             })}
+            {/* Legend: which brand shade means which status. */}
+            <div className="flex flex-wrap gap-3 pt-1 text-[11px] text-slate-500">
+              {(["available", "reserved", "sold"] as ObjectStatus[]).map((s) => (
+                <span key={s} className="flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm"
+                    style={{ background: occShade(s).background }}
+                  />
+                  {t.objects.statuses[s]}
+                </span>
+              ))}
+            </div>
           </div>
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
@@ -536,8 +572,11 @@ export default function DashboardPage() {
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-sky-400 transition-all duration-700"
-                        style={{ width: `${((b.tjs + b.usd) / peak) * 100}%` }}
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${((b.tjs + b.usd) / peak) * 100}%`,
+                          background: "var(--brand)",
+                        }}
                       />
                     </div>
                   </div>

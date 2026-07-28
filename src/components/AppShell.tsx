@@ -183,7 +183,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </span>
                 {t.nav[item.key]}
                 {active && (
-                  <span className="animate-nav-dot ml-auto h-1.5 w-1.5 rounded-full bg-[#e3a73b]" />
+                  <span className="animate-nav-dot ml-auto h-1.5 w-1.5 rounded-full bg-[var(--hero-3)]" />
                 )}
               </Link>
             );

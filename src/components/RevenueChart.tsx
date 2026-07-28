@@ -14,23 +14,33 @@ function compact(n: number): string {
   return String(Math.round(n));
 }
 
+// TJS uses the company brand colour; USD a lighter tint of the same brand, so
+// the chart stays on-theme (green/ocean/…) instead of a fixed sky/violet.
+const TJS_COLOR = "var(--brand)";
+const USD_COLOR = "color-mix(in srgb, var(--brand) 45%, white)";
+
 function Bar({
   frac,
-  gradient,
+  color,
   delay,
   highlighted,
 }: {
   frac: number;
-  gradient: string;
+  color: string;
   delay: number;
   highlighted: boolean;
 }) {
   return (
     <div
-      className={`w-full rounded-t-lg bg-gradient-to-t ${gradient} shadow-sm transition-[height,filter] duration-700 ease-out ${
-        highlighted ? "brightness-110 saturate-150" : ""
+      className={`w-full rounded-t-lg shadow-sm transition-[height,filter] duration-700 ease-out ${
+        highlighted ? "brightness-110" : ""
       }`}
-      style={{ height: `${frac * 100}%`, minHeight: frac > 0 ? 5 : 0, transitionDelay: `${delay}ms` }}
+      style={{
+        height: `${frac * 100}%`,
+        minHeight: frac > 0 ? 5 : 0,
+        transitionDelay: `${delay}ms`,
+        background: color,
+      }}
     />
   );
 }
@@ -57,11 +67,10 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-sky-500 to-sky-400" /> TJS
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: TJS_COLOR }} /> TJS
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400" />{" "}
-          USD
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: USD_COLOR }} /> USD
         </span>
       </div>
 
@@ -98,7 +107,7 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
                   {anyTjs && (
                     <Bar
                       frac={mounted ? d.tjs / maxTjs : 0}
-                      gradient="from-sky-600 to-sky-400"
+                      color={TJS_COLOR}
                       delay={idx * 55}
                       highlighted={isH}
                     />
@@ -106,7 +115,7 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
                   {anyUsd && (
                     <Bar
                       frac={mounted ? d.usd / maxUsd : 0}
-                      gradient="from-violet-600 to-fuchsia-400"
+                      color={USD_COLOR}
                       delay={idx * 55 + 25}
                       highlighted={isH}
                     />
@@ -116,14 +125,14 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
                 <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl group-hover:visible">
                   <p className="mb-1 font-semibold text-slate-700">{d.month}</p>
                   {d.tjs > 0 && (
-                    <p className="flex items-center gap-1.5 text-sky-600">
-                      <span className="h-2 w-2 rounded-full bg-sky-500" />
+                    <p className="flex items-center gap-1.5" style={{ color: TJS_COLOR }}>
+                      <span className="h-2 w-2 rounded-full" style={{ background: TJS_COLOR }} />
                       {formatCurrency(d.tjs, "TJS")}
                     </p>
                   )}
                   {d.usd > 0 && (
-                    <p className="flex items-center gap-1.5 text-violet-600">
-                      <span className="h-2 w-2 rounded-full bg-violet-500" />
+                    <p className="flex items-center gap-1.5" style={{ color: USD_COLOR }}>
+                      <span className="h-2 w-2 rounded-full" style={{ background: USD_COLOR }} />
                       {formatCurrency(d.usd, "USD")}
                     </p>
                   )}
