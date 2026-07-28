@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractPayments } from "@/components/ContractPayments";
+import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
 import { formatCurrency } from "@/lib/currency";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
@@ -88,6 +89,8 @@ export default function ContractPaymentsPage() {
       ) : (
         <BackLink href="/clients">{t.clients.backToList}</BackLink>
       )}
+
+      {contract && <ContractTabs id={params.id} active="payments" />}
 
       {!configured && <SetupNotice />}
 

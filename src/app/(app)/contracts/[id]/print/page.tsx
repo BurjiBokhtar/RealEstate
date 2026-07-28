@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { ContractDocument } from "@/components/ContractDocument";
+import { ContractTabs } from "@/components/ContractTabs";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -86,13 +87,16 @@ export default function ContractPrintPage() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6 print:py-0">
-      <button
-        type="button"
-        onClick={() => printDocument()}
-        className="w-fit self-end rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 print:hidden"
-      >
-        {t.contracts.print.button}
-      </button>
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <ContractTabs id={params.id} active="print" />
+        <button
+          type="button"
+          onClick={() => printDocument()}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md active:scale-[0.98]"
+        >
+          {t.contracts.print.button}
+        </button>
+      </div>
 
       {/* Each copy is a full document in its own right (not a shared half
           page like a receipt), so it gets its own printed page -- no cut

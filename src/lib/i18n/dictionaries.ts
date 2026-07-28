@@ -303,6 +303,7 @@ export const dictionaries = {
     contracts: {
       title: "Договоры",
       newContract: "Новый договор",
+      tabs: { overview: "Обзор", payments: "Платежи", print: "Печать" },
       empty: "Договоров пока нет",
       table: {
         number: "№",
@@ -1000,6 +1001,7 @@ export const dictionaries = {
     contracts: {
       title: "Шартномаҳо",
       newContract: "Шартномаи нав",
+      tabs: { overview: "Шарҳ", payments: "Пардохтҳо", print: "Чоп" },
       empty: "Ҳоло шартнома нест",
       table: {
         number: "№",

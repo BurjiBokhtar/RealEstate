@@ -10,6 +10,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
+import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency } from "@/lib/currency";
@@ -160,6 +161,8 @@ export default function ContractDetailPage() {
       ) : (
         <BackLink href="/clients">{t.clients.backToList}</BackLink>
       )}
+
+      {contract && <ContractTabs id={params.id} active="overview" />}
 
       {!configured && <SetupNotice />}
 
