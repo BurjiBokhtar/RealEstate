@@ -5,6 +5,7 @@ import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { SettingsProvider } from "@/lib/settings/SettingsProvider";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
+import { getBranding } from "@/lib/branding";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,14 +17,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "RealEstate CRM",
-  description: "CRM для риэлторских и строительных компаний",
-  // Installable app: manifest.ts serves the manifest; these cover the
-  // iOS/Safari side, which ignores it.
-  appleWebApp: { capable: true, title: "CRM", statusBarStyle: "black-translucent" },
-  icons: { apple: "/apple-icon.png" },
-};
+// Dynamic so the browser tab, the iOS home-screen icon and the app title all
+// follow the company the admin configured. iOS ignores the manifest, so its
+// icon has to come from this apple-touch-icon.
+export async function generateMetadata(): Promise<Metadata> {
+  const { name, logo } = await getBranding();
+  const appName = name || "RealEstate CRM";
+  return {
+    title: appName,
+    description: "CRM для риэлторских и строительных компаний",
+    appleWebApp: { capable: true, title: name || "CRM", statusBarStyle: "black-translucent" },
+    icons: { apple: logo || "/apple-icon.png" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#1c1a3a",

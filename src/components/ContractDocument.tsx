@@ -347,8 +347,15 @@ export function ContractDocument({
               repeating the numbers. */}
           <div
             style={{ borderColor: PLUM }}
-            className="mt-3 flex overflow-hidden rounded-lg border"
+            className="mt-3 overflow-hidden rounded-lg border break-inside-avoid"
           >
+            <p
+              style={{ borderColor: PLUM, color: PLUM }}
+              className="border-b px-3 py-1 text-[9px] font-bold uppercase tracking-[0.16em]"
+            >
+              Маълумоти аҳд
+            </p>
+            <div className="flex">
             <div
               style={{ borderColor: PLUM }}
               className="flex w-36 shrink-0 flex-col gap-2.5 border-r bg-slate-50 p-3 print:bg-white"
@@ -384,6 +391,7 @@ export function ContractDocument({
                 big
                 last
               />
+            </div>
             </div>
           </div>
 

@@ -243,9 +243,34 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-5 print:overflow-visible print:bg-white print:p-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-4 pb-24 sm:p-5 sm:pb-5 print:overflow-visible print:bg-white print:p-0">
           {children}
         </main>
+
+        {/* App-style bottom navigation on phones (the sidebar is desktop-only).
+            Fixed, safe-area aware, active tab in the theme colour. */}
+        <nav
+          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-slate-200 bg-white/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden"
+        >
+          {visibleNavItems.map((item) => {
+            const active =
+              item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            return (
+              <Link
+                key={item.key}
+                href={item.href}
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+                  active ? "text-brand" : "text-slate-400"
+                }`}
+              >
+                <span className={active ? "scale-110 transition-transform" : ""}>
+                  {NAV_ICONS[item.key]}
+                </span>
+                <span className="truncate">{t.nav[item.key]}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
