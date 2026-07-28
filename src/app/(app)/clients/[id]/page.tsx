@@ -520,20 +520,15 @@ export default function ClientDetailPage() {
                           </td>
                           <td className="px-3 py-3 text-center text-slate-600">{paidCount}</td>
                           <td className="px-5 py-3 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <Link
-                                href={`/contracts/${c.id}/print`}
-                                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
-                              >
-                                🖨 {t.clients.purchases.printContract}
-                              </Link>
-                              <Link
-                                href={`/contracts/${c.id}/payments`}
-                                className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
-                              >
-                                {t.clients.purchases.pay} →
-                              </Link>
-                            </div>
+                            {/* One entry point -- the contract page now holds
+                                печать / платежи as tabs, so no scattered
+                                per-row print button here. */}
+                            <Link
+                              href={`/contracts/${c.id}`}
+                              className="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
+                            >
+                              {t.clients.purchases.open} →
+                            </Link>
                           </td>
                         </tr>
                       );
