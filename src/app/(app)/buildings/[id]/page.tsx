@@ -198,6 +198,11 @@ export default function BuildingDetailPage() {
     const supabase = createClient();
     const before = { area: unit.area, price: unit.price, name: unit.name, span };
     const basePos = unit.position_in_floor ?? 0;
+    // Merging summed the cells' area/price into this one; splitting hands each
+    // resulting cell an even share, so the booking window keeps its area and
+    // price-per-m² instead of going blank on the new cells.
+    const perArea = unit.area != null ? Math.round((unit.area / span) * 100) / 100 : null;
+    const perPrice = unit.price != null ? Math.round((unit.price / span) * 100) / 100 : null;
     const newRows = [];
     for (let k = 1; k < span; k++) {
       newRows.push({
@@ -208,13 +213,29 @@ export default function BuildingDetailPage() {
         type: unit.type,
         status: "available" as const,
         currency: unit.currency,
+        area: perArea,
+        price: perPrice,
+        rooms: unit.rooms,
         floor: unit.floor,
         block: unit.block,
         position_in_floor: basePos + k,
         span: 1,
       });
     }
-    await supabase.schema("crm").from("objects").update({ span: 1 }).eq("id", unit.id);
+    // The cell that stays keeps span 1, its own even share, and a single-cell
+    // name (it was carrying the merged "№5-1-2" name).
+    await supabase
+      .schema("crm")
+      .from("objects")
+      .update({
+        span: 1,
+        area: perArea,
+        price: perPrice,
+        name: unit.block
+          ? `${unit.block} №${unit.floor}-${basePos}`
+          : `№${unit.floor}-${basePos}`,
+      })
+      .eq("id", unit.id);
     const { data: created } = await supabase
       .schema("crm")
       .from("objects")
@@ -225,7 +246,11 @@ export default function BuildingDetailPage() {
     pushUndo(t.buildings.cellActions.split, async () => {
       const sb = createClient();
       if (createdIds.length) await sb.schema("crm").from("objects").delete().in("id", createdIds);
-      await sb.schema("crm").from("objects").update({ span: before.span }).eq("id", unit.id);
+      await sb
+        .schema("crm")
+        .from("objects")
+        .update({ span: before.span, area: before.area, price: before.price, name: before.name })
+        .eq("id", unit.id);
     });
     setToast({ message: t.buildings.cellActions.splitDone, type: "success" });
   };

@@ -485,11 +485,13 @@ export function ShakhmatkaGrid({
       {/* Blocks/entrances sit side by side as columns sharing the same floor
           rows, rather than stacked one under another -- lets you compare
           entrances at a glance the way a real shakhmatka is read. */}
-      {/* overflow-y-hidden: a horizontal-scroll container implicitly turns
-          overflow-y to auto, which spawns a second (phantom) vertical
-          scrollbar next to the page's own. Pin it so there's just one. */}
-      <div className="overflow-x-auto overflow-y-hidden">
-        <div className="flex w-fit flex-col gap-2">
+      {/* The hover cards open downward (absolute); on the bottom row they used
+          to extend past the content and get clipped -- and that same overflow
+          spawned the phantom second vertical scrollbar. The pb-56 below leaves
+          room for the tallest card, so bottom-row tooltips show in full AND
+          nothing overflows vertically (one scrollbar, no clipping). */}
+      <div className="overflow-x-auto">
+        <div className="flex w-fit flex-col gap-2 pb-56">
           {hasBlocks && (
             <div className="flex items-center gap-3">
               <span className="w-16 shrink-0" />
