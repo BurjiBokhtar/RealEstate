@@ -125,16 +125,47 @@ function Var({ children }: { children: React.ReactNode }) {
   );
 }
 
-// The handful of facts staff actually check before signing, lifted into a
-// scannable panel. The legal paragraphs below still state every one of them
-// verbatim -- this is a summary, not a replacement.
-function DealFact({ label, value }: { label: string; value: React.ReactNode }) {
+// One clean key/value row inside the deal-summary panel (no table borders,
+// just a hairline divider). The legal clauses below reference this panel
+// instead of restating every number.
+function SummaryRow({
+  label,
+  value,
+  big,
+  last,
+}: {
+  label: string;
+  value: React.ReactNode;
+  big?: boolean;
+  last?: boolean;
+}) {
   return (
-    <div className="flex flex-col gap-0.5 px-3 py-1.5">
-      <span className="text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+    <div
+      className={`flex items-baseline justify-between gap-3 py-1.5 ${
+        last ? "" : "border-b border-slate-100"
+      }`}
+    >
+      <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
         {label}
       </span>
-      <span className="text-[12.5px] font-bold leading-tight">{value}</span>
+      <span
+        className={`text-right font-bold ${big ? "text-[15px]" : "text-[12.5px]"}`}
+        style={big ? { color: PLUM } : undefined}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// A tiny stacked stat for the accent rail (label above, value below).
+function RailStat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+        {label}
+      </p>
+      <p className="text-[13px] font-bold leading-tight">{value}</p>
     </div>
   );
 }
@@ -177,10 +208,21 @@ export function ContractDocument({
 
   const amountWords =
     contract.amount_words || amountToWordsTj(contract.amount, contract.currency);
-  const pricePerSqmWords =
-    pricePerSqm != null ? amountToWordsTj(pricePerSqm, contract.currency) : null;
 
   const aptNo = apartmentNumber != null ? String(apartmentNumber) : "____";
+  const paymentLabel =
+    contract.payment_type === "installment"
+      ? `Бо қисм · ${contract.installment_months ?? "__"} моҳ`
+      : contract.payment_type === "barter"
+        ? "Бартер"
+        : "Якбора";
+  const railSub = [
+    contract.object?.floor != null ? `ошёнаи ${contract.object.floor}` : null,
+    contract.object?.rooms != null ? `${contract.object.rooms} ҳуҷра` : null,
+    contract.object?.block ?? null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
 
   // Schedule summary derived from the ACTUAL rows, not recomputed from
@@ -299,21 +341,50 @@ export function ContractDocument({
             <span className="font-bold">ш. Бохтар</span>
           </div>
 
-          {/* Deal summary -- what changes every time, at a glance */}
+          {/* Deal summary ("Маълумоти аҳд") -- an accent rail with the flat
+              number + its key specs, and clean data rows beside it. Every
+              figure lives here; the clauses below reference it instead of
+              repeating the numbers. */}
           <div
             style={{ borderColor: PLUM }}
-            className="mt-2 grid grid-cols-2 divide-x divide-y rounded-lg border sm:grid-cols-4 sm:divide-y-0"
+            className="mt-3 flex overflow-hidden rounded-lg border"
           >
-            <DealFact label="Харидор" value={contract.client?.name ?? "____________"} />
-            <DealFact label="Хона" value={`№${aptNo}`} />
-            <DealFact
-              label="Масоҳат"
-              value={`${docArea(contract.object?.area ?? null)} м²`}
-            />
-            <DealFact
-              label="Маблағи умумӣ"
-              value={docAmount(contract.amount, contract.currency)}
-            />
+            <div
+              style={{ borderColor: PLUM }}
+              className="flex w-36 shrink-0 flex-col gap-2.5 border-r bg-slate-50 p-3 print:bg-white"
+            >
+              <div>
+                <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Хона
+                </p>
+                <p style={{ color: PLUM }} className="text-[30px] font-bold leading-none">
+                  №{aptNo}
+                </p>
+              </div>
+              {railSub && <p className="text-[10.5px] text-slate-600">{railSub}</p>}
+              <div className="mt-auto flex flex-col gap-2 pt-1">
+                <RailStat
+                  label="Масоҳат"
+                  value={`${docArea(contract.object?.area ?? null)} м²`}
+                />
+                {pricePerSqm != null && (
+                  <RailStat label="Нарх/м²" value={docAmount(pricePerSqm, contract.currency)} />
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 px-3.5 py-1.5">
+              <SummaryRow label="Фурӯшанда" value={`ҶДММ «${companyName}»`} />
+              <SummaryRow label="Харидор" value={contract.client?.name ?? "____________"} />
+              <SummaryRow label="Шиноснома" value={contract.client?.passport ?? "—"} />
+              <SummaryRow label="Навъи пардохт" value={paymentLabel} />
+              <SummaryRow
+                label="Маблағи умумӣ"
+                value={docAmount(contract.amount, contract.currency)}
+                big
+                last
+              />
+            </div>
           </div>
 
           <Section num={1} title="Тарафҳои аҳдкунанда" />
@@ -341,23 +412,12 @@ export function ContractDocument({
           </p>
           <p className="text-justify">
             2.2. «Фурӯшанда» имконият медиҳад, ки «Харидор» дар маблағгузории иншооти мазкур
-            ширкат намуда, барои ба моликияти худ ба расмият даровардани ҳуҷраи истиқоматӣ{" "}
-            {contract.object?.block ? `дар ${contract.object.block}, ` : ""}
-            дар ошёнаи <Var>{contract.object?.floor ?? "__"}</Var>-ум,{" "}
-            <Var>{contract.object?.rooms ?? "__"}</Var>-ҳуҷрагӣ, бо масоҳати{" "}
-            <Var>{docArea(contract.object?.area ?? null)} м²</Var> (масоҳати умумӣ мувофиқи лоиҳа{" "}
-            {docArea(contract.object?.area ?? null)} м²), ҳуҷраи <Var>№{aptNo}</Var>
-            {pricePerSqm != null && (
-              <>
-                , ки маблағи фурӯш барои 1 м² —{" "}
-                <Var>{docAmount(pricePerSqm, contract.currency)}</Var> ({pricePerSqmWords})
-                мебошад
-              </>
-            )}
-            , пардохт намояд. «Харидор» уҳдадор мешавад, ки маблағи умумии хонаи
-            истиқоматиро — <Var>{docAmount(contract.amount, contract.currency)}</Var> (
-            {amountWords}) — пардохт намуда, дар муҳлати пешбининамудаи шартномаи мазкур онро
-            минбаъд ба моликияти шахсии худ табдил дода, иҷро намояд.
+            ширкат намуда, ҳуҷраи истиқоматии <Var>№{aptNo}</Var>-ро, ки нишондиҳандаҳои он
+            (ошёна, шумораи ҳуҷраҳо, масоҳат ва нарх барои 1 м²) дар «Маълумоти аҳд»-и боло
+            оварда шудаанд, ба моликияти худ ба расмият дарорад. «Харидор» уҳдадор мешавад, ки
+            маблағи умумии дар «Маълумоти аҳд» нишондодашударо ({amountWords}) дар муҳлати
+            пешбининамудаи шартномаи мазкур пардохт намуда, минбаъд онро ба моликияти шахсии
+            худ табдил диҳад.
           </p>
           <p className="text-justify">
             2.3. «Фурӯшанда» бо анҷом расидани корҳои сохтмонӣ ва супоридани иншоот ба

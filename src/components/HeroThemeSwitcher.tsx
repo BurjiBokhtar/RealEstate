@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 // Hero themes: each just re-points the --hero-* gradient stops (see
 // globals.css). "atlas" is the default indigo→plum→saffron; the rest give the
-// dashboard a different mood without touching the quiet slate rest of the app.
+// dashboard a different mood. The choice is company-wide, set by an admin in
+// Settings -- there is no per-user override.
 export const HERO_THEMES = [
   { id: "atlas", label: "Атлас", swatch: ["#1c1a3a", "#5b3468", "#e3a73b"] },
   { id: "emerald", label: "Зумуррад", swatch: ["#06302b", "#0f766e", "#6ee7b7"] },
@@ -15,7 +14,7 @@ export const HERO_THEMES = [
 export type HeroThemeId = (typeof HERO_THEMES)[number]["id"];
 
 // Ornament patterns laid over the gradient (see globals.css). `css` is a tiny
-// inline preview used on the switcher buttons; the real overlay is applied via
+// inline preview used on the Settings buttons; the real overlay is applied via
 // data-hero-pattern on <html>.
 export const HERO_PATTERNS = [
   { id: "none", label: "Ҳамвор", css: "" },
@@ -48,103 +47,14 @@ export const HERO_PATTERNS = [
 
 export type HeroPatternId = (typeof HERO_PATTERNS)[number]["id"];
 
-const THEME_KEY = "heroTheme";
-const PATTERN_KEY = "heroPattern";
-
-// Apply the effective theme + pattern app-wide. A per-user local choice wins;
-// otherwise the company-wide value (from admin Settings) is used. Called from
-// AppShell so it survives reloads and reaches every page.
-export function applyHeroTheme(companyTheme?: string | null, companyPattern?: string | null) {
-  if (typeof window === "undefined") return;
-  const theme = window.localStorage.getItem(THEME_KEY) || companyTheme || "atlas";
+// Apply the company-wide theme + pattern app-wide. Called from AppShell with
+// the values loaded from Settings, so an admin change reaches every page
+// (accent-color too). No local storage / per-user override anymore.
+export function applyHeroTheme(theme?: string | null, pattern?: string | null) {
+  if (typeof document === "undefined") return;
   if (theme && theme !== "atlas") document.documentElement.dataset.heroTheme = theme;
   else delete document.documentElement.dataset.heroTheme;
 
-  const pattern = window.localStorage.getItem(PATTERN_KEY) || companyPattern || "none";
   if (pattern && pattern !== "none") document.documentElement.dataset.heroPattern = pattern;
   else delete document.documentElement.dataset.heroPattern;
-}
-
-export function HeroThemeSwitcher() {
-  const [theme, setTheme] = useState<HeroThemeId>("atlas");
-  const [pattern, setPattern] = useState<HeroPatternId>("none");
-
-  useEffect(() => {
-    setTheme((window.localStorage.getItem(THEME_KEY) as HeroThemeId) || "atlas");
-    setPattern((window.localStorage.getItem(PATTERN_KEY) as HeroPatternId) || "none");
-  }, []);
-
-  const chooseTheme = (id: HeroThemeId) => {
-    setTheme(id);
-    window.localStorage.setItem(THEME_KEY, id);
-    if (id === "atlas") delete document.documentElement.dataset.heroTheme;
-    else document.documentElement.dataset.heroTheme = id;
-  };
-
-  const choosePattern = (id: HeroPatternId) => {
-    setPattern(id);
-    window.localStorage.setItem(PATTERN_KEY, id);
-    if (id === "none") delete document.documentElement.dataset.heroPattern;
-    else document.documentElement.dataset.heroPattern = id;
-  };
-
-  return (
-    <div className="flex items-center gap-2.5">
-      {/* Colour themes */}
-      <div className="flex items-center gap-1.5">
-        {HERO_THEMES.map((th) => {
-          const isActive = theme === th.id;
-          return (
-            <button
-              key={th.id}
-              type="button"
-              onClick={() => chooseTheme(th.id)}
-              title={th.label}
-              aria-label={th.label}
-              aria-pressed={isActive}
-              className={`h-6 w-6 shrink-0 rounded-full ring-offset-1 ring-offset-transparent transition-all ${
-                isActive
-                  ? "scale-110 ring-2 ring-white"
-                  : "opacity-80 ring-1 ring-white/40 hover:opacity-100"
-              }`}
-              style={{
-                background: `linear-gradient(120deg, ${th.swatch[0]}, ${th.swatch[1]} 55%, ${th.swatch[2]})`,
-              }}
-            />
-          );
-        })}
-      </div>
-
-      <span className="h-4 w-px bg-white/25" />
-
-      {/* Ornament patterns */}
-      <div className="flex items-center gap-1.5">
-        {HERO_PATTERNS.map((pt) => {
-          const isActive = pattern === pt.id;
-          return (
-            <button
-              key={pt.id}
-              type="button"
-              onClick={() => choosePattern(pt.id)}
-              title={pt.label}
-              aria-label={pt.label}
-              aria-pressed={isActive}
-              className={`flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-white/10 transition-all ${
-                isActive
-                  ? "scale-110 border-white"
-                  : "border-white/30 opacity-80 hover:opacity-100"
-              }`}
-              style={
-                pt.css
-                  ? { backgroundImage: pt.css, backgroundColor: "rgba(255,255,255,0.12)" }
-                  : undefined
-              }
-            >
-              {pt.id === "none" && <span className="text-[9px] font-semibold text-white/70">—</span>}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
 }

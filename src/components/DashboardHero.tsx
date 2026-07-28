@@ -6,7 +6,6 @@ import type { Dictionary } from "@/lib/i18n/dictionaries";
 import type { Building } from "@/lib/buildings/types";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { CountUp } from "@/components/CountUp";
-import { HeroThemeSwitcher } from "@/components/HeroThemeSwitcher";
 import { useCountUp } from "@/lib/useCountUp";
 
 type PeriodFilter = "all" | "today" | "month" | "year";
@@ -102,7 +101,6 @@ export function DashboardHero({
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{brandName}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <HeroThemeSwitcher />
             <select
               value={selectedBuildingId}
               onChange={(e) => onBuildingChange(e.target.value)}
