@@ -5,10 +5,15 @@ import { formatCurrency } from "@/lib/currency";
 
 export type RevenueMonth = { month: string; tjs: number; usd: number };
 
-const PLOT = 150; // px height of the bar area
+const PLOT = 190; // px height of the bar area
 
-// A single value bar: gradient fill, rounded top, grows from the baseline on
-// mount with a small per-bar delay for a lively staggered reveal.
+// Compact axis/label money: 5 720 000 -> "5,7 млн", 384 000 -> "384 т".
+function compact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} млн`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)} т`;
+  return String(Math.round(n));
+}
+
 function Bar({
   frac,
   gradient,
@@ -22,22 +27,18 @@ function Bar({
 }) {
   return (
     <div
-      className={`w-full max-w-[16px] rounded-t-md bg-gradient-to-t ${gradient} transition-[height,filter] duration-700 ease-out ${
+      className={`w-full rounded-t-lg bg-gradient-to-t ${gradient} shadow-sm transition-[height,filter] duration-700 ease-out ${
         highlighted ? "brightness-110 saturate-150" : ""
       }`}
-      style={{
-        height: `${frac * 100}%`,
-        minHeight: frac > 0 ? 4 : 0,
-        transitionDelay: `${delay}ms`,
-      }}
+      style={{ height: `${frac * 100}%`, minHeight: frac > 0 ? 5 : 0, transitionDelay: `${delay}ms` }}
     />
   );
 }
 
-// A modern grouped bar chart. TJS and USD live on independent scales (millions
-// vs thousands would otherwise flatten USD to nothing), each normalised to its
-// own peak, so both series are actually readable. Dashed gridlines, a hover
-// spotlight and a rich tooltip make it a real chart, not a row of blue sticks.
+// A bold, space-filling grouped bar chart. Bars fill their columns (no thin
+// sticks), each column labelled with its value, TJS and USD each on their own
+// scale so both read clearly. Gridlines, hover spotlight and a tooltip round
+// it out.
 export function RevenueChart({ data }: { data: RevenueMonth[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -52,67 +53,67 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
   const anyTjs = data.some((d) => d.tjs > 0);
   const anyUsd = data.some((d) => d.usd > 0);
 
-  const peakTjs = data.reduce((a, b) => (b.tjs > a.tjs ? b : a), data[0]);
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
-        <div className="flex items-center gap-4">
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-sky-500 to-sky-400" /> TJS
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400" />{" "}
-            USD
-          </span>
-        </div>
-        {anyTjs && peakTjs && (
-          <span className="text-[11px] text-slate-400">
-            пик · {formatCurrency(peakTjs.tjs, "TJS")}
-          </span>
-        )}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-4 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-sky-500 to-sky-400" /> TJS
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-gradient-to-t from-violet-500 to-fuchsia-400" />{" "}
+          USD
+        </span>
       </div>
 
       <div className="relative" style={{ height: PLOT }}>
         {/* Dashed gridlines behind the bars. */}
         <div className="absolute inset-0 flex flex-col justify-between">
-          {[0, 1, 2, 3, 4].map((i) => (
+          {[0, 1, 2, 3].map((i) => (
             <div key={i} className="border-t border-dashed border-slate-100" />
           ))}
         </div>
 
-        {/* Bars. */}
-        <div className="absolute inset-0 flex items-end gap-2 sm:gap-3">
+        <div className="absolute inset-0 flex items-end gap-1.5 sm:gap-2.5">
           {data.map((d, idx) => {
             const isH = hovered === d.month;
+            const primary = d.tjs >= 1 ? compact(d.tjs) : d.usd >= 1 ? compact(d.usd) : "";
             return (
               <div
                 key={d.month}
-                className="group relative flex h-full flex-1 items-end justify-center rounded-t-md transition-colors hover:bg-slate-50/70"
+                className="group relative flex h-full flex-1 flex-col justify-end rounded-t-lg px-0.5 transition-colors hover:bg-slate-50"
                 onMouseEnter={() => setHovered(d.month)}
                 onMouseLeave={() => setHovered(null)}
               >
-                <div className="flex h-full w-full items-end justify-center gap-1.5">
+                {/* value label above the column */}
+                {primary && (
+                  <span
+                    className={`mb-1 text-center text-[10px] font-semibold tabular-nums transition-colors ${
+                      isH ? "text-slate-800" : "text-slate-400"
+                    }`}
+                  >
+                    {primary}
+                  </span>
+                )}
+                <div className="flex h-full w-full items-end justify-center gap-1">
                   {anyTjs && (
                     <Bar
                       frac={mounted ? d.tjs / maxTjs : 0}
-                      gradient="from-sky-500 to-sky-400"
-                      delay={idx * 60}
+                      gradient="from-sky-600 to-sky-400"
+                      delay={idx * 55}
                       highlighted={isH}
                     />
                   )}
                   {anyUsd && (
                     <Bar
                       frac={mounted ? d.usd / maxUsd : 0}
-                      gradient="from-violet-500 to-fuchsia-400"
-                      delay={idx * 60 + 30}
+                      gradient="from-violet-600 to-fuchsia-400"
+                      delay={idx * 55 + 25}
                       highlighted={isH}
                     />
                   )}
                 </div>
 
-                {/* Tooltip */}
-                <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl group-hover:visible">
+                <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl group-hover:visible">
                   <p className="mb-1 font-semibold text-slate-700">{d.month}</p>
                   {d.tjs > 0 && (
                     <p className="flex items-center gap-1.5 text-sky-600">
@@ -134,8 +135,7 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
         </div>
       </div>
 
-      {/* Month labels */}
-      <div className="flex gap-2 sm:gap-3">
+      <div className="flex gap-1.5 sm:gap-2.5">
         {data.map((d) => (
           <span
             key={d.month}

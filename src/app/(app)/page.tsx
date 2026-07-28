@@ -471,31 +471,39 @@ export default function DashboardPage() {
         </p>
         {occupancy.length > 0 ? (
           <div className="flex flex-col gap-3">
-            {occupancy.map((b) => (
-              <div key={b.id} className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-sm">
-                  <Link
-                    href={`/buildings/${b.id}`}
-                    className="font-medium text-slate-700 hover:underline"
-                  >
-                    {b.name}
-                  </Link>
-                  <span className="text-slate-400">{b.total}</span>
+            {occupancy.map((b) => {
+              const soldPct = b.total ? Math.round((b.counts.sold / b.total) * 100) : 0;
+              return (
+                <div key={b.id} className="flex flex-col gap-1.5">
+                  <div className="flex items-baseline justify-between text-sm">
+                    <Link
+                      href={`/buildings/${b.id}`}
+                      className="font-medium text-slate-700 hover:underline"
+                    >
+                      {b.name}
+                    </Link>
+                    <span className="text-xs text-slate-400">
+                      <span className="font-semibold text-rose-500">{soldPct}%</span> продано ·{" "}
+                      {b.total}
+                    </span>
+                  </div>
+                  <div className="flex h-6 w-full overflow-hidden rounded-lg bg-slate-100 text-[10px] font-semibold text-white">
+                    {(Object.keys(b.counts) as ObjectStatus[]).map((status) =>
+                      b.counts[status] > 0 ? (
+                        <div
+                          key={status}
+                          style={{ width: `${(b.counts[status] / b.total) * 100}%` }}
+                          className={`flex items-center justify-center transition-all duration-200 hover:brightness-95 ${STATUS_COLORS[status].split(" ")[0]}`}
+                          title={`${t.objects.statuses[status]}: ${b.counts[status]}`}
+                        >
+                          {(b.counts[status] / b.total) * 100 > 8 ? b.counts[status] : ""}
+                        </div>
+                      ) : null
+                    )}
+                  </div>
                 </div>
-                <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-                  {(Object.keys(b.counts) as ObjectStatus[]).map((status) =>
-                    b.counts[status] > 0 ? (
-                      <div
-                        key={status}
-                        style={{ width: `${(b.counts[status] / b.total) * 100}%` }}
-                        className={`transition-all duration-200 hover:brightness-95 ${STATUS_COLORS[status].split(" ")[0]}`}
-                        title={`${t.objects.statuses[status]}: ${b.counts[status]}`}
-                      />
-                    ) : null
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
