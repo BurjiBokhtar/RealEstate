@@ -825,6 +825,25 @@ create trigger trg_audit_delete_objects
 before delete on crm.objects
 for each row execute function crm.log_delete('object');
 
+-- Auto-prune: keep only the last 14 days of the journal so it never piles up.
+-- See migration 035.
+create index if not exists audit_log_created_at_idx on crm.audit_log (created_at);
+create or replace function crm.prune_audit_log()
+returns trigger
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+begin
+  delete from crm.audit_log where created_at < now() - interval '14 days';
+  return null;
+end;
+$$;
+drop trigger if exists trg_prune_audit_log on crm.audit_log;
+create trigger trg_prune_audit_log
+after insert on crm.audit_log
+for each statement execute function crm.prune_audit_log();
+
 drop policy if exists "Authenticated access to clients" on crm.clients;
 drop policy if exists "clients_select" on crm.clients;
 drop policy if exists "clients_insert" on crm.clients;

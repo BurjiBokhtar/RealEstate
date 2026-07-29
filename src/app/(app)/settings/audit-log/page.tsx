@@ -19,17 +19,6 @@ type AuditEntry = {
 
 type StaffUser = { id: string; email: string | null };
 
-async function authHeaders() {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return {
-    "Content-Type": "application/json",
-    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-  };
-}
-
 // A short human label for the affected row, pulled from whatever field the
 // snapshot happens to have (name for clients, number for contracts, ...) --
 // so the log reads as "клиент Иванов" instead of a bare UUID. For updates,
@@ -84,12 +73,14 @@ export default function AuditLogPage() {
     }
     setEntries((data ?? []) as AuditEntry[]);
 
+    // Resolve actor ids to e-mails via the list_staff RPC. It's a SECURITY
+    // DEFINER function (no service key needed), so this works even when the
+    // admin API route / service key isn't configured -- which was why every
+    // row showed a raw id instead of who did it.
     try {
-      const res = await fetch("/api/admin/users", { headers: await authHeaders() });
-      if (res.ok) {
-        const { users } = (await res.json()) as { users: StaffUser[] };
-        setActors(new Map(users.map((u) => [u.id, u.email ?? t.auditLog.unknownActor])));
-      }
+      const { data: staff } = await supabase.schema("crm").rpc("list_staff");
+      const users = (staff ?? []) as StaffUser[];
+      setActors(new Map(users.map((u) => [u.id, u.email ?? t.auditLog.unknownActor])));
     } catch {
       // Non-fatal -- entries still show with a raw id if this fails.
     }
