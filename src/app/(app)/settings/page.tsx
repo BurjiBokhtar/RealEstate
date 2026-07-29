@@ -50,6 +50,24 @@ export default function SettingsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  // Buildings for the "documentation PDF" picker.
+  const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
+  const [reportBuilding, setReportBuilding] = useState("");
+
+  useEffect(() => {
+    if (role !== "admin" || !configured) return;
+    const supabase = createClient();
+    supabase
+      .schema("crm")
+      .from("buildings")
+      .select("id, name")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        const rows = (data ?? []) as Array<{ id: string; name: string }>;
+        setBuildings(rows);
+        setReportBuilding((prev) => prev || rows[0]?.id || "");
+      });
+  }, [role, configured]);
 
   // Loaded separately from the app-wide SettingsProvider, which deliberately
   // never fetches sms_api_key (it's mounted for every signed-in user
@@ -364,6 +382,36 @@ export default function SettingsPage() {
               ))}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Documentation PDF: pick a ЖК and open its full report (shakhmatka +
+          sales + clients), printable / savable as PDF. */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="text-sm font-semibold text-slate-700">{t.settings.backup.title}</p>
+        <p className="mt-0.5 text-xs text-slate-400">{t.settings.backup.hint}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <select
+            value={reportBuilding}
+            onChange={(e) => setReportBuilding(e.target.value)}
+            className={FIELD_CLASS + " max-w-xs flex-1"}
+          >
+            {buildings.length === 0 && <option value="">—</option>}
+            {buildings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+          <Link
+            href={reportBuilding ? `/buildings/${reportBuilding}/report` : "#"}
+            aria-disabled={!reportBuilding}
+            className={`btn-brand inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98] ${
+              reportBuilding ? "" : "pointer-events-none opacity-40"
+            }`}
+          >
+            📄 {t.settings.backup.open}
+          </Link>
         </div>
       </div>
 
