@@ -167,7 +167,7 @@ export function ContractBookingModal({
     : t.buildings.bookUnit;
 
   return (
-    <Modal title={title} onClose={onClose} size="lg">
+    <Modal title={title} onClose={onClose} size="lg" guardClose={!preview}>
       {!preview ? (
         <>
           <ContractForm

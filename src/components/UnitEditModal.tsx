@@ -127,7 +127,7 @@ export function UnitEditModal({
 
   if (!canEdit) {
     return (
-      <Modal title={title} onClose={onClose}>
+      <Modal title={title} onClose={onClose} guardClose>
         <div className="flex flex-col gap-3 text-sm">
           <p className="text-xs text-slate-400">{t.buildings.viewOnlyHint}</p>
           <Row label={t.buildings.hover.rooms} value={unit.rooms ?? "—"} />
@@ -138,7 +138,7 @@ export function UnitEditModal({
   }
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose} guardClose>
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-3 gap-3">
           <label className="flex flex-col gap-1 text-xs">

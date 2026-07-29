@@ -718,6 +718,7 @@ export const dictionaries = {
       loading: "Загрузка...",
       error: "Произошла ошибка",
       back: "Назад",
+      discardConfirm: "Закрыть окно? Введённые данные не сохранятся.",
       supabaseNotConfigured:
         "Supabase не настроен. Добавьте NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY в .env.local",
       uploadErrorType: "Недопустимый тип файла. Разрешены изображения и PDF.",
@@ -1442,6 +1443,7 @@ export const dictionaries = {
       loading: "Боркунӣ...",
       error: "Хатогӣ рух дод",
       back: "Бозгашт",
+      discardConfirm: "Тирезаро мебандед? Маълумоти воридшуда захира намешавад.",
       supabaseNotConfigured:
         "Supabase танзим нашудааст. NEXT_PUBLIC_SUPABASE_URL ва NEXT_PUBLIC_SUPABASE_ANON_KEY-ро ба .env.local илова кунед",
       uploadErrorType: "Навъи файл иҷозат дода намешавад. Танҳо расм ва PDF мумкин аст.",

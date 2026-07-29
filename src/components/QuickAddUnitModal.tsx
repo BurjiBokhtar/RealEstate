@@ -73,7 +73,7 @@ export function QuickAddUnitModal({
   };
 
   return (
-    <Modal title={`${t.buildings.addUnitHere} — ${name}`} onClose={onClose}>
+    <Modal title={`${t.buildings.addUnitHere} — ${name}`} onClose={onClose} guardClose>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {siblingUnit && (
           <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
