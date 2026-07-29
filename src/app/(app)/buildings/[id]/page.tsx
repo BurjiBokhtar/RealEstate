@@ -431,6 +431,13 @@ export default function BuildingDetailPage() {
                   {editMode ? t.buildings.editModeOn : t.buildings.editMode}
                 </button>
                 <Link
+                  href={`/buildings/${building.id}/report`}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">📄</span>
+                  {t.buildings.report.savePdf}
+                </Link>
+                <Link
                   href={`/buildings/${building.id}/edit`}
                   className="inline-flex items-center gap-2 rounded-lg btn-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
                 >

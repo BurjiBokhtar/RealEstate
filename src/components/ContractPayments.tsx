@@ -10,9 +10,6 @@ import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
-const FIELD_CLASS =
-  "h-9 rounded-lg border border-slate-300 px-2.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
-
 function addMonths(dateStr: string, months: number) {
   const d = new Date(dateStr);
   d.setMonth(d.getMonth() + months);
@@ -195,29 +192,47 @@ export function ContractPayments({
           it gets the prominent spot at the top, not buried under a table.
           Directors watch, they don't take money. */}
       {!readOnly && (
-        <div className="flex flex-col gap-2 rounded-lg bg-slate-50 p-3">
-          <p className="text-xs font-medium text-slate-500">
+        // The everyday money action -- deliberately loud so it's the first
+        // thing the eye lands on: a brand-tinted card, big amount field, bold
+        // gradient button.
+        <div
+          className="relative flex flex-col gap-3 overflow-hidden rounded-xl border-2 border-brand-soft p-4 shadow-sm"
+          style={{
+            background:
+              "linear-gradient(135deg, color-mix(in srgb, var(--brand) 10%, white), color-mix(in srgb, var(--brand) 3%, white))",
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-10"
+            style={{ background: "var(--brand)" }}
+          />
+          <p className="relative flex items-center gap-2 text-sm font-bold text-brand">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-sm text-white shadow-sm">
+              +
+            </span>
             {t.contracts.payments.recordTitle}
           </p>
-          <div className="flex flex-wrap items-end gap-2">
+          <div className="relative flex flex-wrap items-end gap-2">
             <label className="flex flex-1 flex-col gap-1 text-xs">
-              <span className="text-slate-500">{t.contracts.payments.amount}</span>
+              <span className="font-semibold text-slate-600">{t.contracts.payments.amount}</span>
               <input
                 type="number"
                 min="0"
                 step="0.01"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
-                className={`${FIELD_CLASS} w-full`}
+                placeholder="0"
+                className="h-12 w-full rounded-lg border-2 border-slate-200 bg-white px-3 text-lg font-bold text-slate-900 transition-colors focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--brand)_25%,transparent)]"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-500">{t.contracts.payments.dueDate}</span>
+              <span className="font-semibold text-slate-600">{t.contracts.payments.dueDate}</span>
               <input
                 type="date"
                 value={newDate}
                 onChange={(e) => setNewDate(e.target.value)}
-                className={FIELD_CLASS}
+                className="h-12 rounded-lg border-2 border-slate-200 bg-white px-2.5 text-sm transition-colors focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--brand)_25%,transparent)]"
               />
             </label>
           </div>
@@ -225,11 +240,11 @@ export function ContractPayments({
             type="button"
             onClick={handleRecordPayment}
             disabled={recording || !newAmount}
-            className="h-9 w-full rounded-lg bg-brand text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            className="btn-brand relative h-12 w-full rounded-lg text-base font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:translate-y-0 active:scale-[0.99] disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            {recording ? t.common.loading : t.contracts.payments.record}
+            {recording ? t.common.loading : `💵 ${t.contracts.payments.record}`}
           </button>
-          {recordError && <p className="text-xs text-red-600">{recordError}</p>}
+          {recordError && <p className="relative text-xs font-medium text-red-600">{recordError}</p>}
         </div>
       )}
 

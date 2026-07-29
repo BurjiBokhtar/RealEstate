@@ -21,7 +21,21 @@ type ContractRow = {
   paid_amount: number;
   currency: Currency;
   status: string;
+  created_by: string | null;
   client: { id: string; name: string; phone: string | null } | null;
+};
+
+type PaymentRow = {
+  id: string;
+  amount: number;
+  paid_date: string | null;
+  due_date: string;
+  contract: {
+    object_id: string;
+    currency: Currency;
+    number: string | null;
+    client: { name: string } | null;
+  } | null;
 };
 
 type Pair = { tjs: number; usd: number };
@@ -61,6 +75,10 @@ export default function BuildingReportPage() {
   const [units, setUnits] = useState<PropertyObject[]>([]);
   const [contracts, setContracts] = useState<ContractRow[]>([]);
   const [paidByCurrency, setPaidByCurrency] = useState<Pair>({ tjs: 0, usd: 0 });
+  const [payments, setPayments] = useState<PaymentRow[]>([]);
+  // created_by -> display name (email). Empty for non-admins (list_staff is
+  // admin-gated), which quietly hides the manager section for them.
+  const [staff, setStaff] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const supabase = createClient();
@@ -86,29 +104,41 @@ export default function BuildingReportPage() {
       const { data: c } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("id, object_id, number, amount, paid_amount, currency, status, client:clients(id, name, phone)")
+        .select(
+          "id, object_id, number, amount, paid_amount, currency, status, created_by, client:clients(id, name, phone)"
+        )
         .in("object_id", ids);
       const contractRows = ((c ?? []) as unknown as ContractRow[]).filter(
         (x) => x.status !== "cancelled"
       );
       setContracts(contractRows);
 
-      // Actual money received = paid schedule rows.
+      // Paid schedule rows: both the "received" total and the receipt history.
       const { data: pays } = await supabase
         .schema("crm")
         .from("contract_payments")
-        .select("amount, contract:contracts(currency, object_id)")
+        .select(
+          "id, amount, paid_date, due_date, contract:contracts(object_id, currency, number, client:clients(name))"
+        )
         .eq("paid", true);
+      const payRows = ((pays ?? []) as unknown as PaymentRow[]).filter(
+        (p) => p.contract && ids.includes(p.contract.object_id)
+      );
       const paid: Pair = { tjs: 0, usd: 0 };
-      for (const p of (pays ?? []) as unknown as Array<{
-        amount: number;
-        contract: { currency: Currency; object_id: string } | null;
-      }>) {
-        if (p.contract && ids.includes(p.contract.object_id)) {
-          addPair(paid, p.contract.currency, p.amount);
-        }
+      for (const p of payRows) {
+        if (p.contract) addPair(paid, p.contract.currency, p.amount);
       }
       setPaidByCurrency(paid);
+      payRows.sort((a, b) => (b.paid_date ?? b.due_date).localeCompare(a.paid_date ?? a.due_date));
+      setPayments(payRows);
+
+      // Staff names for the manager breakdown (admin-only RPC; harmless if empty).
+      const { data: staffRows } = await supabase.schema("crm").rpc("list_staff");
+      const map: Record<string, string> = {};
+      for (const s of (staffRows ?? []) as Array<{ id: string; email: string }>) {
+        map[s.id] = s.email;
+      }
+      setStaff(map);
     })();
   }, [params.id]);
 
@@ -171,6 +201,24 @@ export default function BuildingReportPage() {
     }
     return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [contracts]);
+
+  // Sales per manager (whoever created the contract), within this building.
+  const managerStats = useMemo(() => {
+    const m = new Map<string, { name: string; deals: number; amount: Pair }>();
+    for (const c of contracts) {
+      const key = c.created_by ?? "—";
+      const e = m.get(key) ?? {
+        name: c.created_by ? staff[c.created_by] ?? "—" : "—",
+        deals: 0,
+        amount: { tjs: 0, usd: 0 },
+      };
+      e.deals += 1;
+      addPair(e.amount, c.currency, c.amount);
+      m.set(key, e);
+    }
+    return [...m.values()].sort((a, b) => b.deals - a.deals);
+  }, [contracts, staff]);
+  const showManagers = managerStats.some((m) => m.name !== "—");
 
   if (building === undefined) return <p className="text-slate-400">{t.common.loading}</p>;
   if (building === null) return <p className="text-slate-400">{t.buildings.notFound}</p>;
@@ -360,6 +408,67 @@ export default function BuildingReportPage() {
                     <td className={td}>{cl.name}</td>
                     <td className={td}>{cl.phone || "—"}</td>
                     <td className={td}>{cl.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {/* Manager breakdown (admin only -- staff map is empty otherwise) */}
+        {showManagers && (
+          <>
+            <h2 className="mt-5 text-[13px] font-bold uppercase tracking-wide" style={{ color: PLUM }}>
+              {t.buildings.report.managers}
+            </h2>
+            <table className="mt-2 w-full border-collapse text-[10px]">
+              <thead>
+                <tr style={{ background: "#faf6fc" }}>
+                  <th className={th}>{t.buildings.report.manager}</th>
+                  <th className={th}>{t.buildings.report.deals}</th>
+                  <th className={th}>{t.contracts.form.amount}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {managerStats.map((m, i) => (
+                  <tr key={i}>
+                    <td className={td}>{m.name}</td>
+                    <td className={td}>{m.deals}</td>
+                    <td className={td}>{pairText(m.amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {/* Payment history -- every receipt taken on this building */}
+        {payments.length > 0 && (
+          <>
+            <h2
+              className="mt-5 text-[13px] font-bold uppercase tracking-wide print:break-before-page"
+              style={{ color: PLUM }}
+            >
+              {t.buildings.report.payments} ({payments.length})
+            </h2>
+            <table className="mt-2 w-full border-collapse text-[10px]">
+              <thead>
+                <tr style={{ background: "#faf6fc" }}>
+                  <th className={th}>{t.buildings.report.receiptDate}</th>
+                  <th className={th}>№</th>
+                  <th className={th}>{t.buildings.report.buyer}</th>
+                  <th className={th}>{t.contracts.payments.amount}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id}>
+                    <td className={td}>{p.paid_date ?? p.due_date}</td>
+                    <td className={td}>{p.contract?.number ?? "—"}</td>
+                    <td className={td}>{p.contract?.client?.name ?? "—"}</td>
+                    <td className={`${td} font-semibold`}>
+                      {formatCurrency(p.amount, p.contract?.currency ?? "TJS")}
+                    </td>
                   </tr>
                 ))}
               </tbody>

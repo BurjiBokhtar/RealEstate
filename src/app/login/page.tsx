@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LoginScene } from "@/components/LoginScene";
+import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 
 const FIELD_CLASS =
   "h-11 w-full rounded-lg border border-slate-300 px-3.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
@@ -39,6 +40,9 @@ export default function LoginPage() {
             name: row.company_name ?? null,
             logo: row.company_logo_url ?? null,
           });
+          // Paint the login page in the company's chosen theme too (the
+          // AppShell that normally applies it isn't mounted here).
+          applyHeroTheme(row.hero_theme ?? null, row.hero_pattern ?? null);
         }
       });
   }, []);
@@ -86,7 +90,15 @@ export default function LoginPage() {
           </div>
         </div>
         <p className="text-xs tracking-wide text-white/60">
-          developed by <span className="font-semibold text-white/80">IMRON</span>
+          developed by{" "}
+          <a
+            href="https://www.instagram.com/iammirzozoda"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-white/80 underline-offset-2 transition-colors hover:text-white hover:underline"
+          >
+            IMRON
+          </a>
         </p>
       </div>
 
@@ -192,7 +204,15 @@ export default function LoginPage() {
       {/* Credit -- shown under the form on phones (the desktop copy lives in
           the brand panel). */}
       <p className="mt-6 text-xs tracking-wide text-white/70 lg:hidden">
-        developed by <span className="font-semibold text-white/90">IMRON</span>
+        developed by{" "}
+        <a
+          href="https://www.instagram.com/iammirzozoda"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-white/90 underline-offset-2 transition-colors hover:underline"
+        >
+          IMRON
+        </a>
       </p>
       </div>
     </div>

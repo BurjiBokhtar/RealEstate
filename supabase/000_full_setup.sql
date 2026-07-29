@@ -1769,14 +1769,16 @@ end $$;
 -- Файл идемпотентный — можно запускать повторно.
 -- ============================================================
 
+-- Returns the company hero theme/pattern too, so the pre-auth login page can
+-- paint itself in the company theme. See migration 034.
 create or replace function crm.public_branding()
-returns table (company_name text, company_logo_url text)
+returns table (company_name text, company_logo_url text, hero_theme text, hero_pattern text)
 language sql
 security definer
 set search_path = crm, public
 stable
 as $$
-  select s.company_name, s.company_logo_url
+  select s.company_name, s.company_logo_url, s.hero_theme, s.hero_pattern
   from crm.settings s
   limit 1;
 $$;
