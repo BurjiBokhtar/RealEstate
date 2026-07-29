@@ -1770,7 +1770,10 @@ end $$;
 -- ============================================================
 
 -- Returns the company hero theme/pattern too, so the pre-auth login page can
--- paint itself in the company theme. See migration 034.
+-- paint itself in the company theme. See migration 034. DROP first because the
+-- return type changed (name+logo -> +theme+pattern).
+drop function if exists crm.public_branding();
+
 create or replace function crm.public_branding()
 returns table (company_name text, company_logo_url text, hero_theme text, hero_pattern text)
 language sql
