@@ -593,8 +593,21 @@ export function ShakhmatkaGrid({
               });
             if (group.length === 0) return null;
             const meta = TYPE_META[type];
+            // Split each type by block/entrance so two blocks' commercial
+            // units don't run together into one row with restarting numbers
+            // (М1…М26, then М1… again). Each block gets its own labelled grid.
+            const blockCreated = new Map<string, string>();
+            for (const u of group) {
+              const b = u.block ?? "";
+              const ts = u.created_at ?? "";
+              const seen = blockCreated.get(b);
+              if (seen === undefined || ts < seen) blockCreated.set(b, ts);
+            }
+            const typeBlocks = [...blockCreated.keys()].sort((a, b) =>
+              (blockCreated.get(a) ?? "").localeCompare(blockCreated.get(b) ?? "")
+            );
             return (
-              <div key={type} className="flex flex-col gap-2">
+              <div key={type} className="flex flex-col gap-2.5">
                 <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
                   {meta && (
                     <span
@@ -608,36 +621,51 @@ export function ShakhmatkaGrid({
                     ({group.length})
                   </span>
                 </p>
-                {/* A real grid (fixed CELL-wide columns) so the cells line up
-                    in tidy rows/columns instead of ragged wrapping; a merged
-                    (span>1) cell spans that many columns and still aligns. */}
-                <div
-                  className="grid justify-start gap-2"
-                  style={{ gridTemplateColumns: `repeat(auto-fill, ${CELL}px)` }}
-                >
-                  {group.map((unit) => (
-                    <div key={unit.id} style={{ gridColumn: `span ${unit.span || 1}` }}>
-                    <UnitCell
-                      unit={unit}
-                      apartmentNumber={apartmentNumbers.get(unit.id)}
-                      floorUnits={group}
-                      contractInfo={contractsByUnit[unit.id]}
-                      onBookUnit={onBookUnit}
-                      onQuickBook={onQuickBook}
-                      onCancelQuickBook={onCancelQuickBook}
-                      isPending={pendingUnitIds.has(unit.id)}
-                      onMergeUnits={onMergeUnits}
-                      onSplitUnit={onSplitUnit}
-                      onDeleteUnit={onDeleteUnit}
-                      canEditSold={canEditSold}
-                      readOnly={readOnly}
-                      onViewUnit={onViewUnit}
-                      statusFilter={statusFilter}
-                      editMode={editMode}
-                    />
+                {typeBlocks.map((block) => {
+                  const cells = group.filter((u) => (u.block ?? "") === block);
+                  return (
+                    <div key={block} className="flex flex-col gap-1.5">
+                      {block && (
+                        <p className="text-xs font-medium text-slate-500">
+                          {block} <span className="text-slate-400">({cells.length})</span>
+                        </p>
+                      )}
+                      {/* A real grid (fixed CELL-wide columns) so the cells line
+                          up tidily; a merged (span>1) cell spans that many
+                          columns and still aligns. */}
+                      <div
+                        className="grid justify-start gap-2"
+                        style={{ gridTemplateColumns: `repeat(auto-fill, ${CELL}px)` }}
+                      >
+                        {cells.map((unit) => (
+                          <div
+                            key={unit.id}
+                            style={{ gridColumn: `span ${unit.span || 1}` }}
+                          >
+                            <UnitCell
+                              unit={unit}
+                              apartmentNumber={apartmentNumbers.get(unit.id)}
+                              floorUnits={cells}
+                              contractInfo={contractsByUnit[unit.id]}
+                              onBookUnit={onBookUnit}
+                              onQuickBook={onQuickBook}
+                              onCancelQuickBook={onCancelQuickBook}
+                              isPending={pendingUnitIds.has(unit.id)}
+                              onMergeUnits={onMergeUnits}
+                              onSplitUnit={onSplitUnit}
+                              onDeleteUnit={onDeleteUnit}
+                              canEditSold={canEditSold}
+                              readOnly={readOnly}
+                              onViewUnit={onViewUnit}
+                              statusFilter={statusFilter}
+                              editMode={editMode}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
+                  );
+                })}
               </div>
             );
           })}
