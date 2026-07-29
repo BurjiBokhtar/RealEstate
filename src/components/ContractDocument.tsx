@@ -94,14 +94,14 @@ const PLUM = "#5b3468";
 // graphics" box is unticked -- which is the default.
 function Section({ num, title }: { num: number; title: string }) {
   return (
-    <div className="mt-4 flex items-center gap-2.5 break-inside-avoid break-after-avoid">
+    <div className="mt-2.5 flex items-center gap-2 break-inside-avoid break-after-avoid">
       <span
         style={{ borderColor: PLUM, color: PLUM }}
-        className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-[11px] font-bold"
+        className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-[10px] font-bold"
       >
         {num}
       </span>
-      <span className="shrink-0 text-[13.5px] font-bold uppercase tracking-[0.08em]">
+      <span className="shrink-0 text-[12px] font-bold uppercase tracking-[0.07em]">
         {title}
       </span>
       <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-30" />
@@ -259,7 +259,7 @@ export function ContractDocument({
   return (
     <div
       style={SERIF}
-      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white text-[13px] leading-[1.6] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none"
+      className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white text-[11px] leading-[1.4] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none"
     >
       {/* Watermark: the company logo, washed out and centred behind the text,
           same as the Word original. Deliberately an <img> rather than a CSS
@@ -324,7 +324,7 @@ export function ContractDocument({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 px-10 pb-8 pt-5">
+        <div className="flex flex-col gap-1.5 px-9 pb-6 pt-4">
           {/* Title */}
           <div className="flex items-center gap-3">
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
@@ -396,7 +396,7 @@ export function ContractDocument({
           </div>
 
           <Section num={1} title="Тарафҳои аҳдкунанда" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             Ҷамъияти дорои масъулияти маҳдуди «{companyName}» дар шахсияти роҳбари ҷамъият{" "}
             <b>{director}</b>, ки дар асоси Оинномаи ҷамъият амал мекунад, аз як тараф,
             минбаъд <b>«Фурӯшанда»</b> ва аз тарафи дигар шаҳрванди Ҷумҳурии Тоҷикистон{" "}
@@ -412,13 +412,13 @@ export function ContractDocument({
           </p>
 
           <Section num={2} title="Мақсади шартнома" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             2.1. Бо мақсади вусъат бахшидани рафти сохтмони биноҳои истиқоматии баландошёна
             бо пентхаус, дар ошёнаи якум маркази савдо ва хизматрасонӣ ва дар таҳхонаҳои онҳо
             ташкил намудани таваққуфгоҳи зеризаминӣ, воқеъ дар <Var>{buildingAddress}</Var>, тарафҳо
             уҳдадор шуданд, ки бо шартҳои манфиати мутақобила ҳамкорӣ намоянд.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             2.2. «Фурӯшанда» имконият медиҳад, ки «Харидор» дар маблағгузории иншооти мазкур
             ширкат намуда, ҳуҷраи истиқоматии <Var>№{aptNo}</Var>-ро, ки нишондиҳандаҳои он
             (ошёна, шумораи ҳуҷраҳо, масоҳат ва нарх барои 1 м²) дар «Маълумоти аҳд»-и боло
@@ -427,88 +427,88 @@ export function ContractDocument({
             пешбининамудаи шартномаи мазкур пардохт намуда, минбаъд онро ба моликияти шахсии
             худ табдил диҳад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             2.3. «Фурӯшанда» бо анҷом расидани корҳои сохтмонӣ ва супоридани иншоот ба
             «Харидор» масоҳати зикршударо, ки дар банди 2.2-и шартномаи мазкур нишон дода
             шудааст, месупорад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             2.4. «Харидор» аз лаҳзаи бастани шартномаи ҳамкорӣ талаботи дар банди 2.2-и
             шартномаи мазкур нишон додашударо таъмин менамояд.
           </p>
 
           <Section num={3} title="Уҳдадориҳои тарафҳо" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             3.1. «Фурӯшанда» уҳдадор мешавад ба «Харидор» барои ба расмият даровардани
             манзили истиқоматӣ ба моликияти шахсӣ шиносномаи техникӣ диҳад, ки он баъди
             қабули иншоот ба баҳрабардорӣ дода мешавад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             3.2. Тамоми хароҷоти вобаста ба ҳуҷҷатгузории нотариалӣ ва бақайдгирии давлатӣ,
             аз рӯи нархномаи КДФБММГ ва нотариуси давлатӣ, мустақилона аз ҷониби «Харидор»
             пардохт карда мешавад.
           </p>
 
           <Section num={4} title="Масъулияти тарафҳо" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             4.1. «Харидор» барои саривақт пардохт намудани маблағи шартнома дар банди 2.2
             шартномаи мазкур нишондодашуда масъул мебошад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             4.2. «Фурӯшанда» барои саривақт ва босифат иҷро намудани корҳои сохтмонӣ –
             васлкунии иншоот масъул мебошад.
           </p>
 
           <Section num={5} title="Чораҳои ҷаримавӣ" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             5.1. Дар мавриди риоя накардани муҳлати пардохт зиёда аз як моҳ ба андозаи 0,1%
             аз маблағи умумии шартнома барои ҳар як рӯзи ба таъхирандозӣ, на зиёда аз 10%,
             «Харидор» ба «Фурӯшанда» ҷарима пардохт менамояд.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             5.2. Дар ҳолати «Харидор» пас аз анҷоми сохтмони бинои истиқоматии бисёрошёна дар
             банди 2.2 шартномаи мазкур муқараргардидаро рад намояд, бо ҷарима ситонида ба
             андозаи 10%-и маблағи умумии дар шартнома зикршуда баргардонида мешавад.
           </p>
 
           <Section num={6} title="Ҳолатҳои бекор намудани шартнома" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             6.1. Шартнома тибқи мувофиқаи тарафайн то пардохт намудан ва ё бо тартиби
             яктарафа дар мавриди қобилияти имконнопазир рад намуда, «Харидор» изҳори
             боздошти пардохт беш аз як моҳ аз муҳлати пардохт метавон бекор кард.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             6.2. Дар сурати 2 (ду) моҳ пардохт накардани маблағ аз тарафи «Харидор», онгоҳ
             «Фурӯшанда» метавонад дигар муштариро барои ҳуҷраи дар банди 2.2 шартномаи мазкур
             аз нав бандад.
           </p>
 
           <Section num={7} title="Форс-мажор" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             7.1. Ягон тараф масъулиятро барои иҷро накардан ва иҷрои номатлуби уҳдадориҳои
             худ нахоҳад бурд, агар иҷрои номатлуб дар ҳолати қувваи рафънопазир номумкин
             гашта бошад, яъне ҳолатҳои фавқулода, ки онҳо баъди бастани Шартномаҳои мазкур ба
             вуҷуд омаданд. Ба чунин ҳолатҳо дохил мешавад: сӯхтор, обхезӣ, заминҷунбӣ ва
             дигар офатҳои табиӣ, ки уҳдадориҳои тарафҳоро номумкин мегардонад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             7.2. Агар ҳамагуна аз ҳолатҳои мазкур бевосита барои иҷрои уҳдадориҳо ба
             муҳлате, ки дар шартномаи мазкур дарҷ шудааст, таъсир расонида, муҳлати мазкур ба
             вақти амалии ҳолати дахлдор дароз карда мешавад.
           </p>
 
           <Section num={8} title="Ҳалли баҳсҳо" />
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             8.1. Баҳсҳои зимни амалисозии шартномаи мазкур рухдиҳандаро метавон бо роҳи
             гуфтушунид ҳал намуд. Дар мавриди бо гуфтушунид ҳал нагардидани баҳс, он дар
             асоси Қонунҳои амалкунандаи Ҷумҳурии Тоҷикистон дар Суди иқтисодии шаҳри Бохтар
             ҳаллу фасл карда мешавад.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             8.2. Шартномаи мазкур аз лаҳзаи ба имзо расонидани ҳар ду тараф эътибор пайдо
             менамояд.
           </p>
-          <p className="text-justify break-inside-avoid">
+          <p className="text-justify">
             8.3. Ба Шартномаи мазкур номгӯи намуди корҳои иҷронамудаи «Фурӯшанда» замима
             гардида, қисми ҷудонопазири шартнома ба шумор рафта, шартнома дар ду нусха бо
             забони тоҷикӣ барои ҳар кадом тарафҳо тартиб дода шудааст ва эътибор ва ҳуқуқи
@@ -523,7 +523,7 @@ export function ContractDocument({
               <p className="mt-4 text-center text-[14px] font-bold">
                 ҶАДВАЛИ ПАРДОХТҲО
               </p>
-              <p className="text-justify break-inside-avoid">
+              <p className="text-justify">
                 Пардохтшуда: <b>{docAmount(paidSoFar, contract.currency)}</b>; боқимонда:{" "}
                 <b>{docAmount(remainingSchedule, contract.currency)}</b>
                 {unpaidRows.length > 0 && typicalMonthly != null && (

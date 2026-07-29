@@ -608,10 +608,16 @@ export function ShakhmatkaGrid({
                     ({group.length})
                   </span>
                 </p>
-                <div className="flex flex-wrap gap-2">
+                {/* A real grid (fixed CELL-wide columns) so the cells line up
+                    in tidy rows/columns instead of ragged wrapping; a merged
+                    (span>1) cell spans that many columns and still aligns. */}
+                <div
+                  className="grid justify-start gap-2"
+                  style={{ gridTemplateColumns: `repeat(auto-fill, ${CELL}px)` }}
+                >
                   {group.map((unit) => (
+                    <div key={unit.id} style={{ gridColumn: `span ${unit.span || 1}` }}>
                     <UnitCell
-                      key={unit.id}
                       unit={unit}
                       apartmentNumber={apartmentNumbers.get(unit.id)}
                       floorUnits={group}
@@ -629,6 +635,7 @@ export function ShakhmatkaGrid({
                       statusFilter={statusFilter}
                       editMode={editMode}
                     />
+                    </div>
                   ))}
                 </div>
               </div>
