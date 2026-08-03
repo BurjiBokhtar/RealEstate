@@ -256,6 +256,10 @@ create trigger settings_set_updated_at
 alter table crm.buildings add column if not exists price_per_sqm numeric;
 alter table crm.buildings add column if not exists facade_url text;
 alter table crm.buildings add column if not exists plan_url text;
+alter table crm.buildings add column if not exists construction_status text not null default 'in_progress';
+alter table crm.buildings drop constraint if exists buildings_construction_status_check;
+alter table crm.buildings add constraint buildings_construction_status_check
+  check (construction_status in ('planning', 'in_progress', 'completed'));
 
 alter table crm.objects add column if not exists plan_url text;
 

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { ConstructionStatusBadge } from "@/components/ConstructionStatusBadge";
 import type { Building } from "@/lib/buildings/types";
 
 // Card grid instead of a table: each ЖК shows its facade photo (or an atlas
@@ -84,9 +85,12 @@ export default function BuildingsPage() {
                 )}
               </div>
               <div className="p-4">
-                <p className="truncate text-[15px] font-semibold text-slate-900">
-                  {building.name}
-                </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-[15px] font-semibold text-slate-900">
+                    {building.name}
+                  </p>
+                  <ConstructionStatusBadge status={building.construction_status} />
+                </div>
                 <p className="mt-0.5 truncate text-sm text-slate-500">
                   {building.address || "—"}
                 </p>

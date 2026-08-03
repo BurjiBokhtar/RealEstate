@@ -14,6 +14,8 @@ import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
 import { UnitEditModal } from "@/components/UnitEditModal";
 import { Toast, type ToastType } from "@/components/Toast";
+import { ConstructionStatusBadge } from "@/components/ConstructionStatusBadge";
+import { DuplicateBuildingModal } from "@/components/DuplicateBuildingModal";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -40,6 +42,7 @@ export default function BuildingDetailPage() {
   } | null>(null);
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
   // A stack of reversible structural edits (merge / split / delete / add) made
   // this session, so a mis-click can be undone with one button -- the data is
   // captured before each action and re-applied on undo.
@@ -413,7 +416,10 @@ export default function BuildingDetailPage() {
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold">{building.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-semibold">{building.name}</h1>
+                <ConstructionStatusBadge status={building.construction_status} />
+              </div>
               {building.address && <p className="text-sm text-slate-500">{building.address}</p>}
             </div>
             {role === "admin" && (
@@ -444,9 +450,25 @@ export default function BuildingDetailPage() {
                   <span aria-hidden="true" className="text-base leading-none">⚙</span>
                   {t.buildings.configure}
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowDuplicate(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                >
+                  <span aria-hidden="true" className="text-base leading-none">⧉</span>
+                  {t.buildings.duplicate.button}
+                </button>
               </div>
             )}
           </div>
+
+          {showDuplicate && (
+            <DuplicateBuildingModal
+              building={building}
+              units={units}
+              onClose={() => setShowDuplicate(false)}
+            />
+          )}
 
           {editMode && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">

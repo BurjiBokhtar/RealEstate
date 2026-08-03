@@ -81,6 +81,8 @@ export const dictionaries = {
       periodMonth: "Этот месяц",
       periodYear: "Этот год",
       noData: "Пока нет данных",
+      completedSuffix: "завершён",
+      completedSummary: "Завершённых ЖК: {buildings} · {units} помещений — не входят в статистику выше",
     },
     objects: {
       title: "Объекты",
@@ -450,6 +452,7 @@ export const dictionaries = {
       form: {
         name: "Название",
         address: "Адрес",
+        constructionStatus: "Стадия строительства",
         floorsCount: "Количество этажей",
         unitsPerFloor: "Квартир на этаже",
         pricePerSqm: "Цена за м² (TJS)",
@@ -462,6 +465,18 @@ export const dictionaries = {
         confirmDelete: "Удалить это здание вместе со всеми квартирами?",
         deleteBlocked:
           "Нельзя удалить: у части квартир есть договоры. Сначала удалите или перенесите их договоры.",
+      },
+      constructionStatuses: {
+        planning: "Планируется",
+        in_progress: "Строится",
+        completed: "Завершено",
+      },
+      duplicate: {
+        button: "Дублировать",
+        title: "Дублировать здание",
+        hint: "Создаст новое здание с той же шахматкой ({n} помещений) — этажи, блоки, площади и цены скопируются, все ячейки будут свободны.",
+        nameLabel: "Название нового здания",
+        confirm: "Создать копию",
       },
       backToList: "К списку зданий",
       notFound: "Здание не найдено",
@@ -804,6 +819,8 @@ export const dictionaries = {
       periodMonth: "Ин моҳ",
       periodYear: "Ин сол",
       noData: "Ҳоло маълумот нест",
+      completedSuffix: "анҷомёфта",
+      completedSummary: "МИ-и анҷомёфта: {buildings} · {units} хона — дар омори боло дохил нашудаанд",
     },
     objects: {
       title: "Объектҳо",
@@ -1174,6 +1191,7 @@ export const dictionaries = {
       form: {
         name: "Ном",
         address: "Суроға",
+        constructionStatus: "Марҳилаи сохтмон",
         floorsCount: "Шумораи ошёнаҳо",
         unitsPerFloor: "Хона дар ҳар ошёна",
         pricePerSqm: "Нарх барои 1 м² (TJS)",
@@ -1186,6 +1204,18 @@ export const dictionaries = {
         confirmDelete: "Ин биноро бо ҳамаи хонаҳояш нест кунам?",
         deleteBlocked:
           "Нест кардан имконнопазир аст: баъзе хонаҳо шартнома доранд. Аввал шартномаҳоро нест кунед ё ба хонаи дигар гузаронед.",
+      },
+      constructionStatuses: {
+        planning: "Ба нақша гирифта шуда",
+        in_progress: "Дар сохтмон",
+        completed: "Анҷом ёфта",
+      },
+      duplicate: {
+        button: "Дубликат кардан",
+        title: "Дубликати бино",
+        hint: "Бинои нав бо ҳамон шахмата ({n} хона) сохта мешавад — ошёнаҳо, блокҳо, масоҳат ва нарх нусхабардорӣ мешаванд, ҳамаи ячейкаҳо озод хоҳанд буд.",
+        nameLabel: "Номи бинои нав",
+        confirm: "Сохтани нусха",
       },
       backToList: "Ба рӯйхати биноҳо",
       notFound: "Бино ёфт нашуд",

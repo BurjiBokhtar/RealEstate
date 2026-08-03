@@ -164,15 +164,42 @@ export default function DashboardPage() {
     );
   }, [allObjects, selectedBuildingId]);
 
+  // A finished ЖК is done selling -- its numbers are settled history, not
+  // something that needs to keep dominating the "all buildings" overview.
+  // So the aggregate dashboard drops it by default and folds it into one
+  // compact summary line instead (see completedSummary below); picking that
+  // building explicitly in the filter still shows its full data untouched.
+  const completedBuildingIds = useMemo(
+    () => new Set(buildings.filter((b) => b.construction_status === "completed").map((b) => b.id)),
+    [buildings]
+  );
+  const completedObjectIds = useMemo(() => {
+    if (completedBuildingIds.size === 0) return new Set<string>();
+    return new Set(
+      allObjects.filter((o) => o.building_id && completedBuildingIds.has(o.building_id)).map((o) => o.id)
+    );
+  }, [allObjects, completedBuildingIds]);
+
   const objects = useMemo(() => {
-    if (!scopedObjectIds) return allObjects;
-    return allObjects.filter((o) => scopedObjectIds.has(o.id));
-  }, [allObjects, scopedObjectIds]);
+    if (scopedObjectIds) return allObjects.filter((o) => scopedObjectIds.has(o.id));
+    return allObjects.filter((o) => !completedObjectIds.has(o.id));
+  }, [allObjects, scopedObjectIds, completedObjectIds]);
 
   const contracts = useMemo(() => {
-    if (!scopedObjectIds) return allContracts;
-    return allContracts.filter((c) => scopedObjectIds.has(c.object_id));
-  }, [allContracts, scopedObjectIds]);
+    if (scopedObjectIds) return allContracts.filter((c) => scopedObjectIds.has(c.object_id));
+    return allContracts.filter((c) => !completedObjectIds.has(c.object_id));
+  }, [allContracts, scopedObjectIds, completedObjectIds]);
+
+  // Collapsed, one-line stand-in for every completed ЖК that got dropped
+  // from the live figures above -- just enough to know it exists and roughly
+  // how big it was, without re-computing (or re-fetching) its full history.
+  const completedSummary = useMemo(() => {
+    const list = buildings.filter((b) => b.construction_status === "completed");
+    if (list.length === 0) return null;
+    const ids = new Set(list.map((b) => b.id));
+    const unitsCount = allObjects.filter((o) => o.building_id && ids.has(o.building_id)).length;
+    return { buildingsCount: list.length, unitsCount };
+  }, [buildings, allObjects]);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -213,7 +240,7 @@ export default function DashboardPage() {
   const occupancy: BuildingOccupancy[] = useMemo(() => {
     const relevantBuildings =
       selectedBuildingId === "all"
-        ? buildings
+        ? buildings.filter((b) => b.construction_status !== "completed")
         : buildings.filter((b) => b.id === selectedBuildingId);
     return relevantBuildings
       .map((b) => {
@@ -259,7 +286,11 @@ export default function DashboardPage() {
     const dayMap = new Map<string, { tjs: number; usd: number }>();
     allPayments
       .filter((p) => p.paid && p.paid_date && p.contract)
-      .filter((p) => !scopedObjectIds || scopedObjectIds.has(p.contract!.object_id))
+      .filter((p) =>
+        scopedObjectIds
+          ? scopedObjectIds.has(p.contract!.object_id)
+          : !completedObjectIds.has(p.contract!.object_id)
+      )
       .filter((p) => p.paid_date! >= periodBounds.start && p.paid_date! <= periodBounds.end)
       .forEach((p) => {
         const day = p.paid_date!;
@@ -271,7 +302,7 @@ export default function DashboardPage() {
     return Array.from(dayMap.keys())
       .sort()
       .map((day) => ({ month: day, ...dayMap.get(day)! }));
-  }, [allPayments, scopedObjectIds, periodFilter, periodBounds]);
+  }, [allPayments, scopedObjectIds, completedObjectIds, periodFilter, periodBounds]);
 
   const debtors: Debtor[] = useMemo(() => {
     const debtorMap = new Map<string, Debtor>();
@@ -324,12 +355,16 @@ export default function DashboardPage() {
     const v: MoneyPair = { tjs: 0, usd: 0 };
     overdueRows.forEach((r) => {
       if (r.cancelled) return;
-      if (scopedObjectIds && !scopedObjectIds.has(r.objectId)) return;
+      if (scopedObjectIds) {
+        if (!scopedObjectIds.has(r.objectId)) return;
+      } else if (completedObjectIds.has(r.objectId)) {
+        return;
+      }
       if (r.currency === "USD") v.usd += r.amount;
       else v.tjs += r.amount;
     });
     return v;
-  }, [overdueRows, scopedObjectIds]);
+  }, [overdueRows, scopedObjectIds, completedObjectIds]);
 
   const potentialRevenue: MoneyPair = useMemo(() => {
     const v: MoneyPair = { tjs: 0, usd: 0 };
@@ -369,7 +404,7 @@ export default function DashboardPage() {
       });
     const relevantBuildings =
       selectedBuildingId === "all"
-        ? buildings
+        ? buildings.filter((b) => b.construction_status !== "completed")
         : buildings.filter((b) => b.id === selectedBuildingId);
     return relevantBuildings
       .map((b) => ({ id: b.id, name: b.name, ...(map.get(b.id) ?? { tjs: 0, usd: 0 }) }))
@@ -397,6 +432,14 @@ export default function DashboardPage() {
       />
 
       {!configured && <SetupNotice />}
+
+      {selectedBuildingId === "all" && completedSummary && (
+        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+          {t.dashboard.completedSummary
+            .replace("{buildings}", String(completedSummary.buildingsCount))
+            .replace("{units}", String(completedSummary.unitsCount))}
+        </p>
+      )}
 
       {/* Only what the hero doesn't already say: total/available/sold and
           paid revenue live up there now, so this row carries just the

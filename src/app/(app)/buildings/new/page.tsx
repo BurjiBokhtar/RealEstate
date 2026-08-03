@@ -41,6 +41,7 @@ export default function NewBuildingPage() {
         price_per_sqm: values.price_per_sqm ? Number(values.price_per_sqm) : null,
         facade_url: values.facade_url || null,
         plan_url: values.plan_url || null,
+        construction_status: values.construction_status,
       })
       .select("id")
       .single();

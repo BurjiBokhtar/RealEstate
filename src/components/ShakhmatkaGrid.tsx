@@ -247,7 +247,12 @@ function UnitCell({
             {t.buildings.hover.price}
           </span>
           <span className="text-[13px] font-bold text-slate-900">
-            {formatCurrency(unit.price, unit.currency)}
+            {/* Once a contract exists, its negotiated amount IS the deal's
+                real price (may differ from the catalog price via a discount
+                or a hand-agreed rate) -- show that, not the listing price. */}
+            {contractInfo
+              ? formatCurrency(contractInfo.amount, contractInfo.currency)
+              : formatCurrency(unit.price, unit.currency)}
           </span>
         </div>
 

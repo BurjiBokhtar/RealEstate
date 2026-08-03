@@ -216,10 +216,14 @@ export function ContractDocument({
       : contract.payment_type === "barter"
         ? "Бартер"
         : "Якбора";
+  // Order matters here: block/entrance first (which entrance the buyer walks
+  // into), then floor, then area, then room count -- matches how the company
+  // reads out a unit verbally and how the paper contract should read too.
   const railSub = [
-    contract.object?.floor != null ? `ошёнаи ${contract.object.floor}` : null,
-    contract.object?.rooms != null ? `${contract.object.rooms} ҳуҷра` : null,
     contract.object?.block ?? null,
+    contract.object?.floor != null ? `ошёнаи ${contract.object.floor}` : null,
+    dealArea != null ? `${docArea(dealArea)} м²` : null,
+    contract.object?.rooms != null ? `${contract.object.rooms} ҳуҷра` : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -336,7 +340,8 @@ export function ContractDocument({
 
           <div className="flex items-baseline justify-between text-[12.5px]">
             <span>
-              <Var>{tjLongDate(contract.signed_date)}</Var>
+              <Var>{shortDate(contract.signed_date)}</Var>{" "}
+              <span className="text-slate-500">({tjLongDate(contract.signed_date)})</span>
             </span>
             <span className="font-bold">ш. Бохтар</span>
           </div>

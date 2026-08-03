@@ -2,7 +2,7 @@
 
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { FileUploadField } from "@/components/FileUploadField";
-import type { BuildingInput } from "@/lib/buildings/types";
+import { CONSTRUCTION_STATUSES, type BuildingInput } from "@/lib/buildings/types";
 
 const FIELD_CLASS =
   "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
@@ -56,6 +56,25 @@ export function BuildingForm({
           onChange={(e) => update("address", e.target.value)}
           className={FIELD_CLASS}
         />
+      </label>
+
+      <label className="flex flex-col gap-1 text-sm">
+        <span className="font-medium text-slate-700">
+          {t.buildings.form.constructionStatus}
+        </span>
+        <select
+          value={values.construction_status}
+          onChange={(e) =>
+            update("construction_status", e.target.value as BuildingInput["construction_status"])
+          }
+          className={FIELD_CLASS}
+        >
+          {CONSTRUCTION_STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {t.buildings.constructionStatuses[s]}
+            </option>
+          ))}
+        </select>
       </label>
 
       {(!hideFloorsCount || !hideUnitsPerFloor) && (

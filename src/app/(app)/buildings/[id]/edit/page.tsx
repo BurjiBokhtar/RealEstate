@@ -61,6 +61,7 @@ export default function EditBuildingPage() {
             price_per_sqm: b.price_per_sqm?.toString() ?? "",
             facade_url: b.facade_url ?? "",
             plan_url: b.plan_url ?? "",
+            construction_status: b.construction_status ?? "in_progress",
           });
         }
       });
@@ -81,6 +82,7 @@ export default function EditBuildingPage() {
         price_per_sqm: values.price_per_sqm ? Number(values.price_per_sqm) : null,
         facade_url: values.facade_url || null,
         plan_url: values.plan_url || null,
+        construction_status: values.construction_status,
       })
       .eq("id", params.id);
     setSubmitting(false);

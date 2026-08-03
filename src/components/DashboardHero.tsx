@@ -112,6 +112,7 @@ export function DashboardHero({
               {buildings.map((b) => (
                 <option style={{ color: "#0f172a" }} key={b.id} value={b.id}>
                   {b.name}
+                  {b.construction_status === "completed" ? ` · ${t.dashboard.completedSuffix}` : ""}
                 </option>
               ))}
             </select>

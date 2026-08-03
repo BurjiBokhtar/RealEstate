@@ -1,5 +1,8 @@
 import type { ObjectStatus } from "@/lib/objects/types";
 
+export const CONSTRUCTION_STATUSES = ["planning", "in_progress", "completed"] as const;
+export type ConstructionStatus = (typeof CONSTRUCTION_STATUSES)[number];
+
 export type Building = {
   id: string;
   name: string;
@@ -9,6 +12,7 @@ export type Building = {
   price_per_sqm: number | null;
   facade_url: string | null;
   plan_url: string | null;
+  construction_status: ConstructionStatus;
   created_at: string;
   updated_at: string;
 };
@@ -21,6 +25,7 @@ export type BuildingInput = {
   price_per_sqm: string;
   facade_url: string;
   plan_url: string;
+  construction_status: ConstructionStatus;
 };
 
 export const emptyBuildingInput: BuildingInput = {
@@ -31,6 +36,7 @@ export const emptyBuildingInput: BuildingInput = {
   price_per_sqm: "",
   facade_url: "",
   plan_url: "",
+  construction_status: "in_progress",
 };
 
 export type BuildingUnit = {
