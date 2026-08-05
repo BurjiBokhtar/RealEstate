@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
@@ -60,6 +61,7 @@ export function ContractPayments({
   onPaymentAdded?: () => void;
 }) {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const { role } = useRole();
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [generating, setGenerating] = useState(false);
@@ -132,7 +134,7 @@ export function ContractPayments({
   };
 
   const handleDeletePayment = async (payment: ContractPayment) => {
-    if (!window.confirm(t.contracts.payments.confirmDelete)) return;
+    if (!(await confirm(t.contracts.payments.confirmDelete, { danger: true }))) return;
     setDeletingId(payment.id);
     setRecordError(null);
     const supabase = createClient();

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
@@ -24,6 +25,7 @@ type ContractWithNames = Contract & {
 
 export default function ContractDetailPage() {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
@@ -90,7 +92,7 @@ export default function ContractDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(t.contracts.form.confirmDelete)) return;
+    if (!(await confirm(t.contracts.form.confirmDelete, { danger: true }))) return;
     setError(null);
     const supabase = createClient();
     const clientId = contract?.client_id;

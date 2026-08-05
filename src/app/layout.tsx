@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LocaleProvider } from "@/lib/i18n/LocaleProvider";
 import { SettingsProvider } from "@/lib/settings/SettingsProvider";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { getBranding } from "@/lib/branding";
@@ -63,7 +64,9 @@ export default async function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <LocaleProvider>
-          <SettingsProvider>{children}</SettingsProvider>
+          <SettingsProvider>
+            <ConfirmProvider>{children}</ConfirmProvider>
+          </SettingsProvider>
         </LocaleProvider>
         <ServiceWorkerRegistrar />
         <RecoveryRedirect />

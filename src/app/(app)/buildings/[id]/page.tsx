@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
 import { Modal } from "@/components/Modal";
@@ -25,6 +26,7 @@ import { formatArea } from "@/lib/objects/format";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
 
@@ -266,7 +268,7 @@ export default function BuildingDetailPage() {
       setToast({ message: t.buildings.cellActions.cannotDeleteSold, type: "error" });
       return;
     }
-    if (!window.confirm(t.buildings.cellActions.confirmDelete)) return;
+    if (!(await confirm(t.buildings.cellActions.confirmDelete, { danger: true }))) return;
     const supabase = createClient();
     const row = reinsertPayload(unit);
     const { error } = await supabase.schema("crm").from("objects").delete().eq("id", unit.id);

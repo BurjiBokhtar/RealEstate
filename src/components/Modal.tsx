@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 const SIZE_CLASSES = {
   md: "max-w-xl",
@@ -26,12 +27,13 @@ export function Modal({
   guardClose?: boolean;
 }) {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const [touched, setTouched] = useState(false);
 
   // Latest close logic behind a ref so the one-time Esc listener always sees
   // the current `touched`/`onClose` without re-binding on every keystroke.
-  const requestClose = () => {
-    if (guardClose && touched && !window.confirm(t.common.discardConfirm)) return;
+  const requestClose = async () => {
+    if (guardClose && touched && !(await confirm(t.common.discardConfirm))) return;
     onClose();
   };
   const closeRef = useRef(requestClose);

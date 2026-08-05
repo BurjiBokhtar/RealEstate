@@ -6,6 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { BuildingForm } from "@/components/BuildingForm";
 import { FloorUnitsBuilder } from "@/components/FloorUnitsBuilder";
@@ -16,6 +17,7 @@ import type { PropertyObject } from "@/lib/objects/types";
 
 export default function EditBuildingPage() {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
@@ -90,7 +92,7 @@ export default function EditBuildingPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(t.buildings.form.confirmDelete)) return;
+    if (!(await confirm(t.buildings.form.confirmDelete, { danger: true }))) return;
     setDeleteError(null);
     const supabase = createClient();
     const { error } = await supabase.schema("crm").from("buildings").delete().eq("id", params.id);

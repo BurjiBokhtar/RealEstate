@@ -7,12 +7,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { TaskForm } from "@/components/TaskForm";
 import type { Task, TaskInput } from "@/lib/tasks/types";
 
 export default function TaskDetailPage() {
   const { t } = useLocale();
+  const confirm = useConfirm();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
@@ -58,7 +60,7 @@ export default function TaskDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm(t.tasks.form.confirmDelete)) return;
+    if (!(await confirm(t.tasks.form.confirmDelete, { danger: true }))) return;
     const supabase = createClient();
     await supabase.schema("crm").from("tasks").delete().eq("id", params.id);
     router.push("/tasks");
