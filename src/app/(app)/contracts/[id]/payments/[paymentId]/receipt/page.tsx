@@ -137,7 +137,7 @@ export default function PaymentReceiptPage() {
           className="flex items-center gap-2 text-slate-300 print:text-slate-400"
         >
           <span className="flex-1 border-t border-dashed border-current" />
-          <span className="text-xs">✂</span>
+          <ScissorsIcon className="h-3.5 w-3.5" />
           <span className="flex-1 border-t border-dashed border-current" />
         </div>
 

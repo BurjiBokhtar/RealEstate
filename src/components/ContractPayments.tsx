@@ -7,6 +7,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
+import { MoneyIcon } from "@/components/icons";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -244,7 +245,13 @@ export function ContractPayments({
             disabled={recording || !newAmount}
             className="btn-brand relative h-12 w-full rounded-lg text-base font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:translate-y-0 active:scale-[0.99] disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            {recording ? t.common.loading : `💵 ${t.contracts.payments.record}`}
+            {recording ? (
+              t.common.loading
+            ) : (
+              <span className="inline-flex items-center justify-center gap-2">
+                <MoneyIcon className="h-5 w-5" /> {t.contracts.payments.record}
+              </span>
+            )}
           </button>
           {recordError && <p className="relative text-xs font-medium text-red-600">{recordError}</p>}
         </div>

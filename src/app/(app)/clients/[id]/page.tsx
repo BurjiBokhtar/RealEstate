@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BackLink } from "@/components/BackLink";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -9,28 +9,26 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ClientForm } from "@/components/ClientForm";
-import { ClientQuickPayment } from "@/components/ClientQuickPayment";
 import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
-import { PrintIcon } from "@/components/icons";
+import { SendActions } from "@/components/SendActions";
+import { ContractPayments } from "@/components/ContractPayments";
+import { PrintIcon, HomeIcon, ReceiptIcon } from "@/components/icons";
 import { Toast, type ToastType } from "@/components/Toast";
-import { formatCurrency, type Currency } from "@/lib/currency";
+import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { useRole } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
-import type { ContractPayment, ContractStatus } from "@/lib/contracts/types";
+import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
-type ClientContract = {
-  id: string;
-  number: string | null;
-  amount: number;
-  paid_amount: number;
-  currency: Currency;
-  status: ContractStatus;
-  signed_date: string | null;
+// The full Contract shape (not just the summary columns the old table
+// showed) -- ContractPayments needs payment_type/installment_months/etc to
+// generate and render the schedule, since each purchase card now embeds
+// that component directly instead of linking out to its own page.
+type ClientContract = Contract & {
   object: { name: string; building: { name: string } | null } | null;
 };
 
@@ -60,9 +58,12 @@ const FIELD_ICONS: Record<string, ReactNode> = {
 };
 
 // Everything front-desk work with one client needs, on one screen: who they
-// are (compact card, edit tucked away behind a button), take a payment and
-// print its receipt, their apartments with contract print / cash-desk
-// shortcuts, and the full receipt history with reprints.
+// are (compact card, edit tucked away behind a button), and every apartment
+// they've bought as an expandable card -- opening one reveals the exact
+// cash-desk this client used to have to navigate away to (record a
+// payment, see the schedule, print/share) right in place. That old
+// standalone page (/contracts/[id]/payments) now just redirects here with
+// ?contract=<id> so it opens pre-expanded and scrolled into view.
 export default function ClientDetailPage() {
   const { t } = useLocale();
   const router = useRouter();
@@ -88,6 +89,21 @@ export default function ClientDetailPage() {
     message: null,
     type: "success",
   });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Read ?contract=<id> once on mount (plain URLSearchParams, not the
+  // Next.js hook -- avoids a Suspense boundary just for a one-off read) so
+  // a redirect from the old cash-desk URL lands pre-expanded.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("contract");
+    if (id) setExpandedId(id);
+  }, []);
+
+  useEffect(() => {
+    if (!expandedId) return;
+    cardRefs.current[expandedId]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [expandedId, contracts]);
 
   const loadClient = useCallback(async () => {
     const supabase = createClient();
@@ -118,7 +134,7 @@ export default function ClientDetailPage() {
       .schema("crm")
       .from("contracts")
       .select(
-        "id, number, amount, paid_amount, currency, status, signed_date, object:objects(name, building:buildings(name))"
+        "id, number, client_id, object_id, amount, paid_amount, currency, amount_words, status, signed_date, notes, payment_type, installment_months, barter_details, created_at, updated_at, object:objects(name, building:buildings(name))"
       )
       .eq("client_id", params.id)
       .order("signed_date", { ascending: false });
@@ -307,128 +323,118 @@ export default function ClientDetailPage() {
           {/* Client state at a glance -- same tile language as the cash desk */}
           <StatTileRow tiles={statTiles} />
 
+          {/* Profile card: everything at a glance, edit folded away */}
           <div
-            className={`grid grid-cols-1 gap-5 lg:items-start ${
-              readOnly ? "" : "lg:grid-cols-[minmax(0,1fr)_360px]"
-            }`}
+            className="animate-fade-up flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            style={{ animationDelay: "150ms" }}
           >
-            {/* Profile card: everything at a glance, edit folded away */}
-            <div
-              className="animate-fade-up flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-              style={{ animationDelay: "150ms" }}
-            >
-              <ClientIdentity
-                name={client.name}
-                phone={client.phone}
-                source={client.source}
-                size="lg"
-                actions={
-                  !readOnly && (
-                    <div className="flex items-center gap-2">
+            <ClientIdentity
+              name={client.name}
+              phone={client.phone}
+              source={client.source}
+              size="lg"
+              actions={
+                !readOnly && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditing((v) => !v)}
+                      className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                    >
+                      {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                    </button>
+                    {/* Prominent delete for admins -- the cascade-delete modal
+                        (client + contracts + payments) was previously buried
+                        inside the edit form. */}
+                    {role === "admin" && (
                       <button
                         type="button"
-                        onClick={() => setEditing((v) => !v)}
-                        className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                        onClick={handleDelete}
+                        className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
                       >
-                        {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                        {t.clients.form.delete}
                       </button>
-                      {/* Prominent delete for admins -- the cascade-delete modal
-                          (client + contracts + payments) was previously buried
-                          inside the edit form. */}
-                      {role === "admin" && (
-                        <button
-                          type="button"
-                          onClick={handleDelete}
-                          className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
+                    )}
+                  </div>
+                )
+              }
+            />
+
+            {!editing && (
+              <div className="grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 sm:grid-cols-2 xl:grid-cols-3">
+                {profileFields.map((f) => (
+                  <div
+                    key={f.label}
+                    className="flex min-h-[60px] min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition-colors hover:border-brand-soft hover:bg-slate-50"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
+                      {f.icon}
+                    </span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        {f.label}
+                      </span>
+                      {f.href && f.value ? (
+                        <a
+                          href={f.href}
+                          className="truncate text-sm font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline"
                         >
-                          {t.clients.form.delete}
-                        </button>
+                          {f.value}
+                        </a>
+                      ) : (
+                        <span className="truncate text-sm font-semibold text-slate-800">
+                          {f.value || "—"}
+                        </span>
                       )}
                     </div>
-                  )
-                }
-              />
-
-              {!editing && (
-                <div className="grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {profileFields.map((f) => (
-                    <div
-                      key={f.label}
-                      className="flex min-h-[60px] min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 transition-colors hover:border-brand-soft hover:bg-slate-50"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
-                        {f.icon}
+                  </div>
+                ))}
+                {client.notes && (
+                  <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 sm:col-span-2 xl:col-span-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
+                      {FIELD_ICONS.note}
+                    </span>
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        {t.clients.form.notes}
                       </span>
-                      <div className="flex min-w-0 flex-col">
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                          {f.label}
-                        </span>
-                        {f.href && f.value ? (
-                          <a
-                            href={f.href}
-                            className="truncate text-sm font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline"
-                          >
-                            {f.value}
-                          </a>
-                        ) : (
-                          <span className="truncate text-sm font-semibold text-slate-800">
-                            {f.value || "—"}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm text-slate-700">{client.notes}</span>
                     </div>
-                  ))}
-                  {client.notes && (
-                    <div className="flex min-w-0 items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-3 py-2.5 sm:col-span-2 xl:col-span-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-brand shadow-sm">
-                        {FIELD_ICONS.note}
-                      </span>
-                      <div className="flex min-w-0 flex-col">
-                        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                          {t.clients.form.notes}
-                        </span>
-                        <span className="text-sm text-slate-700">{client.notes}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {editing && (
-                <ClientForm
-                  initial={{
-                    name: client.name,
-                    phone: client.phone ?? "",
-                    email: client.email ?? "",
-                    passport: client.passport ?? "",
-                    passport_issued_by: client.passport_issued_by ?? "",
-                    birth_date: client.birth_date ?? "",
-                    address: client.address ?? "",
-                    interested_object_id: client.interested_object_id ?? "",
-                    notes: client.notes ?? "",
-                  }}
-                  submitting={submitting}
-                  onSubmit={handleSubmit}
-                  onDelete={role === "admin" ? handleDelete : undefined}
-                />
-              )}
-            </div>
-
-            {!readOnly && (
-              <div className="animate-fade-up" style={{ animationDelay: "200ms" }}>
-                <ClientQuickPayment contracts={contracts} onRecorded={loadContracts} />
+                  </div>
+                )}
               </div>
+            )}
+
+            {editing && (
+              <ClientForm
+                initial={{
+                  name: client.name,
+                  phone: client.phone ?? "",
+                  email: client.email ?? "",
+                  passport: client.passport ?? "",
+                  passport_issued_by: client.passport_issued_by ?? "",
+                  birth_date: client.birth_date ?? "",
+                  address: client.address ?? "",
+                  interested_object_id: client.interested_object_id ?? "",
+                  notes: client.notes ?? "",
+                }}
+                submitting={submitting}
+                onSubmit={handleSubmit}
+                onDelete={role === "admin" ? handleDelete : undefined}
+              />
             )}
           </div>
 
-          {/* Purchases: unit, money state, and the two actions staff need
-              from here -- print the contract, take a payment. */}
-          <div className="animate-fade-up flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style={{ animationDelay: "250ms" }}>
+          {/* Purchases: every apartment this client bought, each an
+              expandable card. Opening one reveals the same cash desk
+              (record a payment, schedule, print/share) the old standalone
+              contract-payments page showed -- no second page needed. */}
+          <div className="animate-fade-up flex flex-col gap-3" style={{ animationDelay: "250ms" }}>
             <p className="text-sm font-semibold text-slate-700">{t.clients.purchases.title}</p>
             {contracts.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-400">
-                  🏠
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  <HomeIcon className="h-5 w-5" />
                 </span>
                 <p className="text-sm text-slate-400">{t.clients.purchases.empty}</p>
                 {interestedObject && (
@@ -448,75 +454,107 @@ export default function ClientDetailPage() {
                 )}
               </div>
             ) : (
-              <div className="-mx-5 overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
-                  <thead className="border-b border-slate-200 text-slate-500">
-                    <tr>
-                      <th className="px-5 py-2.5 font-medium">{t.clients.purchases.object}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.contracts.form.status}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.contracts.form.amount}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.contracts.form.paidAmount}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.buildings.hover.remaining}</th>
-                      <th className="px-3 py-2.5 text-center font-medium">
-                        {t.clients.purchases.paymentsCount}
-                      </th>
-                      <th className="px-5 py-2.5 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {contracts.map((c) => {
-                      const remaining = c.amount - c.paid_amount;
-                      const paidCount = (paymentsByContract[c.id] ?? []).filter(
-                        (p) => p.paid
-                      ).length;
-                      return (
-                        <tr key={c.id} className="border-b border-slate-100 last:border-0">
-                          <td className="px-5 py-3">
+              <div className="flex flex-col gap-2.5">
+                {contracts.map((c) => {
+                  const remaining = c.amount - c.paid_amount;
+                  const paidCount = (paymentsByContract[c.id] ?? []).filter((p) => p.paid).length;
+                  const isOpen = expandedId === c.id;
+                  return (
+                    <div
+                      key={c.id}
+                      ref={(el) => {
+                        cardRefs.current[c.id] = el;
+                      }}
+                      className={`overflow-hidden rounded-xl border bg-white shadow-sm transition-colors ${
+                        isOpen ? "border-brand-soft" : "border-slate-200"
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setExpandedId(isOpen ? null : c.id)}
+                        className="flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-slate-900">
+                            {c.object?.name ?? "—"}
+                          </p>
+                          <p className="truncate text-xs text-slate-400">
+                            {[c.object?.building?.name, c.number ? `№${c.number}` : null]
+                              .filter(Boolean)
+                              .join(" · ")}
+                            {paidCount > 0 &&
+                              ` · ${paidCount} ${t.clients.purchases.paymentsCount.toLowerCase()}`}
+                          </p>
+                        </div>
+                        <span
+                          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${CONTRACT_STATUS_COLORS[c.status]}`}
+                        >
+                          {t.contracts.statuses[c.status]}
+                        </span>
+                        <div className="hidden shrink-0 items-baseline gap-4 text-right sm:flex">
+                          <div>
+                            <p className="text-[9.5px] uppercase tracking-wide text-slate-400">
+                              {t.contracts.form.amount}
+                            </p>
+                            <p className="text-sm font-semibold text-slate-700">
+                              {formatCurrency(c.amount, c.currency)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9.5px] uppercase tracking-wide text-slate-400">
+                              {t.contracts.form.paidAmount}
+                            </p>
+                            <p className="text-sm font-semibold text-emerald-600">
+                              {formatCurrency(c.paid_amount, c.currency)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[9.5px] uppercase tracking-wide text-slate-400">
+                              {t.buildings.hover.remaining}
+                            </p>
+                            <p
+                              className={`text-sm font-semibold ${remaining > 0 ? "text-rose-600" : "text-emerald-600"}`}
+                            >
+                              {remaining > 0 ? formatCurrency(remaining, c.currency) : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                          aria-hidden="true"
+                        >
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+
+                      {isOpen && (
+                        <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <SendActions
+                              contractId={c.id}
+                              kind="contract"
+                              printAction={{
+                                href: `/contracts/${c.id}/print`,
+                                label: t.contracts.print.button,
+                              }}
+                            />
                             <Link
                               href={`/contracts/${c.id}`}
-                              className="font-medium text-slate-900 hover:underline"
+                              className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-800 hover:underline"
                             >
-                              {c.object?.name ?? "—"}
+                              {t.contracts.cashier.editFull} →
                             </Link>
-                            <span className="block text-xs text-slate-400">
-                              {[c.object?.building?.name, c.number ? `№${c.number}` : null]
-                                .filter(Boolean)
-                                .join(" · ")}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${CONTRACT_STATUS_COLORS[c.status]}`}
-                            >
-                              {t.contracts.statuses[c.status]}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3 text-slate-700">
-                            {formatCurrency(c.amount, c.currency)}
-                          </td>
-                          <td className="px-3 py-3 font-medium text-emerald-600">
-                            {formatCurrency(c.paid_amount, c.currency)}
-                          </td>
-                          <td className="px-3 py-3 font-medium text-rose-600">
-                            {remaining > 0 ? formatCurrency(remaining, c.currency) : "—"}
-                          </td>
-                          <td className="px-3 py-3 text-center text-slate-600">{paidCount}</td>
-                          <td className="px-5 py-3 text-right">
-                            {/* One entry point -- the contract page now holds
-                                печать / платежи as tabs, so no scattered
-                                per-row print button here. */}
-                            <Link
-                              href={`/contracts/${c.id}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-brand px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-95"
-                            >
-                              {t.clients.purchases.open} →
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+                          <ContractPayments contract={c} onPaymentAdded={loadContracts} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -529,8 +567,8 @@ export default function ClientDetailPage() {
             </p>
             {paidPayments.length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-lg text-slate-400">
-                  🧾
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                  <ReceiptIcon className="h-5 w-5" />
                 </span>
                 <p className="text-sm text-slate-400">{t.clients.paymentHistory.empty}</p>
               </div>

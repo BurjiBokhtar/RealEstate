@@ -17,7 +17,7 @@ import { UnitEditModal } from "@/components/UnitEditModal";
 import { Toast, type ToastType } from "@/components/Toast";
 import { ConstructionStatusBadge } from "@/components/ConstructionStatusBadge";
 import { DuplicateBuildingModal } from "@/components/DuplicateBuildingModal";
-import { DocumentIcon } from "@/components/icons";
+import { DocumentIcon, PencilIcon, GearIcon } from "@/components/icons";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -436,7 +436,7 @@ export default function BuildingDetailPage() {
                       : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                   }`}
                 >
-                  <span aria-hidden="true" className="text-base leading-none">✎</span>
+                  <PencilIcon className="h-4 w-4" />
                   {editMode ? t.buildings.editModeOn : t.buildings.editMode}
                 </button>
                 <Link
@@ -450,7 +450,7 @@ export default function BuildingDetailPage() {
                   href={`/buildings/${building.id}/edit`}
                   className="inline-flex items-center gap-2 rounded-lg btn-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
                 >
-                  <span aria-hidden="true" className="text-base leading-none">⚙</span>
+                  <GearIcon className="h-4 w-4" />
                   {t.buildings.configure}
                 </Link>
                 <button
