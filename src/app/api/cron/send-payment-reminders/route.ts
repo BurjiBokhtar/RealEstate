@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { renderContractTemplate } from "@/lib/contracts/renderTemplate";
+import { normalizeTjPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +66,7 @@ export async function GET(request: Request) {
   let failed = 0;
 
   for (const payment of dueList) {
-    const phone = payment.contract?.client?.phone;
+    const phone = normalizeTjPhone(payment.contract?.client?.phone);
     if (!phone) continue;
 
     const text = renderContractTemplate(

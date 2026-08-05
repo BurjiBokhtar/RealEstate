@@ -3,13 +3,12 @@
 // the simplest reminder channel, and the one people in Tajikistan actually
 // use. Auto-sending stays a separate (optional) feature.
 
-export function normalizeWaPhone(phone: string | null | undefined): string {
-  const d = (phone ?? "").replace(/\D/g, "");
-  if (!d) return "";
-  if (d.startsWith("992")) return d; // already has the Tajik country code
-  if (d.length === 9) return `992${d}`; // bare local number
-  return d;
-}
+import { normalizeTjPhone } from "@/lib/phone";
+
+// Kept as an alias -- other modules already import normalizeWaPhone by this
+// name; the actual normalization now lives in lib/phone.ts so the SMS
+// gateway can share it too.
+export const normalizeWaPhone = normalizeTjPhone;
 
 export function waLink(phone: string | null | undefined, text: string): string {
   const p = normalizeWaPhone(phone);

@@ -54,7 +54,7 @@ export async function checkAdmin(
   | { ok: false; reason: "no-token" | "bad-token" | "no-profile" | "not-admin"; detail?: string }
 > {
   const authHeader = request.headers.get("authorization");
-  const token = authHeader?.replace(/^Bearers+/i, "");
+  const token = authHeader?.replace(/^Bearer\s+/i, "");
   if (!token) return { ok: false, reason: "no-token" };
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) {
@@ -81,7 +81,7 @@ export async function checkAdmin(
 export function getUserScopedClient(request: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  const token = request.headers.get("authorization")?.replace(/^Bearers+/i, "");
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
   if (!supabaseUrl || !anonKey || !token) return null;
   return createClient(supabaseUrl, anonKey, {
     db: { schema: "crm" },

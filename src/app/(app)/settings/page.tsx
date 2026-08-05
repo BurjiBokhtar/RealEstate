@@ -50,6 +50,8 @@ export default function SettingsPage() {
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [testPhone, setTestPhone] = useState("");
+  const [testSending, setTestSending] = useState(false);
   // Buildings for the "documentation PDF" picker.
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
   const [reportBuilding, setReportBuilding] = useState("");
@@ -104,8 +106,11 @@ export default function SettingsPage() {
     setValues((v) => ({ ...v, [key]: value }));
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  // Shared by the Save button and the SMS test-send button -- the test has
+  // to hit the row that's actually stored (the API route reads it fresh via
+  // the service client), so it saves first rather than testing whatever's
+  // still sitting unsaved in the form.
+  const saveSettings = async (): Promise<boolean> => {
     const supabase = createClient();
     const { error, data } = await supabase
       .schema("crm")
@@ -126,17 +131,59 @@ export default function SettingsPage() {
       })
       .eq("id", true)
       .select("id");
-    setSaving(false);
     if (error) {
       setToast({ message: error.message, type: "error" });
-      return;
+      return false;
     }
     if (!data || data.length === 0) {
       setToast({ message: t.settings.saveBlocked, type: "error" });
-      return;
+      return false;
     }
     await refresh();
-    setToast({ message: t.settings.saved, type: "success" });
+    return true;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const ok = await saveSettings();
+    setSaving(false);
+    if (ok) setToast({ message: t.settings.saved, type: "success" });
+  };
+
+  const handleTestSend = async () => {
+    if (!testPhone.trim()) {
+      setToast({ message: t.settings.sms.testNoPhone, type: "error" });
+      return;
+    }
+    setTestSending(true);
+    const ok = await saveSettings();
+    if (!ok) {
+      setTestSending(false);
+      return;
+    }
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    try {
+      const res = await fetch("/api/sms/test", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ phone: testPhone }),
+      });
+      const json = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        setToast({ message: json.error || t.common.error, type: "error" });
+      } else {
+        setToast({ message: t.settings.sms.testSuccess, type: "success" });
+      }
+    } catch {
+      setToast({ message: t.common.error, type: "error" });
+    }
+    setTestSending(false);
   };
 
   if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
@@ -317,6 +364,32 @@ export default function SettingsPage() {
               ))}
             </div>
           </label>
+
+          {/* Compact inline test-send: one row, phone + button, no separate
+              card -- saves the form first so the API key/sender it tests is
+              exactly what's on screen, then fires one real SMS through the
+              gateway so a broken key/sender surfaces immediately instead of
+              days later when the reminder cron happens to run. */}
+          <div className="flex items-end gap-2 border-t border-slate-100 pt-3">
+            <label className="flex flex-1 flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">{t.settings.sms.testTitle}</span>
+              <input
+                type="tel"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder={t.settings.sms.testPhonePlaceholder}
+                className={`${FIELD_CLASS} h-9`}
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleTestSend}
+              disabled={testSending}
+              className="h-9 shrink-0 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            >
+              {testSending ? t.settings.sms.testSending : t.settings.sms.testSend}
+            </button>
+          </div>
         </Accordion>
       </div>
 
