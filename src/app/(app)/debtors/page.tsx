@@ -7,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
 import { waLink } from "@/lib/whatsapp";
 
@@ -221,10 +222,10 @@ export default function DebtorsPage() {
                 </td>
                 <td className="px-4 py-3 text-slate-600">{r.objectName ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">
-                  {r.earliestDue}
+                  {formatShortDate(r.earliestDue)}
                   {r.missedCount > 1 && (
                     <span className="block text-xs text-slate-400">
-                      {t.debtors.since} · {r.latestDue}
+                      {t.debtors.since} · {formatShortDate(r.latestDue)}
                     </span>
                   )}
                 </td>

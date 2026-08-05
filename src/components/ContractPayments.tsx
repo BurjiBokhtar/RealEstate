@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { formatCurrency } from "@/lib/currency";
+import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { useRole } from "@/lib/auth/useRole";
@@ -275,7 +276,7 @@ export function ContractPayments({
           {nextDue && (
             <p className="text-xs text-slate-500">
               {t.contracts.payments.nextDue}:{" "}
-              <span className="font-semibold text-slate-700">{nextDue.due_date}</span> ·{" "}
+              <span className="font-semibold text-slate-700">{formatShortDate(nextDue.due_date)}</span> ·{" "}
               <span className="font-semibold text-slate-700">
                 {formatCurrency(nextDueRemaining, contract.currency)}
               </span>
@@ -313,7 +314,7 @@ export function ContractPayments({
                     {formatCurrency(p.amount, contract.currency)}
                   </span>
                   <span className="text-xs text-slate-400">
-                    №{receiptNumberFor(payments, p.id)} · {p.paid_date ?? p.due_date}
+                    №{receiptNumberFor(payments, p.id)} · {formatShortDate(p.paid_date ?? p.due_date)}
                   </span>
                 </div>
                 <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
@@ -376,7 +377,7 @@ export function ContractPayments({
                         ? `${formatCurrency(a.covered, contract.currency)} / ${formatCurrency(p.amount, contract.currency)}`
                         : formatCurrency(p.amount, contract.currency)}
                     </span>
-                    <span className="text-xs text-slate-400">{p.due_date}</span>
+                    <span className="text-xs text-slate-400">{formatShortDate(p.due_date)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     {a.state === "covered" && (

@@ -436,6 +436,7 @@ export const dictionaries = {
         contractSubject: "Договор",
         receiptMsg: "Ассалому алейкум, {name}! Оплата {amount} по договору {contract} принята. Остаток: {remaining}. Спасибо.",
         contractMsg: "Ассалому алейкум, {name}! По договору {contract} ({object}): сумма {amount}, остаток {remaining}. Полный документ у вашего менеджера.",
+        imageDownloaded: "Изображение чека скачано — прикрепите его в открывшемся WhatsApp",
       },
     },
     buildings: {
@@ -604,6 +605,7 @@ export const dictionaries = {
         logo: "Логотип компании",
         name: "Название компании (ООО, ЧП и т.д.)",
         director: "ФИО руководителя",
+        directorHint: "Полностью, с отчеством — печатается в договоре как есть (например: Каримов Далер Файзуллоевич)",
         address: "Юридический адрес",
         bankDetails: "Банковские реквизиты",
         bankDetailsPlaceholder: "Филиал банка, счёт, МФО, ИНН и т.д.",
@@ -1175,6 +1177,7 @@ export const dictionaries = {
         contractSubject: "Шартнома",
         receiptMsg: "Ассалому алейкум, {name}! Пардохти {amount} аз рӯи шартномаи {contract} қабул шуд. Боқимонда: {remaining}. Ташаккур.",
         contractMsg: "Ассалому алейкум, {name}! Аз рӯи шартномаи {contract} ({object}): маблағ {amount}, боқимонда {remaining}. Ҳуҷҷати пурра дар назди менеҷери шумо.",
+        imageDownloaded: "Сурати расид бор карда шуд — онро дар WhatsApp замима кунед",
       },
     },
     buildings: {
@@ -1344,6 +1347,7 @@ export const dictionaries = {
         logo: "Логотипи ширкат",
         name: "Номи ширкат (ҶДММ ва ғ.)",
         director: "Ному насаби роҳбар",
+        directorHint: "Пурра, бо насаб — дар шартнома чупи ҳамин рӯйе чоп карда мешавад (масалан: Қаримов Далер Файзуллоевич)",
         address: "Суроғаи ҳуқуқӣ",
         bankDetails: "Реквизитҳои бонкӣ",
         bankDetailsPlaceholder: "Филиали бонк, ҳисоб, МФО, ИНН ва ғ.",

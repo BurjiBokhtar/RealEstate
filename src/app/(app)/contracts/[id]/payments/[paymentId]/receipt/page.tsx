@@ -2,7 +2,7 @@
 
 import { COPY_FOR_CLIENT, COPY_FOR_COMPANY } from "@/lib/contracts/copyLabels";
 import { printDocument } from "@/lib/print";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -37,6 +37,9 @@ export default function PaymentReceiptPage() {
   const [payment, setPayment] = useState<ContractPayment | null | undefined>(undefined);
   const [receiptNo, setReceiptNo] = useState<number | null>(null);
   const [apartmentNumber, setApartmentNumber] = useState<number | undefined>(undefined);
+  // Only the client's copy gets captured for WhatsApp -- the company copy
+  // stays purely for printing.
+  const clientCopyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -99,7 +102,12 @@ export default function PaymentReceiptPage() {
           ← {t.common.back}
         </button>
         <div className="flex items-center gap-2">
-          <SendActions contractId={params.id} kind="receipt" paymentId={params.paymentId} />
+          <SendActions
+            contractId={params.id}
+            kind="receipt"
+            paymentId={params.paymentId}
+            receiptNodeRef={clientCopyRef}
+          />
           <button
             type="button"
             onClick={() => printDocument()}
@@ -120,14 +128,16 @@ export default function PaymentReceiptPage() {
         className="mx-auto flex w-full max-w-md flex-col gap-4 print:h-[273mm] print:max-w-none print:gap-0"
       >
         <div className="print:flex print:h-1/2 print:flex-col print:justify-center print:overflow-hidden">
-          <ReceiptDocument
-            settings={settings}
-            contract={contract}
-            payment={payment}
-            receiptNo={receiptNo}
-            copyLabel={COPY_FOR_CLIENT}
-            apartmentNumber={apartmentNumber}
-          />
+          <div ref={clientCopyRef} className="inline-block">
+            <ReceiptDocument
+              settings={settings}
+              contract={contract}
+              payment={payment}
+              receiptNo={receiptNo}
+              copyLabel={COPY_FOR_CLIENT}
+              apartmentNumber={apartmentNumber}
+            />
+          </div>
         </div>
 
         <div

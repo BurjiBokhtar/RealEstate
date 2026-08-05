@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { formatShortDate } from "@/lib/formatDate";
 import { amountToWordsTj } from "@/lib/contracts/amountToWordsTj";
 import { bareCompanyName } from "@/lib/settings/companyName";
 import type { Settings } from "@/lib/settings/types";
@@ -69,6 +70,19 @@ export function ReceiptDocument({
           className="pointer-events-none absolute left-1/2 top-1/2 w-[52%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.12]"
         />
       )}
+      {/* Every receipt that reaches this component is for money already
+          received (paid: true payments), so the corner stamp isn't
+          conditional -- it's the one visual cue that survives even a tiny
+          WhatsApp thumbnail preview, before the recipient reads a word. */}
+      {payment.paid && (
+        <div
+          aria-hidden="true"
+          style={{ borderColor: "#059669", color: "#059669" }}
+          className="pointer-events-none absolute right-5 top-5 -rotate-[14deg] select-none rounded-md border-[3px] px-3 py-1 text-[13px] font-black uppercase tracking-[0.12em] opacity-80 print:opacity-70"
+        >
+          ✓ Пардохт шуд
+        </div>
+      )}
       {/* Header: company left, РАСИД № + copy chip right */}
       <div
         style={{ borderBottom: `2.5px solid ${PLUM}` }}
@@ -100,7 +114,7 @@ export function ReceiptDocument({
             Расид
           </p>
           <p className="text-[15px] font-bold">№ {receiptLabel}</p>
-          <p className="text-[10px] text-slate-500">{dateStr}</p>
+          <p className="text-[10px] text-slate-500">{formatShortDate(dateStr)}</p>
           <span className="mt-0.5 inline-block rounded border border-slate-300 px-1.5 py-px text-[9px] uppercase tracking-wide text-slate-500">
             {copyLabel}
           </span>
@@ -119,15 +133,14 @@ export function ReceiptDocument({
           <p className="text-[14px] font-bold leading-tight">
             {contract.client?.name ?? "—"}
           </p>
-          {/* The real building-wide apartment number (the one on the
-              contract), not the unit's internal grid name -- that string
-              repeats the floor and shows position-in-floor, which means
-              nothing to the client. */}
+          {/* Order matches how the company reads a unit out loud: which
+              entrance, which floor, how big, and only then the apartment
+              number -- not the internal grid name. */}
           <p className="text-[11px] text-slate-500">
+            {contract.object?.block && `${contract.object.block} · `}
+            {contract.object?.floor != null && `${contract.object.floor}-ошёна · `}
+            {contract.object?.area != null && `${contract.object.area} м² · `}
             {apartmentNumber != null ? `Хонаи №${apartmentNumber}` : (contract.object?.name ?? "—")}
-            {contract.object?.block && ` · ${contract.object.block}`}
-            {contract.object?.area != null && ` · ${contract.object.area} м²`}
-            {contract.object?.floor != null && ` · ${contract.object.floor}-ошёна`}
           </p>
         </div>
 
@@ -146,7 +159,7 @@ export function ReceiptDocument({
             </tr>
             <tr>
               <td className="py-0.5 text-slate-500">Санаи пардохт</td>
-              <td className="py-0.5 text-right">{dateStr}</td>
+              <td className="py-0.5 text-right">{formatShortDate(dateStr)}</td>
             </tr>
             <tr>
               <td className="py-0.5 text-slate-500">Ҳолати пардохт</td>

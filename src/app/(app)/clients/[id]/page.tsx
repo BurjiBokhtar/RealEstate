@@ -12,6 +12,7 @@ import { ClientForm } from "@/components/ClientForm";
 import { ClientQuickPayment } from "@/components/ClientQuickPayment";
 import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { formatShortDate } from "@/lib/formatDate";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
@@ -575,7 +576,7 @@ export default function ClientDetailPage() {
                             №{receiptNumberFor(paymentsByContract[p.contract_id] ?? [], p.id)}
                           </td>
                           <td className="px-3 py-3 text-slate-700">
-                            {p.paid_date ?? p.due_date}
+                            {formatShortDate(p.paid_date ?? p.due_date)}
                           </td>
                           <td className="px-3 py-3">
                             <Link

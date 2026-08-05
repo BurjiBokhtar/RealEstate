@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { printDocument } from "@/lib/print";
 import { formatCurrency, type Currency } from "@/lib/currency";
+import { formatShortDate } from "@/lib/formatDate";
 import { formatArea } from "@/lib/objects/format";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
@@ -463,7 +464,7 @@ export default function BuildingReportPage() {
               <tbody>
                 {payments.map((p) => (
                   <tr key={p.id}>
-                    <td className={td}>{p.paid_date ?? p.due_date}</td>
+                    <td className={td}>{formatShortDate(p.paid_date ?? p.due_date)}</td>
                     <td className={td}>{p.contract?.number ?? "—"}</td>
                     <td className={td}>{p.contract?.client?.name ?? "—"}</td>
                     <td className={`${td} font-semibold`}>

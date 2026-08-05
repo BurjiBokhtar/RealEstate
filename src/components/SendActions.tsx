@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type RefObject } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { waLink } from "@/lib/whatsapp";
+import { captureNodeAsPngFile } from "@/lib/receiptImage";
 
 type Kind = "contract" | "receipt";
 
@@ -25,14 +26,22 @@ export function SendActions({
   contractId,
   kind,
   paymentId,
+  receiptNodeRef,
 }: {
   contractId: string;
   kind: Kind;
   paymentId?: string;
+  // When set (only meaningful for kind="receipt"), WhatsApp send captures
+  // this DOM node as an image and shares it alongside the text, instead of
+  // text alone. Only the page that actually renders the receipt (the print
+  // page) can offer this -- the compact list view has no receipt DOM to
+  // capture, so it stays text-only there.
+  receiptNodeRef?: RefObject<HTMLElement | null>;
 }) {
   const { t } = useLocale();
   const [busy, setBusy] = useState<"whatsapp" | "email" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Load just what the message needs, on click, as the logged-in user (RLS).
   const loadInfo = async (): Promise<{ info: ContractInfo; paidAmount: number } | null> => {
@@ -84,11 +93,54 @@ export function SendActions({
   const openWhatsApp = async () => {
     setBusy("whatsapp");
     setError(null);
+    setNotice(null);
     const res = await loadInfo();
-    setBusy(null);
-    if (!res) return setError(t.common.error);
-    if (!res.info.client?.phone) return setError(t.contracts.send.noPhone);
+    if (!res) {
+      setBusy(null);
+      return setError(t.common.error);
+    }
+    if (!res.info.client?.phone) {
+      setBusy(null);
+      return setError(t.contracts.send.noPhone);
+    }
     const msg = buildMessage(res.info, res.paidAmount);
+
+    // Receipt + a real receipt DOM to capture: try the native share sheet
+    // so the image and the text go together in one WhatsApp message, the
+    // way a photo of a paper receipt would. Falls through to the old
+    // text-only wa.me link on any failure (unsupported browser, capture
+    // error, user cancelled the share sheet) -- never a dead end.
+    if (kind === "receipt" && receiptNodeRef?.current) {
+      try {
+        const file = await captureNodeAsPngFile(
+          receiptNodeRef.current,
+          `receipt-${res.info.number ?? paymentId ?? "chek"}.png`
+        );
+        const nav = navigator as Navigator & {
+          canShare?: (data: { files: File[] }) => boolean;
+          share?: (data: { files: File[]; text: string }) => Promise<void>;
+        };
+        if (nav.canShare?.({ files: [file] }) && nav.share) {
+          await nav.share({ files: [file], text: msg });
+          setBusy(null);
+          return;
+        }
+        // No native share (most desktop browsers): download the image so
+        // it's one drag away from the WhatsApp chat that's about to open.
+        const url = URL.createObjectURL(file);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+        setNotice(t.contracts.send.imageDownloaded);
+      } catch {
+        // Capture failed (e.g. a cross-origin logo) -- text-only is still
+        // a complete, working send, just without the picture.
+      }
+    }
+
+    setBusy(null);
     window.open(waLink(res.info.client.phone, msg), "_blank", "noopener,noreferrer");
   };
 
@@ -139,6 +191,7 @@ export function SendActions({
         </button>
       </div>
       {error && <p className="text-xs text-red-600">{error}</p>}
+      {notice && <p className="text-xs text-emerald-600">{notice}</p>}
     </div>
   );
 }

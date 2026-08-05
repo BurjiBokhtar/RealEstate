@@ -370,3 +370,45 @@
     opacity: 1;
   }
 }
+
+/* Contract printing: page numbering, minimize widows/orphans, compact
+   spacing. The @page rule applies globally to all print output; #contract-*
+   selectors target specific layouts. */
+@page {
+  margin: 12mm 10mm;
+  /* Page counter at the bottom center of every page. */
+  @bottom-center {
+    content: counter(page);
+    font-size: 10pt;
+    color: #6b7280;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+}
+
+#contract-print-area {
+  orphans: 3;
+  widows: 3;
+}
+
+#contract-print-area > div {
+  /* Space between copies is for screen only; printing should go
+     copy-to-copy with no gap between pages. */
+  margin: 0;
+}
+
+#contract-print-area section {
+  page-break-inside: avoid;
+  page-break-after: auto;
+}
+
+#contract-print-area p {
+  orphans: 2;
+  widows: 2;
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+#contract-print-area table {
+  page-break-inside: avoid;
+}
+
