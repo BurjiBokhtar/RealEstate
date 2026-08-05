@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
+import { OccupancyBar, occShade } from "@/components/OccupancyBar";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -50,22 +51,6 @@ type ObjectRow = {
 
 function formatArea(m2: number) {
   return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
-}
-
-// Occupancy segment shade: the same status colours as the shakhmatka grid
-// (available = green, reserved = yellow, sold = red/rose, …) instead of
-// tints of the theme brand colour -- so a unit's colour here means the same
-// thing it means everywhere else in the app, regardless of which hero theme
-// is active.
-function occShade(status: ObjectStatus): { background: string; color: string } {
-  const map: Record<ObjectStatus, { background: string; color: string }> = {
-    available: { background: "#34d399", color: "#065f46" }, // emerald-400 / emerald-900
-    reserved: { background: "#fbbf24", color: "#78350f" }, // amber-400 / amber-900
-    sold: { background: "#fb7185", color: "#ffffff" }, // rose-400
-    rented: { background: "#38bdf8", color: "#ffffff" }, // sky-400
-    in_progress: { background: "#a78bfa", color: "#ffffff" }, // violet-400
-  };
-  return map[status] ?? { background: "#94a3b8", color: "#ffffff" };
 }
 
 type ContractRow = {
@@ -546,26 +531,7 @@ export default function DashboardPage() {
                       {b.total}
                     </span>
                   </div>
-                  {/* Segments are shades of the company brand colour (darkest =
-                      sold), not a fixed rainbow, and the count sits in a
-                      readable colour on each shade. */}
-                  <div className="flex h-6 w-full overflow-hidden rounded-lg bg-slate-100 text-[11px] font-bold">
-                    {(Object.keys(b.counts) as ObjectStatus[]).map((status) =>
-                      b.counts[status] > 0 ? (
-                        <div
-                          key={status}
-                          style={{
-                            width: `${(b.counts[status] / b.total) * 100}%`,
-                            ...occShade(status),
-                          }}
-                          className="flex items-center justify-center transition-all duration-200 hover:brightness-95"
-                          title={`${t.objects.statuses[status]}: ${b.counts[status]}`}
-                        >
-                          {(b.counts[status] / b.total) * 100 > 7 ? b.counts[status] : ""}
-                        </div>
-                      ) : null
-                    )}
-                  </div>
+                  <OccupancyBar counts={b.counts} total={b.total} labels={t.objects.statuses} />
                 </div>
               );
             })}

@@ -36,25 +36,42 @@ function Bar({
   delay: number;
   highlighted: boolean;
 }) {
+  // "Glow": a light-to-rich vertical gradient (never a flat fill) plus a
+  // soft blurred ellipse of the same colour sitting right at the baseline,
+  // like the bar is casting a little coloured light onto the card. The
+  // glow lives in its own wrapper (not the bar itself) so it stays pinned
+  // to the baseline regardless of the bar's own height.
   return (
-    <div
-      className={`w-full rounded-t-lg shadow-sm transition-[height,filter] duration-700 ease-out ${
-        highlighted ? "brightness-110" : ""
-      }`}
-      style={{
-        height: `${frac * 100}%`,
-        minHeight: frac > 0 ? 5 : 0,
-        transitionDelay: `${delay}ms`,
-        background: color,
-      }}
-    />
+    <div className="relative flex h-full w-full max-w-[26px] flex-col justify-end">
+      <div
+        className={`w-full rounded-t-xl transition-[height,transform,filter] duration-700 ease-out ${
+          highlighted ? "-translate-y-0.5 brightness-105" : ""
+        }`}
+        style={{
+          height: `${frac * 100}%`,
+          minHeight: frac > 0 ? 5 : 0,
+          transitionDelay: `${delay}ms`,
+          background: `linear-gradient(180deg, color-mix(in srgb, ${color} 45%, white), ${color})`,
+        }}
+      />
+      {frac > 0 && (
+        <div
+          aria-hidden="true"
+          className={`pointer-events-none absolute inset-x-[12%] -bottom-2 h-4 rounded-full blur-[7px] transition-opacity duration-300 ${
+            highlighted ? "opacity-70" : "opacity-45"
+          }`}
+          style={{ background: color }}
+        />
+      )}
+    </div>
   );
 }
 
-// A bold, space-filling grouped bar chart. Bars fill their columns (no thin
-// sticks), each column labelled with its value, TJS and USD each on their own
-// scale so both read clearly. Gridlines, hover spotlight and a tooltip round
-// it out.
+// A quiet grouped bar chart: slim, capped-width bars with room to breathe
+// instead of blocks wedged edge-to-edge, solid hairline gridlines (never
+// dashed -- a dashed rule reads as a placeholder chart), each column
+// labelled with its value, TJS and USD each on their own scale so both read
+// clearly. Hover lifts the bar and opens a tooltip.
 export function RevenueChart({ data }: { data: RevenueMonth[] }) {
   const [hovered, setHovered] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -81,10 +98,11 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
       </div>
 
       <div className="relative" style={{ height: PLOT }}>
-        {/* Dashed gridlines behind the bars. */}
+        {/* Solid hairline gridlines, one step off the card surface -- quiet
+            and recessive, never competing with the bars for attention. */}
         <div className="absolute inset-0 flex flex-col justify-between">
           {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="border-t border-dashed border-slate-100" />
+            <div key={i} className="border-t border-slate-100" />
           ))}
         </div>
 
@@ -128,18 +146,32 @@ export function RevenueChart({ data }: { data: RevenueMonth[] }) {
                   )}
                 </div>
 
-                <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl group-hover:visible">
-                  <p className="mb-1 font-semibold text-slate-700">{d.month}</p>
+                {/* Value leads (bold ink), series name follows, dot carries
+                    identity -- text itself never wears the data colour. */}
+                <div className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl group-hover:visible">
+                  <p className="mb-1.5 font-semibold text-slate-700">{d.month}</p>
                   {d.tjs > 0 && (
-                    <p className="flex items-center gap-1.5" style={{ color: TJS_COLOR }}>
-                      <span className="h-2 w-2 rounded-full" style={{ background: TJS_COLOR }} />
-                      {formatCurrency(d.tjs, "TJS")}
+                    <p className="flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: TJS_COLOR }}
+                      />
+                      <span className="text-slate-400">TJS</span>
+                      <span className="ml-auto font-semibold tabular-nums text-slate-800">
+                        {formatCurrency(d.tjs, "TJS")}
+                      </span>
                     </p>
                   )}
                   {d.usd > 0 && (
-                    <p className="flex items-center gap-1.5" style={{ color: USD_COLOR }}>
-                      <span className="h-2 w-2 rounded-full" style={{ background: USD_COLOR }} />
-                      {formatCurrency(d.usd, "USD")}
+                    <p className="mt-0.5 flex items-center gap-2">
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: USD_COLOR }}
+                      />
+                      <span className="text-slate-400">USD</span>
+                      <span className="ml-auto font-semibold tabular-nums text-slate-800">
+                        {formatCurrency(d.usd, "USD")}
+                      </span>
                     </p>
                   )}
                   {d.tjs === 0 && d.usd === 0 && <p className="text-slate-400">—</p>}
