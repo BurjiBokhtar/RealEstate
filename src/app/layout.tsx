@@ -38,15 +38,28 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Same lookup generateMetadata() already does (cached, so this doesn't cost
+  // a second DB round trip in practice) -- but here it decides the hero theme
+  // BEFORE the first byte goes out, so the page never paints the default
+  // "atlas" indigo before swapping to the company's real theme. AppShell and
+  // the login page still call applyHeroTheme() client-side, but only once
+  // settings have actually loaded, so they confirm this value rather than
+  // momentarily resetting it.
+  const { heroTheme, heroPattern } = await getBranding();
+  const htmlDataAttrs: Record<string, string> = {};
+  if (heroTheme && heroTheme !== "atlas") htmlDataAttrs["data-hero-theme"] = heroTheme;
+  if (heroPattern && heroPattern !== "none") htmlDataAttrs["data-hero-pattern"] = heroPattern;
+
   return (
     <html
       lang="ru"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      {...htmlDataAttrs}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
         <LocaleProvider>

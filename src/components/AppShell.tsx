@@ -56,7 +56,7 @@ const navItems = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useLocale();
-  const { settings } = useSettings();
+  const { settings, loading: settingsLoading } = useSettings();
   const { role, loading: roleLoading } = useRole();
   // Settings (company data, staff accounts, audit log) is admin territory --
   // the pages themselves refuse non-admins, but showing the menu item just
@@ -72,9 +72,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Apply the hero theme app-wide: the company-wide default (admin Settings)
   // unless this user set a personal override. Re-runs when the company value
   // loads/changes so its accent-color reaches every page.
+  //
+  // Skipped while settings are still loading: the root layout already paints
+  // <html> in the company's real theme server-side (see getBranding()), and
+  // `settings` sits on DEFAULT_SETTINGS (hero_theme: null) until the fetch
+  // resolves. Running this during that window would wipe the correct
+  // server-applied theme back to "atlas" for a frame, then re-apply the real
+  // one once the fetch lands -- exactly the indigo-then-real-color flash this
+  // guard exists to prevent.
   useEffect(() => {
+    if (settingsLoading) return;
     applyHeroTheme(settings.hero_theme, settings.hero_pattern);
-  }, [settings.hero_theme, settings.hero_pattern]);
+  }, [settingsLoading, settings.hero_theme, settings.hero_pattern]);
 
   useEffect(() => {
     const supabase = createClient();

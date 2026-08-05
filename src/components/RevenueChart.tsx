@@ -14,10 +14,13 @@ function compact(n: number): string {
   return String(Math.round(n));
 }
 
-// TJS uses the company brand colour; USD a lighter tint of the same brand, so
-// the chart stays on-theme (green/ocean/…) instead of a fixed sky/violet.
-const TJS_COLOR = "var(--brand)";
-const USD_COLOR = "color-mix(in srgb, var(--brand) 45%, white)";
+// TJS uses the company's strong brand shade; USD uses the theme's accent
+// colour (the third hero-gradient stop -- saffron/mint/amber/sky depending on
+// the chosen theme). Two genuinely different hues from the same palette, so
+// the two currencies read apart at a glance instead of blurring into two
+// tints of one colour, while the chart still tracks whichever theme is active.
+const TJS_COLOR = "var(--brand-strong)";
+const USD_COLOR = "var(--hero-3)";
 
 function Bar({
   frac,

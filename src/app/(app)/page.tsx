@@ -52,22 +52,20 @@ function formatArea(m2: number) {
   return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
 }
 
-// Occupancy segment shade: a tint of the company brand colour (darkest = sold),
-// with a readable text colour on top. Keeps the chart on-theme instead of a
-// fixed green/amber/red rainbow.
+// Occupancy segment shade: the same status colours as the shakhmatka grid
+// (available = green, reserved = yellow, sold = red/rose, …) instead of
+// tints of the theme brand colour -- so a unit's colour here means the same
+// thing it means everywhere else in the app, regardless of which hero theme
+// is active.
 function occShade(status: ObjectStatus): { background: string; color: string } {
-  const map: Record<string, { mix: number; dark: boolean }> = {
-    available: { mix: 16, dark: true },
-    reserved: { mix: 52, dark: false },
-    sold: { mix: 100, dark: false },
-    rented: { mix: 40, dark: false },
-    in_progress: { mix: 28, dark: true },
+  const map: Record<ObjectStatus, { background: string; color: string }> = {
+    available: { background: "#34d399", color: "#065f46" }, // emerald-400 / emerald-900
+    reserved: { background: "#fbbf24", color: "#78350f" }, // amber-400 / amber-900
+    sold: { background: "#fb7185", color: "#ffffff" }, // rose-400
+    rented: { background: "#38bdf8", color: "#ffffff" }, // sky-400
+    in_progress: { background: "#a78bfa", color: "#ffffff" }, // violet-400
   };
-  const m = map[status] ?? { mix: 40, dark: false };
-  return {
-    background: `color-mix(in srgb, var(--brand) ${m.mix}%, white)`,
-    color: m.dark ? "var(--brand-strong)" : "white",
-  };
+  return map[status] ?? { background: "#94a3b8", color: "#ffffff" };
 }
 
 type ContractRow = {
