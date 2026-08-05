@@ -1,0 +1,15 @@
+# Normalize line endings to LF for all text files, regardless of what OS
+# checked them out or which editor touched them. Without this, a Windows
+# checkout (CRLF) diffs as a full-file rewrite against the LF blobs already
+# in history, so every file looks "modified" with nothing actually changed.
+* text=auto eol=lf
+
+# Binary assets: never touch these.
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff binary
+*.woff2 binary
