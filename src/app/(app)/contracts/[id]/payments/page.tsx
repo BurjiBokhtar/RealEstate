@@ -13,7 +13,6 @@ import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
 import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
-import { PrintIcon } from "@/components/icons";
 import { formatCurrency } from "@/lib/currency";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import type { Contract } from "@/lib/contracts/types";
@@ -125,13 +124,15 @@ export default function ContractPaymentsPage() {
                 {t.contracts.statuses[contract.status]}
               </span>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/contracts/${params.id}/print`}
-                className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
-              >
-                <PrintIcon /> {t.clients.purchases.printContract}
-              </Link>
+            <div className="flex flex-wrap items-center gap-2">
+              <SendActions
+                contractId={params.id}
+                kind="contract"
+                printAction={{
+                  href: `/contracts/${params.id}/print`,
+                  label: t.clients.purchases.printContract,
+                }}
+              />
               <Link
                 href={`/contracts/${params.id}`}
                 className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
@@ -182,14 +183,6 @@ export default function ContractPaymentsPage() {
                 >
                   {t.contracts.backToClient} →
                 </Link>
-              </div>
-
-              {/* Send the contract itself */}
-              <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm font-semibold text-slate-700">
-                  {t.contracts.print.title}
-                </p>
-                <SendActions contractId={params.id} kind="contract" />
               </div>
             </div>
           </div>

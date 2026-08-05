@@ -1,14 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
-import { PrintIcon } from "@/components/icons";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -325,26 +323,26 @@ export function ContractPayments({
                 </span>
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100/60 pt-1.5">
-                <Link
-                  href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
-                  className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
-                >
-                  <PrintIcon className="h-3.5 w-3.5" /> {t.contracts.receipt.print}
-                </Link>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />
-                  {role === "admin" && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeletePayment(p)}
-                      disabled={deletingId === p.id}
-                      title={t.contracts.payments.deletePayment}
-                      className="flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
+                <SendActions
+                  contractId={contract.id}
+                  kind="receipt"
+                  paymentId={p.id}
+                  printAction={{
+                    href: `/contracts/${contract.id}/payments/${p.id}/receipt`,
+                    label: t.contracts.receipt.print,
+                  }}
+                />
+                {role === "admin" && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeletePayment(p)}
+                    disabled={deletingId === p.id}
+                    title={t.contracts.payments.deletePayment}
+                    className="flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           ))}

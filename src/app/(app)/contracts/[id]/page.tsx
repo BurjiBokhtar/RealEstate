@@ -13,7 +13,6 @@ import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
 import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
-import { PrintIcon } from "@/components/icons";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency } from "@/lib/currency";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
@@ -189,12 +188,11 @@ export default function ContractDetailPage() {
                 {t.contracts.statuses[contract.status]}
               </span>
             </div>
-            <Link
-              href={`/contracts/${params.id}/print`}
-              className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
-            >
-              <PrintIcon /> {t.contracts.print.button}
-            </Link>
+            <SendActions
+              contractId={params.id}
+              kind="contract"
+              printAction={{ href: `/contracts/${params.id}/print`, label: t.contracts.print.button }}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_380px] xl:items-start">
@@ -263,7 +261,6 @@ export default function ContractDetailPage() {
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-5">
-              <SendActions contractId={params.id} kind="contract" />
               <ContractPayments contract={contract} onPaymentAdded={loadContract} />
             </div>
           </div>

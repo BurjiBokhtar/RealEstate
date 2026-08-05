@@ -426,6 +426,7 @@ export const dictionaries = {
         cutHere: "Линия отреза",
       },
       send: {
+        share: "Поделиться",
         whatsapp: "Отправить в WhatsApp",
         email: "Отправить на Email",
         sending: "Отправка...",
@@ -1177,6 +1178,7 @@ export const dictionaries = {
         cutHere: "Хати буриш",
       },
       send: {
+        share: "Мубодила",
         whatsapp: "Ба WhatsApp фиристодан",
         email: "Ба Email фиристодан",
         sending: "Фиристода истодааст...",

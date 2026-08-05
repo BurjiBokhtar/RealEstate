@@ -10,7 +10,6 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { ReceiptDocument } from "@/components/ReceiptDocument";
 import { SendActions } from "@/components/SendActions";
-import { PrintIcon } from "@/components/icons";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -102,21 +101,13 @@ export default function PaymentReceiptPage() {
         >
           ← {t.common.back}
         </button>
-        <div className="flex items-center gap-2">
-          <SendActions
-            contractId={params.id}
-            kind="receipt"
-            paymentId={params.paymentId}
-            receiptNodeRef={clientCopyRef}
-          />
-          <button
-            type="button"
-            onClick={() => printDocument()}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
-          >
-            <PrintIcon /> {t.contracts.print.button}
-          </button>
-        </div>
+        <SendActions
+          contractId={params.id}
+          kind="receipt"
+          paymentId={params.paymentId}
+          receiptNodeRef={clientCopyRef}
+          printAction={{ onClick: () => printDocument(), label: t.contracts.print.button }}
+        />
       </div>
 
       {/* Both copies share one A4 sheet, so each gets exactly half its
