@@ -72,13 +72,17 @@ export function ReceiptDocument({
       )}
       {/* Every receipt that reaches this component is for money already
           received (paid: true payments), so the corner stamp isn't
-          conditional -- it's the one visual cue that survives even a tiny
-          WhatsApp thumbnail preview, before the recipient reads a word. */}
+          conditional on that -- it's the one visual cue that survives even
+          a tiny WhatsApp thumbnail preview, before the recipient reads a
+          word. It's for the shared image only, not the paper copy: the
+          signed printout is the actual proof of payment, and a rubber-stamp
+          look on it reads as presumptuous rather than official, so it's
+          hidden from print with print:hidden. */}
       {payment.paid && (
         <div
           aria-hidden="true"
           style={{ borderColor: "#059669", color: "#059669" }}
-          className="pointer-events-none absolute right-5 top-5 -rotate-[14deg] select-none rounded-md border-[3px] px-3 py-1 text-[13px] font-black uppercase tracking-[0.12em] opacity-80 print:opacity-70"
+          className="pointer-events-none absolute right-5 top-5 -rotate-[14deg] select-none rounded-md border-[3px] px-3 py-1 text-[13px] font-black uppercase tracking-[0.12em] opacity-80 print:hidden"
         >
           ✓ Пардохт шуд
         </div>

@@ -328,7 +328,14 @@ export function ContractDocument({
           </div>
         </div>
 
-        <div className="flex flex-col gap-1.5 px-9 pb-6 pt-4">
+        {/* print:block: this is the whole letter body (all 9 sections + the
+            payment table), routinely taller than one printed page. Chrome's
+            print engine doesn't fragment display:flex containers across
+            page breaks the way it does plain block content -- content got
+            cut off mid-line or an entire remaining stretch jumped whole to
+            the next page. Block flow lets the page-break-inside/orphans/
+            widows rules on #contract-print-area (globals.css) do their job. */}
+        <div className="flex flex-col gap-1.5 px-9 pb-6 pt-4 print:block">
           {/* Title */}
           <div className="flex items-center gap-3">
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
@@ -338,7 +345,7 @@ export function ContractDocument({
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
           </div>
 
-          <div className="flex items-baseline justify-between text-[12.5px]">
+          <div className="flex items-baseline justify-between text-[12.5px] print:mt-1">
             <span>
               <Var>{shortDate(contract.signed_date)}</Var>{" "}
               <span className="text-slate-500">({tjLongDate(contract.signed_date)})</span>
@@ -649,8 +656,11 @@ export function ContractDocument({
           </div>
         </div>
 
-        {/* ЗАМИМА -- its own page, as in the original */}
-        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page">
+        {/* ЗАМИМА -- its own page, as in the original. print:block for the
+            same reason as the body above: this can run past one page too
+            (14-item list + two signature blocks), and a flex container
+            doesn't paginate the overflow onto the next page cleanly. */}
+        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
           <div className="flex items-center gap-3">
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
             <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">

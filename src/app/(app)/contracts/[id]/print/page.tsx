@@ -101,8 +101,13 @@ export default function ContractPrintPage() {
       {/* Each copy is a full document in its own right (not a shared half
           page like a receipt), so it gets its own printed page -- no cut
           line between them, that only makes sense when two copies share
-          one sheet. */}
-      <div id="contract-print-area" className="flex flex-col gap-10 print:gap-0">
+          one sheet. print:block (not print:flex-col): each copy here spans
+          several printed pages (main body + ЗАМИМА annex), and Chrome
+          doesn't fragment display:flex containers across page breaks
+          reliably -- content gets clipped or an entire child jumps whole to
+          the next page, leaving a blank gap. Plain block flow paginates
+          the way the @page/orphans/widows rules below expect. */}
+      <div id="contract-print-area" className="flex flex-col gap-10 print:block">
         <div className="print:break-after-page">
           <ContractDocument
             contract={contract}
