@@ -11,6 +11,9 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { ContractPayments } from "@/components/ContractPayments";
 import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
+import { ClientIdentity } from "@/components/ClientIdentity";
+import { StatTileRow } from "@/components/StatTile";
+import { PrintIcon } from "@/components/icons";
 import { formatCurrency } from "@/lib/currency";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import type { Contract } from "@/lib/contracts/types";
@@ -125,9 +128,9 @@ export default function ContractPaymentsPage() {
             <div className="flex flex-wrap gap-2">
               <Link
                 href={`/contracts/${params.id}/print`}
-                className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
               >
-                🖨 {t.clients.purchases.printContract}
+                <PrintIcon /> {t.clients.purchases.printContract}
               </Link>
               <Link
                 href={`/contracts/${params.id}`}
@@ -138,23 +141,8 @@ export default function ContractPaymentsPage() {
             </div>
           </div>
 
-          {/* Deal state at a glance */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {tiles.map((tile, i) => (
-              <div
-                key={tile.label}
-                style={{ animationDelay: `${i * 50}ms` }}
-                className="animate-fade-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                  {tile.label}
-                </p>
-                <p className={`mt-1 text-2xl font-bold tabular-nums ${tile.tone}`}>
-                  {tile.value}
-                </p>
-              </div>
-            ))}
-          </div>
+          {/* Deal state at a glance -- same tile language as the client page */}
+          <StatTileRow tiles={tiles} />
 
           <div
             className="animate-fade-up flex flex-col gap-1.5"
@@ -182,22 +170,12 @@ export default function ContractPaymentsPage() {
             >
               {/* Who's paying */}
               <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-3">
-                  <span className="hero-gradient flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-white">
-                    {(contract.client?.name ?? "?").trim().charAt(0).toUpperCase()}
-                  </span>
-                  <div className="min-w-0">
-                    <Link
-                      href={`/clients/${contract.client_id}`}
-                      className="block truncate text-sm font-semibold text-slate-900 hover:underline"
-                    >
-                      {contract.client?.name ?? "—"}
-                    </Link>
-                    {contract.client?.phone && (
-                      <p className="text-xs text-slate-500">{contract.client.phone}</p>
-                    )}
-                  </div>
-                </div>
+                <ClientIdentity
+                  name={contract.client?.name ?? "—"}
+                  phone={contract.client?.phone}
+                  href={`/clients/${contract.client_id}`}
+                  size="md"
+                />
                 <Link
                   href={`/clients/${contract.client_id}`}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"

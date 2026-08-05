@@ -7,11 +7,14 @@ export type RevenueMonth = { month: string; tjs: number; usd: number };
 
 const PLOT = 190; // px height of the bar area
 
-// Compact axis/label money: 5 720 000 -> "5,7 млн", 384 000 -> "384 т".
+// Compact axis/label money: 5 720 000 -> "5,7 млн", 384 000 -> "384 000".
+// No "т" (thousand) abbreviation below a million -- it's a Russian-only
+// shorthand that reads as noise in the Tajik locale, so the full
+// space-grouped number goes there instead (still short enough to fit above
+// a column, and unambiguous in either language).
 function compact(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} млн`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)} т`;
-  return String(Math.round(n));
+  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
 }
 
 // TJS uses the fixed atlas-saffron gold -- a warm accent that reads as

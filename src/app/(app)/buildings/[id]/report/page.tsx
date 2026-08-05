@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { BackLink } from "@/components/BackLink";
+import { PrintIcon } from "@/components/icons";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
@@ -235,9 +236,9 @@ export default function BuildingReportPage() {
         <button
           type="button"
           onClick={() => printDocument("building-report")}
-          className="btn-brand rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+          className="btn-brand inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
         >
-          🖨 {t.buildings.report.savePdf}
+          <PrintIcon /> {t.buildings.report.savePdf}
         </button>
       </div>
 

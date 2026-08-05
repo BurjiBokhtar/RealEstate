@@ -13,6 +13,7 @@ import { ContractForm } from "@/components/ContractForm";
 import { ContractPayments } from "@/components/ContractPayments";
 import { ContractTabs } from "@/components/ContractTabs";
 import { SendActions } from "@/components/SendActions";
+import { PrintIcon } from "@/components/icons";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency } from "@/lib/currency";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
@@ -190,9 +191,9 @@ export default function ContractDetailPage() {
             </div>
             <Link
               href={`/contracts/${params.id}/print`}
-              className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
             >
-              🖨 {t.contracts.print.button}
+              <PrintIcon /> {t.contracts.print.button}
             </Link>
           </div>
 

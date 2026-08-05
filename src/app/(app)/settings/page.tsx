@@ -13,6 +13,7 @@ import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { ChangePasswordCard } from "@/components/ChangePasswordCard";
+import { DocumentIcon } from "@/components/icons";
 import type { SettingsInput } from "@/lib/settings/types";
 
 const FIELD_CLASS =
@@ -483,7 +484,7 @@ export default function SettingsPage() {
               reportBuilding ? "" : "pointer-events-none opacity-40"
             }`}
           >
-            📄 {t.settings.backup.open}
+<DocumentIcon className="h-4 w-4" /> {t.settings.backup.open}
           </Link>
         </div>
       </div>

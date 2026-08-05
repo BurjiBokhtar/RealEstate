@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
+import { PrintIcon } from "@/components/icons";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { useRole } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -328,7 +329,7 @@ export function ContractPayments({
                   href={`/contracts/${contract.id}/payments/${p.id}/receipt`}
                   className="flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
                 >
-                  🖨 {t.contracts.receipt.print}
+                  <PrintIcon className="h-3.5 w-3.5" /> {t.contracts.receipt.print}
                 </Link>
                 <div className="flex flex-wrap items-center gap-1.5">
                   <SendActions contractId={contract.id} kind="receipt" paymentId={p.id} />

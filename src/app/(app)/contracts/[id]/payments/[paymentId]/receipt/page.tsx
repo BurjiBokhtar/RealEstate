@@ -10,6 +10,7 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { ReceiptDocument } from "@/components/ReceiptDocument";
 import { SendActions } from "@/components/SendActions";
+import { PrintIcon } from "@/components/icons";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
@@ -111,9 +112,9 @@ export default function PaymentReceiptPage() {
           <button
             type="button"
             onClick={() => printDocument()}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md active:scale-[0.98]"
           >
-            🖨 {t.contracts.print.button}
+            <PrintIcon /> {t.contracts.print.button}
           </button>
         </div>
       </div>
