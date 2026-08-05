@@ -662,7 +662,7 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
-      <ManagerSales />
+      <ManagerSales periodBounds={periodBounds} />
     </div>
   );
 }

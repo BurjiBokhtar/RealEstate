@@ -14,12 +14,15 @@ function compact(n: number): string {
   return String(Math.round(n));
 }
 
-// TJS uses the company's strong brand shade; USD uses the theme's accent
-// colour (the third hero-gradient stop -- saffron/mint/amber/sky depending on
-// the chosen theme). Two genuinely different hues from the same palette, so
-// the two currencies read apart at a glance instead of blurring into two
-// tints of one colour, while the chart still tracks whichever theme is active.
-const TJS_COLOR = "var(--brand-strong)";
+// TJS uses the fixed atlas-saffron gold -- a warm accent that reads as
+// "money" and stays legible on white regardless of which dashboard theme is
+// active (unlike --brand-strong, which on the emerald/ocean/sunset themes
+// turns near-black and made the tallest bars look flat and heavy). USD uses
+// the theme's own accent (the third hero-gradient stop -- mint/amber/sky
+// depending on the theme), so the two currencies still read apart at a
+// glance and the chart still answers to the chosen theme, just not with two
+// competing dark hues.
+const TJS_COLOR = "var(--atlas-saffron)";
 const USD_COLOR = "var(--hero-3)";
 
 function Bar({

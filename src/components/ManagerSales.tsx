@@ -14,12 +14,19 @@ type Row = {
   paid: number;
 };
 
+export type PeriodBounds = { start: string; end: string } | null;
+
 // "Sales by manager" panel: who closed how many deals, for how much, and how
 // much of it is collected. Fed by the sales_by_manager RPC, which reads
 // auth.users and is guarded to admin/director -- so the panel only renders
 // for those roles. Managers/creator attribution comes from contracts.created_by
 // (migration 030), filled automatically at booking.
-export function ManagerSales() {
+//
+// periodBounds comes straight from the dashboard's own day/month/year/all
+// filter (page.tsx) -- passing it through (rather than each panel picking
+// its own range) is what makes this table follow the hero filter the
+// moment it changes, same as every other dated stat on the page.
+export function ManagerSales({ periodBounds }: { periodBounds?: PeriodBounds }) {
   const { t } = useLocale();
   const { role } = useRole();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -29,9 +36,12 @@ export function ManagerSales() {
     const supabase = createClient();
     supabase
       .schema("crm")
-      .rpc("sales_by_manager")
+      .rpc("sales_by_manager", {
+        p_from: periodBounds?.start ?? null,
+        p_to: periodBounds?.end ?? null,
+      })
       .then(({ data }) => setRows((data as Row[]) ?? []));
-  }, [role]);
+  }, [role, periodBounds]);
 
   if (role !== "admin" && role !== "director") return null;
   if (rows === null) return null;
