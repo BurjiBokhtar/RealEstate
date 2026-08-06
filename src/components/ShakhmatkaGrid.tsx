@@ -103,6 +103,18 @@ function UnitCell({
   const dimmed = statusFilter !== null && unit.status !== statusFilter;
   const typeMeta = TYPE_META[unit.type ?? "apartment"];
 
+  // Payment standing of this cell. Only meaningful where there IS a contract:
+  // a free flat owes nothing and must not look like a fully paid one.
+  // `settled` uses remaining rather than a percentage so a few cents of
+  // rounding on the last installment still counts as done.
+  const payProgress =
+    contractInfo && contractInfo.amount > 0
+      ? {
+          pct: Math.max(0, Math.min(100, (contractInfo.paid / contractInfo.amount) * 100)),
+          settled: contractInfo.remaining <= 0.005,
+        }
+      : null;
+
   // Left click: available -> open the full contract-drafting dialog.
   // Already booked/sold -> a client paying their installment is routine
   // front-desk work, not admin-only, so anyone jumps straight to that
@@ -162,7 +174,7 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`flex h-14 flex-col items-center justify-center rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-14 flex-col items-center justify-center overflow-hidden rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
@@ -172,6 +184,34 @@ function UnitCell({
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
+
+        {/* How much of this flat is actually paid for, readable without
+            hovering anything: a thin fill along the bottom edge while money is
+            still owed, and a small tick once nothing is. The colour alone
+            can't say this -- "продано" is the same red whether the client has
+            paid 5% or 95%. */}
+        {payProgress != null &&
+          (payProgress.settled ? (
+            <span
+              aria-hidden="true"
+              className="absolute right-1 top-1 text-emerald-600"
+              title={t.buildings.hover.fullyPaid}
+            >
+              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12.5l5.5 5.5L20 6.5" />
+              </svg>
+            </span>
+          ) : (
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-0 bottom-0 h-1.5 bg-black/10"
+            >
+              <span
+                className="block h-full bg-emerald-600/80"
+                style={{ width: `${payProgress.pct}%` }}
+              />
+            </span>
+          ))}
       </button>
 
       {canMerge && (
@@ -492,6 +532,25 @@ export function ShakhmatkaGrid({
             × {t.buildings.clearFilter}
           </button>
         )}
+
+        {/* What the fill and the tick on a cell mean. Not buttons: these are a
+            reading key, not another filter. */}
+        {/* The divider only makes sense while this sits on the same line as
+            the status pills; once the row wraps it would start a line. */}
+        <span className="flex flex-wrap items-center gap-3 text-slate-500 sm:ml-1 sm:border-l sm:border-slate-200 sm:pl-3">
+          <span className="flex items-center gap-1.5">
+            <span className="flex h-2.5 w-6 overflow-hidden rounded-sm bg-black/10">
+              <span className="h-full w-3/5 bg-emerald-600/80" />
+            </span>
+            {t.buildings.hover.partlyPaid}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <svg viewBox="0 0 24 24" className="h-3 w-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12.5l5.5 5.5L20 6.5" />
+            </svg>
+            {t.buildings.hover.fullyPaid}
+          </span>
+        </span>
       </div>
 
       {/* Blocks/entrances sit side by side as columns sharing the same floor

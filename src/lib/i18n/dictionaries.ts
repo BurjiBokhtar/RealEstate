@@ -529,6 +529,8 @@ export const dictionaries = {
         reservedNoClient: "Бронь без клиента",
         remaining: "Остаток к оплате",
         paymentsCount: "Платежей внесено",
+        partlyPaid: "Есть задолженность",
+        fullyPaid: "Оплачено полностью",
         clickHint: "ЛКМ — оформить договор · ПКМ — быстрая бронь",
         clickHintBooked: "ЛКМ — оплата и чеки",
         clickHintQuickBooked: "ЛКМ — оформить договор · ПКМ ещё раз — снять бронь",
@@ -1311,6 +1313,8 @@ export const dictionaries = {
         reservedNoClient: "Брон бе мизоҷ",
         remaining: "Боқимонда барои пардохт",
         paymentsCount: "Пардохтҳои гузаронидашуда",
+        partlyPaid: "Қарз дорад",
+        fullyPaid: "Пурра пардохт шуд",
         clickHint: "Тугмаи чап — шартнома бастан · Тугмаи рост — брони тез",
         clickHintBooked: "Тугмаи чап — пардохт ва расид",
         clickHintQuickBooked:
