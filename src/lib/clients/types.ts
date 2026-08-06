@@ -2,6 +2,8 @@ export type Client = {
   id: string;
   name: string;
   phone: string | null;
+  // Secondary number: people often answer on only one of two.
+  phone2: string | null;
   email: string | null;
   passport: string | null;
   passport_issued_by: string | null;
@@ -17,6 +19,7 @@ export type Client = {
 export type ClientInput = {
   name: string;
   phone: string;
+  phone2: string;
   email: string;
   passport: string;
   passport_issued_by: string;

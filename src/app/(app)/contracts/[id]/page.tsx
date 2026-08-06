@@ -26,6 +26,8 @@ export default function ContractRedirect() {
 
   useEffect(() => {
     if (!configured) return;
+    // Preserved across the hop so the client card knows where "back" goes.
+    const from = new URLSearchParams(window.location.search).get("from");
     createClient()
       .schema("crm")
       .from("contracts")
@@ -34,7 +36,10 @@ export default function ContractRedirect() {
       .maybeSingle()
       .then(({ data }) => {
         const clientId = (data as { client_id: string } | null)?.client_id;
-        if (clientId) router.replace(`/clients/${clientId}?contract=${params.id}`);
+        if (clientId) router.replace(
+            `/clients/${clientId}?contract=${params.id}` +
+              (from ? `&from=${encodeURIComponent(from)}` : "")
+          );
         else setFailed(true);
       });
   }, [configured, params.id, router]);

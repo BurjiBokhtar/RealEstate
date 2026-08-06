@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -84,6 +84,13 @@ function UnitCell({
 }) {
   const { t } = useLocale();
   const router = useRouter();
+  // Where "back" should return to. Opening a sold flat lands on the buyer's
+  // card, which otherwise offers "back to the client list" -- a place the
+  // user was never at. Carrying the origin through keeps the way out
+  // pointing at the shakhmatka they came from.
+  const pathname = usePathname();
+  const cashDesk = (contractId: string) =>
+    `/contracts/${contractId}/payments?from=${encodeURIComponent(pathname)}`;
 
   const span = unit.span || 1;
   const width = span * CELL + (span - 1) * GAP;
@@ -112,14 +119,14 @@ function UnitCell({
     if (readOnly) {
       // Director: everything opens as a view -- the cash desk page is
       // already read-only for this role, unit cells never open write forms.
-      if (contractInfo) router.push(`/contracts/${contractInfo.id}/payments`);
+      if (contractInfo) router.push(cashDesk(contractInfo.id));
       else onViewUnit(unit);
       return;
     }
     if (unit.status === "available") {
       onBookUnit(unit);
     } else if (contractInfo) {
-      router.push(`/contracts/${contractInfo.id}/payments`);
+      router.push(cashDesk(contractInfo.id));
     } else if (unit.manual_reserved) {
       // Hand-reserved, no contract yet: the natural next step is drafting
       // the real contract for whoever the unit was held for.

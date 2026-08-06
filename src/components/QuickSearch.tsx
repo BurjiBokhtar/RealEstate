@@ -59,7 +59,7 @@ export function QuickSearch() {
         .schema("crm")
         .from("clients")
         .select("id, name, phone")
-        .or(`name.ilike.%${q}%,phone.ilike.%${q}%`)
+        .or(`name.ilike.%${q}%,phone.ilike.%${q}%,phone2.ilike.%${q}%`)
         .limit(5),
       supabase
         .schema("crm")

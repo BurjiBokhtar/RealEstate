@@ -49,7 +49,7 @@ export default function ClientsPage() {
     let query = supabase.schema("crm").from("clients").select("*", { count: "exact" });
     if (search.trim()) {
       const q = search.trim();
-      query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%`);
+      query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%,phone2.ilike.%${q}%`);
     }
     const from = (page - 1) * PAGE_SIZE;
     const orderBy =

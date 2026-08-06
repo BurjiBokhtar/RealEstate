@@ -19,7 +19,7 @@ type DuePayment = {
     number: string | null;
     currency: string;
     status: string;
-    client: { name: string; phone: string | null } | null;
+    client: { name: string; phone: string | null; phone2: string | null } | null;
   } | null;
 };
 
@@ -106,7 +106,7 @@ export async function sendPaymentReminders(
   const todayStr = today();
 
   const select =
-    "id, due_date, amount, contract:contracts(number, currency, status, client:clients(name, phone))";
+    "id, due_date, amount, contract:contracts(number, currency, status, client:clients(name, phone, phone2))";
 
   // Advance reminder: strictly AFTER today, up to N days out. Strictly after,
   // so a payment due today gets the day-of message below and not both at once.
@@ -156,7 +156,11 @@ export async function sendPaymentReminders(
         skipped++;
         continue;
       }
-      const phone = normalizeTjPhone(payment.contract.client?.phone);
+      // Fall back to the second number: a client whose main line is blank
+      // (or was only ever recorded as the spare) should still be reminded.
+      const phone =
+        normalizeTjPhone(payment.contract.client?.phone) ||
+        normalizeTjPhone(payment.contract.client?.phone2);
       if (!phone) {
         skipped++;
         continue;

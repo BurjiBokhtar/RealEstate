@@ -279,6 +279,7 @@ export function ContractForm({
       .insert({
         name: newClient.name,
         phone: newClient.phone || null,
+        phone2: newClient.phone2 || null,
         email: newClient.email || null,
         passport: newClient.passport || null,
         passport_issued_by: newClient.passport_issued_by || null,

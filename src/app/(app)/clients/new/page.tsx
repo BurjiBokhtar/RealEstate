@@ -25,6 +25,7 @@ export default function NewClientPage() {
       .insert({
         name: values.name,
         phone: values.phone || null,
+        phone2: values.phone2 || null,
         email: values.email || null,
         passport: values.passport || null,
         passport_issued_by: values.passport_issued_by || null,

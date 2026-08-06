@@ -329,7 +329,9 @@ export function ContractPayments({
                   ✓ {t.clients.paymentHistory.paid}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-emerald-100/60 pt-1.5">
+              {/* Same rule as everywhere else: every action of this row in one
+                  cluster on the right, not split to opposite edges. */}
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-emerald-100/60 pt-1.5">
                 <SendActions
                   contractId={contract.id}
                   kind="receipt"

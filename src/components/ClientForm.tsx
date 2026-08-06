@@ -14,6 +14,7 @@ const TEXTAREA_CLASS =
 const emptyInput: ClientInput = {
   name: "",
   phone: "",
+  phone2: "",
   email: "",
   passport: "",
   passport_issued_by: "",
@@ -76,6 +77,17 @@ export function ClientForm({
           <input
             value={values.phone}
             onChange={(e) => update("phone", e.target.value)}
+            className={FIELD_CLASS}
+          />
+        </label>
+        {/* A second number is common (work + personal, or a relative who
+            actually picks up). It used to end up in the notes field, where
+            search can't find it and nothing can dial it. */}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.clients.form.phone2}</span>
+          <input
+            value={values.phone2}
+            onChange={(e) => update("phone2", e.target.value)}
             className={FIELD_CLASS}
           />
         </label>

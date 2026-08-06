@@ -10,6 +10,7 @@ const FIELD_CLASS =
 const emptyNewClient: ClientInput = {
   name: "",
   phone: "",
+  phone2: "",
   email: "",
   passport: "",
   passport_issued_by: "",

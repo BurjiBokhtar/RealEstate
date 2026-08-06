@@ -23,6 +23,8 @@ export default function ContractPaymentsRedirect() {
 
   useEffect(() => {
     if (!configured) return;
+    // Preserved across the hop so the client card knows where "back" goes.
+    const from = new URLSearchParams(window.location.search).get("from");
     const supabase = createClient();
     supabase
       .schema("crm")
@@ -33,7 +35,10 @@ export default function ContractPaymentsRedirect() {
       .then(({ data }) => {
         const clientId = (data as { client_id: string } | null)?.client_id;
         if (clientId) {
-          router.replace(`/clients/${clientId}?contract=${params.id}`);
+          router.replace(
+            `/clients/${clientId}?contract=${params.id}` +
+              (from ? `&from=${encodeURIComponent(from)}` : "")
+          );
         } else {
           setFailed(true);
         }

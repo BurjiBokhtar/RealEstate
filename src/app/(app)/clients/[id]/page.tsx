@@ -12,6 +12,7 @@ import { ClientForm } from "@/components/ClientForm";
 import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
 import { SendActions } from "@/components/SendActions";
+import { ActionBar, ActionButton } from "@/components/ActionBar";
 import { ContractPayments } from "@/components/ContractPayments";
 import { ContractForm } from "@/components/ContractForm";
 import { UnitPriceModal } from "@/components/UnitPriceModal";
@@ -101,6 +102,8 @@ export default function ClientDetailPage() {
     type: "success",
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Where the back button goes; defaults to the client list.
+  const [backTo, setBackTo] = useState<string | null>(null);
   // Which contract's edit form is open, and which apartment's price dialog --
   // both used to live on the separate /contracts/[id] screen.
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
@@ -110,9 +113,19 @@ export default function ClientDetailPage() {
   // Read ?contract=<id> once on mount (plain URLSearchParams, not the
   // Next.js hook -- avoids a Suspense boundary just for a one-off read) so
   // a redirect from the old cash-desk URL lands pre-expanded.
+  //
+  // ?from=<path> is where the visitor actually came from. Opening a sold flat
+  // in the shakhmatka lands here, and "back to the client list" sent people to
+  // a page they had never been on -- the way out has to point at the
+  // shakhmatka instead.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("contract");
+    const q = new URLSearchParams(window.location.search);
+    const id = q.get("contract");
     if (id) setExpandedId(id);
+    const from = q.get("from");
+    // Only same-origin relative paths: never let a query parameter turn the
+    // back button into a link to somebody else's site.
+    if (from && from.startsWith("/") && !from.startsWith("//")) setBackTo(from);
   }, []);
 
   useEffect(() => {
@@ -249,6 +262,7 @@ export default function ClientDetailPage() {
       .update({
         name: values.name,
         phone: values.phone || null,
+        phone2: values.phone2 || null,
         email: values.email || null,
         passport: values.passport || null,
         passport_issued_by: values.passport_issued_by || null,
@@ -352,6 +366,12 @@ export default function ClientDetailPage() {
           icon: FIELD_ICONS.phone,
         },
         {
+          label: t.clients.form.phone2,
+          value: client.phone2,
+          href: client.phone2 ? `tel:${client.phone2.replace(/\s/g, "")}` : undefined,
+          icon: FIELD_ICONS.phone,
+        },
+        {
           label: t.clients.form.email,
           value: client.email,
           href: client.email ? `mailto:${client.email}` : undefined,
@@ -370,7 +390,9 @@ export default function ClientDetailPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <BackLink href="/clients">{t.clients.backToList}</BackLink>
+      <BackLink href={backTo ?? "/clients"}>
+        {backTo?.startsWith("/buildings") ? t.clients.backToShakhmatka : t.clients.backToList}
+      </BackLink>
 
       {!configured && <SetupNotice />}
 
@@ -473,6 +495,7 @@ export default function ClientDetailPage() {
                 initial={{
                   name: client.name,
                   phone: client.phone ?? "",
+                  phone2: client.phone2 ?? "",
                   email: client.email ?? "",
                   passport: client.passport ?? "",
                   passport_issued_by: client.passport_issued_by ?? "",
@@ -596,7 +619,10 @@ export default function ClientDetailPage() {
 
                       {isOpen && (
                         <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/50 p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
+                          {/* Icons and words in ONE cluster on the right --
+                              they used to sit at opposite ends of the card
+                              with a gulf between them. */}
+                          <ActionBar>
                             <SendActions
                               contractId={c.id}
                               kind="contract"
@@ -605,31 +631,23 @@ export default function ClientDetailPage() {
                                 label: t.contracts.print.button,
                               }}
                             />
-                            <div className="flex flex-wrap items-center gap-2">
-                              {role === "admin" && c.object && (
-                                <button
-                                  type="button"
-                                  onClick={() => setPricingContract(c)}
-                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-                                >
-                                  {t.buildings.unitPrice.edit}
-                                </button>
-                              )}
-                              {role !== "director" && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setEditingContractId(editingContractId === c.id ? null : c.id)
-                                  }
-                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-                                >
-                                  {editingContractId === c.id
-                                    ? t.clients.profile.hideForm
-                                    : t.contracts.cashier.editFull}
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                            {role === "admin" && c.object && (
+                              <ActionButton onClick={() => setPricingContract(c)}>
+                                {t.buildings.unitPrice.edit}
+                              </ActionButton>
+                            )}
+                            {role !== "director" && (
+                              <ActionButton
+                                onClick={() =>
+                                  setEditingContractId(editingContractId === c.id ? null : c.id)
+                                }
+                              >
+                                {editingContractId === c.id
+                                  ? t.clients.profile.hideForm
+                                  : t.contracts.cashier.editFull}
+                              </ActionButton>
+                            )}
+                          </ActionBar>
 
                           {/* Contract particulars -- these used to be the whole
                               point of the separate /contracts/[id] screen. */}

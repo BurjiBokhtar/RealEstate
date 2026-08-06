@@ -173,6 +173,7 @@ export const dictionaries = {
       form: {
         name: "Имя",
         phone: "Телефон",
+        phone2: "Доп. телефон",
         email: "Email",
         passport: "Паспорт (серия и номер)",
         passportPlaceholder: "Серия и номер",
@@ -250,6 +251,7 @@ export const dictionaries = {
         mismatch: "Имя не совпадает",
       },
       backToList: "К списку клиентов",
+      backToShakhmatka: "К шахматке",
       notFound: "Клиент не найден",
     },
     debtors: {
@@ -951,6 +953,7 @@ export const dictionaries = {
       form: {
         name: "Ном",
         phone: "Телефон",
+        phone2: "Телефони иловагӣ",
         email: "Email",
         passport: "Шиноснома (серия ва рақам)",
         passportPlaceholder: "Серия ва рақам",
@@ -1028,6 +1031,7 @@ export const dictionaries = {
         mismatch: "Ном мувофиқ нест",
       },
       backToList: "Ба рӯйхати мизоҷон",
+      backToShakhmatka: "Ба шахматка",
       notFound: "Мизоҷ ёфт нашуд",
     },
     debtors: {
