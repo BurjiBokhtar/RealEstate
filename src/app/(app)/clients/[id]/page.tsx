@@ -13,6 +13,9 @@ import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
 import { SendActions } from "@/components/SendActions";
 import { ContractPayments } from "@/components/ContractPayments";
+import { ContractForm } from "@/components/ContractForm";
+import { UnitPriceModal } from "@/components/UnitPriceModal";
+import { useConfirm } from "@/components/ConfirmDialog";
 import { HomeIcon } from "@/components/icons";
 import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency } from "@/lib/currency";
@@ -20,14 +23,23 @@ import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { useRole } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
-import type { Contract, ContractPayment } from "@/lib/contracts/types";
+import type { Contract, ContractInput, ContractPayment } from "@/lib/contracts/types";
 
 // The full Contract shape (not just the summary columns the old table
 // showed) -- ContractPayments needs payment_type/installment_months/etc to
 // generate and render the schedule, since each purchase card now embeds
 // that component directly instead of linking out to its own page.
 type ClientContract = Contract & {
-  object: { name: string; building: { name: string } | null } | null;
+  // The unit's own id/area/price come along so the apartment's price can be
+  // corrected from here (see UnitPriceModal) -- a sold cell in the shakhmatka
+  // opens the buyer, not the unit editor, so this card is the only way in.
+  object: {
+    id: string;
+    name: string;
+    area: number | null;
+    price: number | null;
+    building: { name: string } | null;
+  } | null;
 };
 
 // Small outline icons for the profile info tiles (currentColor, one weight).
@@ -68,6 +80,7 @@ export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
   const { role } = useRole();
+  const confirm = useConfirm();
 
   const [client, setClient] = useState<Client | null | undefined>(undefined);
   const [interestedObject, setInterestedObject] = useState<{
@@ -88,6 +101,10 @@ export default function ClientDetailPage() {
     type: "success",
   });
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  // Which contract's edit form is open, and which apartment's price dialog --
+  // both used to live on the separate /contracts/[id] screen.
+  const [editingContractId, setEditingContractId] = useState<string | null>(null);
+  const [pricingContract, setPricingContract] = useState<ClientContract | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Read ?contract=<id> once on mount (plain URLSearchParams, not the
@@ -132,7 +149,7 @@ export default function ClientDetailPage() {
       .schema("crm")
       .from("contracts")
       .select(
-        "id, number, client_id, object_id, amount, paid_amount, currency, amount_words, status, signed_date, notes, payment_type, installment_months, barter_details, created_at, updated_at, object:objects(name, building:buildings(name))"
+        "id, number, client_id, object_id, amount, paid_amount, currency, amount_words, status, signed_date, notes, payment_type, installment_months, barter_details, created_at, updated_at, object:objects(id, name, area, price, building:buildings(name))"
       )
       .eq("client_id", params.id)
       .order("signed_date", { ascending: false });
@@ -164,6 +181,54 @@ export default function ClientDetailPage() {
   const reloadAfterPayment = useCallback(async () => {
     await Promise.all([loadContracts(), loadPayments()]);
   }, [loadContracts, loadPayments]);
+
+  // ---- Contract editing, moved here from the standalone /contracts/[id] page.
+  const handleContractSubmit = async (values: ContractInput) => {
+    if (!editingContractId) return;
+    setSubmitting(true);
+    const { error } = await createClient()
+      .schema("crm")
+      .from("contracts")
+      .update({
+        number: values.number || null,
+        client_id: values.client_id,
+        object_id: values.object_id,
+        amount: Number(values.amount) || 0,
+        paid_amount: Number(values.paid_amount) || 0,
+        currency: values.currency,
+        amount_words: values.amount_words || null,
+        status: values.status,
+        signed_date: values.signed_date || null,
+        notes: values.notes || null,
+        payment_type: values.payment_type,
+        installment_months: values.installment_months ? Number(values.installment_months) : null,
+        barter_details: values.barter_details || null,
+      })
+      .eq("id", editingContractId);
+    setSubmitting(false);
+    if (error) {
+      setToast({ message: error.message, type: "error" });
+      return;
+    }
+    setEditingContractId(null);
+    setToast({ message: t.buildings.unitEdit.saved, type: "success" });
+    await reloadAfterPayment();
+  };
+
+  const handleContractDelete = async (contractId: string) => {
+    if (!(await confirm(t.contracts.form.confirmDelete, { danger: true }))) return;
+    const { error } = await createClient()
+      .schema("crm")
+      .from("contracts")
+      .delete()
+      .eq("id", contractId);
+    if (error) {
+      setToast({ message: error.message, type: "error" });
+      return;
+    }
+    setEditingContractId(null);
+    await reloadAfterPayment();
+  };
 
   useEffect(() => {
     if (!configured) {
@@ -540,13 +605,116 @@ export default function ClientDetailPage() {
                                 label: t.contracts.print.button,
                               }}
                             />
-                            <Link
-                              href={`/contracts/${c.id}`}
-                              className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-800 hover:underline"
-                            >
-                              {t.contracts.cashier.editFull} →
-                            </Link>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {role === "admin" && c.object && (
+                                <button
+                                  type="button"
+                                  onClick={() => setPricingContract(c)}
+                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                                >
+                                  {t.buildings.unitPrice.edit}
+                                </button>
+                              )}
+                              {role !== "director" && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setEditingContractId(editingContractId === c.id ? null : c.id)
+                                  }
+                                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                                >
+                                  {editingContractId === c.id
+                                    ? t.clients.profile.hideForm
+                                    : t.contracts.cashier.editFull}
+                                </button>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Contract particulars -- these used to be the whole
+                              point of the separate /contracts/[id] screen. */}
+                          {editingContractId !== c.id && (
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:grid-cols-4">
+                              {[
+                                { label: t.contracts.form.number, value: c.number || "—" },
+                                {
+                                  label: t.contracts.form.paymentType,
+                                  value:
+                                    t.contracts.paymentTypes[c.payment_type] +
+                                    (c.payment_type === "installment" && c.installment_months
+                                      ? ` · ${c.installment_months} ${t.contracts.form.monthsShort}`
+                                      : ""),
+                                },
+                                { label: t.contracts.form.signedDate, value: c.signed_date ?? "—" },
+                                {
+                                  label: t.buildings.unitPrice.title,
+                                  value:
+                                    c.object?.price != null
+                                      ? formatCurrency(c.object.price, c.currency)
+                                      : "—",
+                                },
+                              ].map((f) => (
+                                <div key={f.label} className="flex flex-col gap-0.5">
+                                  <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                                    {f.label}
+                                  </span>
+                                  <span className="text-sm text-slate-800">{f.value}</span>
+                                </div>
+                              ))}
+                              {c.notes && (
+                                <div className="col-span-2 flex flex-col gap-0.5 sm:col-span-4">
+                                  <span className="text-[11px] uppercase tracking-wide text-slate-400">
+                                    {t.contracts.form.notes}
+                                  </span>
+                                  <span className="text-sm text-slate-800">{c.notes}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {editingContractId === c.id && (
+                            <div className="rounded-lg border border-slate-200 bg-white p-4">
+                              <ContractForm
+                                initial={{
+                                  number: c.number ?? "",
+                                  client_id: c.client_id,
+                                  object_id: c.object_id,
+                                  amount: c.amount.toString(),
+                                  paid_amount: c.paid_amount.toString(),
+                                  currency: c.currency,
+                                  amount_words: c.amount_words ?? "",
+                                  status: c.status,
+                                  signed_date: c.signed_date ?? "",
+                                  notes: c.notes ?? "",
+                                  payment_type: c.payment_type,
+                                  installment_months: c.installment_months?.toString() ?? "",
+                                  barter_details: c.barter_details ?? "",
+                                }}
+                                objectArea={c.object?.area ?? null}
+                                // The apartment is already decided -- this is
+                                // THIS contract on THIS unit. Locking it also
+                                // skips fetching the whole objects table just
+                                // to build a dropdown with one right answer.
+                                lockedObject={
+                                  c.object
+                                    ? {
+                                        id: c.object.id,
+                                        label: c.object.name,
+                                        secondaryLabel: null,
+                                        buildingName: c.object.building?.name ?? null,
+                                        apartmentNumber: null,
+                                      }
+                                    : undefined
+                                }
+                                submitting={submitting}
+                                onSubmit={handleContractSubmit}
+                                onDelete={
+                                  role === "admin" ? () => handleContractDelete(c.id) : undefined
+                                }
+                              />
+                            </div>
+                          )}
+
                           <ContractPayments contract={c} onPaymentAdded={reloadAfterPayment} />
                         </div>
                       )}
@@ -558,6 +726,23 @@ export default function ClientDetailPage() {
           </div>
         </>
       )}
+      {pricingContract?.object && (
+        <UnitPriceModal
+          unitId={pricingContract.object.id}
+          unitName={pricingContract.object.name}
+          area={pricingContract.object.area}
+          price={pricingContract.object.price}
+          currency={pricingContract.currency}
+          contractId={pricingContract.id}
+          contractAmount={pricingContract.amount}
+          onClose={() => setPricingContract(null)}
+          onSaved={() => {
+            setToast({ message: t.buildings.unitEdit.saved, type: "success" });
+            void reloadAfterPayment();
+          }}
+        />
+      )}
+
       <Toast
         message={toast.message}
         type={toast.type}
