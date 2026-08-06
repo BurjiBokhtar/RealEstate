@@ -497,13 +497,23 @@ export function ShakhmatkaGrid({
       {/* Blocks/entrances sit side by side as columns sharing the same floor
           rows, rather than stacked one under another -- lets you compare
           entrances at a glance the way a real shakhmatka is read. */}
-      {/* The hover cards open downward (absolute); on the bottom row they used
-          to extend past the content and get clipped -- and that same overflow
-          spawned the phantom second vertical scrollbar. The pb-56 below leaves
-          room for the tallest card, so bottom-row tooltips show in full AND
-          nothing overflows vertically (one scrollbar, no clipping). */}
-      <div className="overflow-x-auto">
-        <div className="flex w-fit flex-col gap-2 pb-56">
+      {/* ONE scrollbar on this page, the page's own.
+          `overflow-x-auto` alone is not "horizontal only": CSS makes the other
+          axis compute to `auto` as soon as one axis is not `visible`, so this
+          box was also a vertical scroll container, and anything poking out of
+          it -- a hover card opening downward from the bottom row -- gave it
+          its own vertical scrollbar right next to the page's. Pinning
+          overflow-y to hidden keeps the horizontal scrolling the grid needs
+          and removes the second bar for good.
+          The bottom padding is what now guarantees a bottom-row hover card is
+          fully visible, since the box can no longer scroll to reveal it.
+          Measured in the browser: the fullest card (price, paid, progress,
+          remaining, buyer, phone) is 217px, and 246px when a long Tajik name
+          wraps to a second line -- 254px with its 8px offset. pb-56 was 224px,
+          i.e. already too short; pb-72 is 288px and clears the worst case with
+          room to spare. */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <div className="flex w-fit flex-col gap-2 pb-72">
           {hasBlocks && (
             <div className="flex items-center gap-3">
               <span className="w-16 shrink-0" />
