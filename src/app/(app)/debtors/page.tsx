@@ -17,6 +17,16 @@ const PAGE_SIZE = 25;
 // more than this in one response anyway.
 const EXPORT_BATCH = 1000;
 
+type SortKey = "overdue" | "oldest" | "name";
+
+// Which column each choice orders by, applied in the database so the order
+// holds across pages.
+const SORTS: Record<SortKey, { column: string; ascending: boolean }> = {
+  overdue: { column: "total_overdue", ascending: false },
+  oldest: { column: "earliest_due", ascending: true },
+  name: { column: "client_name", ascending: true },
+};
+
 // One reminder PER CONTRACT, not per missed installment. A long installment
 // plan with nothing paid used to spill one row per overdue month (9, 20, 30
 // rows for the same flat); now it's a single line summing what's overdue.
@@ -32,6 +42,9 @@ type ContractDebt = {
   currency: Currency;
   missedCount: number;
   totalOverdue: number;
+  // The whole balance of the contract, not just the overdue slice -- the two
+  // were being confused for each other on screen.
+  remainingTotal: number;
   // Earliest missed date = since when in arrears; latest = the current period
   // to chase. Days overdue is measured from the latest, so it reflects the
   // present cycle and rolls forward each month instead of ballooning to 785.
@@ -51,6 +64,7 @@ type OverdueRow = {
   currency: Currency;
   missed_count: number;
   total_overdue: number;
+  remaining_total: number | null;
   earliest_due: string;
   latest_due: string;
 };
@@ -67,6 +81,7 @@ function toDebt(r: OverdueRow, now: number): ContractDebt {
     currency: r.currency,
     missedCount: r.missed_count,
     totalOverdue: Number(r.total_overdue),
+    remainingTotal: Number(r.remaining_total ?? 0),
     earliestDue: r.earliest_due,
     latestDue: r.latest_due,
     // Measured from the LATEST missed date, so it reflects the current cycle
@@ -79,7 +94,12 @@ export default function DebtorsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const [rows, setRows] = useState<ContractDebt[]>([]);
-  const [totals, setTotals] = useState<Array<{ currency: Currency; total: number }>>([]);
+  const [totals, setTotals] = useState<
+    Array<{ currency: Currency; overdue: number; remaining: number; contracts: number }>
+  >([]);
+  // Explicit, and visible on screen. The order used to be fixed and unstated,
+  // so there was no way to tell what the list was sorted by.
+  const [sort, setSort] = useState<SortKey>("overdue");
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -101,9 +121,16 @@ export default function DebtorsPage() {
     let cancelled = false;
     setLoading(true);
     const from = (page - 1) * PAGE_SIZE;
+    const order = SORTS[sort];
     createClient()
       .schema("crm")
       .rpc("overdue_contracts", {}, { count: "exact" })
+      // Sorted in the database, so the order holds ACROSS pages -- sorting the
+      // 25 rows on screen would be a different list on every page. contract_id
+      // second: without a unique tiebreaker, equal values can come back in a
+      // different order per page, showing one debtor twice and another never.
+      .order(order.column, { ascending: order.ascending })
+      .order("contract_id", { ascending: true })
       .range(from, from + PAGE_SIZE - 1)
       .then(({ data, count, error }) => {
         if (cancelled) return;
@@ -132,7 +159,7 @@ export default function DebtorsPage() {
     return () => {
       cancelled = true;
     };
-  }, [configured, page]);
+  }, [configured, page, sort]);
 
   // The headline totals cover EVERY debtor, not the 25 on screen, so they come
   // from their own aggregate instead of being summed from `rows`.
@@ -148,9 +175,21 @@ export default function DebtorsPage() {
           return;
         }
         setTotals(
-          ((data ?? []) as Array<{ currency: Currency; total_overdue: number }>)
-            .map((r) => ({ currency: r.currency, total: Number(r.total_overdue) }))
-            .filter((r) => r.total > 0)
+          (
+            (data ?? []) as Array<{
+              currency: Currency;
+              contracts: number;
+              total_overdue: number;
+              remaining_total: number;
+            }>
+          )
+            .map((r) => ({
+              currency: r.currency,
+              contracts: r.contracts,
+              overdue: Number(r.total_overdue),
+              remaining: Number(r.remaining_total ?? 0),
+            }))
+            .filter((r) => r.overdue > 0)
         );
       });
     return () => {
@@ -186,6 +225,7 @@ export default function DebtorsPage() {
       r.earliestDue,
       r.missedCount,
       num(r.totalOverdue),
+      num(r.remainingTotal),
       r.currency,
     ]);
   };
@@ -205,9 +245,10 @@ export default function DebtorsPage() {
               t.clients.table.phone,
               t.debtors.object,
               "№",
-              t.debtors.dueDate,
-              t.debtors.paymentsShort,
-              t.debtors.amount,
+              t.debtors.oldestDue,
+              t.debtors.missedPayments,
+              t.debtors.overdueNow,
+              t.debtors.remainingCol,
               "Валюта",
             ]}
             filenameBase="debtors"
@@ -225,20 +266,69 @@ export default function DebtorsPage() {
         </div>
       )}
 
+      {/* Two figures per currency, side by side and labelled, because they are
+          different things and were being read as one: what is actually late,
+          and the whole balance of those same contracts. */}
       {totals.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {totals.map((row) => (
-            <div
-              key={row.currency}
-              className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3"
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap gap-3">
+            {totals.map((row) => (
+              <div
+                key={row.currency}
+                className="flex flex-wrap items-stretch gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200"
+              >
+                <div className="bg-rose-50 px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-rose-400">
+                    {t.debtors.overdueNow} · {row.currency}
+                  </div>
+                  <div className="text-xl font-bold text-rose-700">
+                    {formatCurrency(row.overdue, row.currency)}
+                  </div>
+                  <div className="text-[11px] text-rose-400">
+                    {row.contracts} {t.contracts.title.toLowerCase()}
+                  </div>
+                </div>
+                <div className="bg-white px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                    {t.debtors.remainingTotal}
+                  </div>
+                  <div className="text-xl font-bold text-slate-700">
+                    {formatCurrency(row.remaining, row.currency)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400">{t.debtors.cardsHint}</p>
+        </div>
+      )}
+
+      {/* The order is a choice now, and it says which one is active. */}
+      {totalCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-slate-500">{t.debtors.sortLabel}:</span>
+          {(
+            [
+              ["overdue", t.debtors.sortByOverdue],
+              ["oldest", t.debtors.sortByOldest],
+              ["name", t.debtors.sortByName],
+            ] as Array<[SortKey, string]>
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                setSort(key);
+                setPage(1);
+              }}
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-[0.98] ${
+                sort === key
+                  ? "border-brand bg-brand-soft text-brand"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
             >
-              <div className="text-xs font-semibold uppercase tracking-wide text-rose-400">
-                {t.debtors.totalOverdue}
-              </div>
-              <div className="text-xl font-bold text-rose-700">
-                {formatCurrency(row.total, row.currency)}
-              </div>
-            </div>
+              {label}
+            </button>
           ))}
         </div>
       )}
@@ -249,9 +339,9 @@ export default function DebtorsPage() {
             <tr>
               <th className="px-4 py-3 font-medium">{t.debtors.client}</th>
               <th className="px-4 py-3 font-medium">{t.debtors.object}</th>
-              <th className="px-4 py-3 font-medium">{t.debtors.dueDate}</th>
-              <th className="px-4 py-3 text-right font-medium">{t.debtors.overdue}</th>
-              <th className="px-4 py-3 text-right font-medium">{t.debtors.amount}</th>
+              <th className="px-4 py-3 font-medium">{t.debtors.oldestDue}</th>
+              <th className="px-4 py-3 text-right font-medium">{t.debtors.overdueNow}</th>
+              <th className="px-4 py-3 text-right font-medium">{t.debtors.remainingCol}</th>
               <th className="px-4 py-3 text-right font-medium"></th>
             </tr>
           </thead>
@@ -290,26 +380,23 @@ export default function DebtorsPage() {
                 <td className="px-4 py-3 text-slate-600">{r.objectName ?? "—"}</td>
                 <td className="px-4 py-3 text-slate-600">
                   {formatShortDate(r.earliestDue)}
-                  {r.missedCount > 1 && (
-                    <span className="block text-xs text-slate-400">
-                      {t.debtors.since} · {formatShortDate(r.latestDue)}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      r.missedCount > 1
-                        ? "bg-rose-100 text-rose-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                    title={`${r.daysOverdue} ${t.debtors.days}`}
-                  >
-                    {r.missedCount} {t.debtors.paymentsShort}
+                  <span className="block text-xs text-slate-400">
+                    {r.daysOverdue} {t.debtors.days}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right font-semibold text-rose-600">
-                  {formatCurrency(r.totalOverdue, r.currency)}
+                {/* Amount first, then how many payments make it up, spelled
+                    out. "9 плат." said nothing about what was owed. */}
+                <td className="px-4 py-3 text-right">
+                  <div className="font-semibold text-rose-600">
+                    {formatCurrency(r.totalOverdue, r.currency)}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {r.missedCount}{" "}
+                    {r.missedCount === 1 ? t.debtors.missedOne : t.debtors.missedPayments}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right text-slate-700">
+                  {formatCurrency(r.remainingTotal, r.currency)}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {r.clientPhone ? (
