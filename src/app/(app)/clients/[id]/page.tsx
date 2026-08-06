@@ -141,6 +141,27 @@ export default function ClientDetailPage() {
     setContracts((data ?? []) as unknown as ClientContract[]);
   }, [params.id]);
 
+  // Filtered THROUGH the contract rather than by a list of contract ids, so
+  // this no longer has to wait for loadContracts() to come back first -- the
+  // client card used to spend two full round trips in a row before it could
+  // show a single payment.
+  const loadPayments = useCallback(async () => {
+    const { data } = await createClient()
+      .schema("crm")
+      .from("contract_payments")
+      .select("*, contract:contracts!inner(client_id)")
+      .eq("contract.client_id", params.id);
+    const rows = (data ?? []) as unknown as ContractPayment[];
+    rows.sort((a, b) => (b.paid_date ?? b.due_date).localeCompare(a.paid_date ?? a.due_date));
+    setPayments(rows);
+  }, [params.id]);
+
+  // Recording a payment changes both the contract's paid_amount and the
+  // installment rows, so the two reload together.
+  const reloadAfterPayment = useCallback(async () => {
+    await Promise.all([loadContracts(), loadPayments()]);
+  }, [loadContracts, loadPayments]);
+
   useEffect(() => {
     if (!configured) {
       setClient(null);
@@ -148,28 +169,8 @@ export default function ClientDetailPage() {
     }
     loadClient();
     loadContracts();
-  }, [configured, loadClient, loadContracts]);
-
-  useEffect(() => {
-    if (contracts.length === 0) {
-      setPayments([]);
-      return;
-    }
-    const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("contract_payments")
-      .select("*")
-      .in(
-        "contract_id",
-        contracts.map((c) => c.id)
-      )
-      .then(({ data }) => {
-        const rows = (data ?? []) as ContractPayment[];
-        rows.sort((a, b) => (b.paid_date ?? b.due_date).localeCompare(a.paid_date ?? a.due_date));
-        setPayments(rows);
-      });
-  }, [contracts]);
+    loadPayments();
+  }, [configured, loadClient, loadContracts, loadPayments]);
 
   // The history block shows money actually received -- real receipts, in
   // the order they happened. The unpaid future installments belong to the
@@ -549,7 +550,7 @@ export default function ClientDetailPage() {
                               {t.contracts.cashier.editFull} →
                             </Link>
                           </div>
-                          <ContractPayments contract={c} onPaymentAdded={loadContracts} />
+                          <ContractPayments contract={c} onPaymentAdded={reloadAfterPayment} />
                         </div>
                       )}
                     </div>

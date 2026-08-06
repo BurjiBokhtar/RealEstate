@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { BackLink } from "@/components/BackLink";
-import Link from "next/link";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useRole, type Role } from "@/lib/auth/useRole";

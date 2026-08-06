@@ -10,6 +10,7 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { ReceiptDocument } from "@/components/ReceiptDocument";
 import { SendActions } from "@/components/SendActions";
+import { ScissorsIcon } from "@/components/icons";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";

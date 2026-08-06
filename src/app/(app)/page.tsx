@@ -14,7 +14,6 @@ import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
-import { STATUS_COLORS } from "@/lib/objects/format";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
 
@@ -49,8 +48,10 @@ type ObjectRow = {
   area: number | null;
 };
 
+const areaFormat = new Intl.NumberFormat("ru-RU");
+
 function formatArea(m2: number) {
-  return `${new Intl.NumberFormat("ru-RU").format(Math.round(m2))} м²`;
+  return `${areaFormat.format(Math.round(m2))} м²`;
 }
 
 type ContractRow = {
@@ -110,19 +111,13 @@ export default function DashboardPage() {
       supabase
         .schema("crm")
         .from("contract_payments")
-        .select("paid, paid_date, amount, contract:contracts(currency, object_id)")
-        .eq("paid", true),
-      supabase
-        .schema("crm")
-        .from("contract_payments")
         .select("amount, contract:contracts(currency, object_id, status)")
         .eq("paid", false)
         .lt("due_date", new Date().toISOString().slice(0, 10)),
-    ]).then(([objectsRes, contractsRes, buildingsRes, paymentsRes, overdueRes]) => {
+    ]).then(([objectsRes, contractsRes, buildingsRes, overdueRes]) => {
       setAllObjects((objectsRes.data ?? []) as ObjectRow[]);
       setAllContracts((contractsRes.data ?? []) as unknown as ContractRow[]);
       setBuildings((buildingsRes.data ?? []) as Building[]);
-      setAllPayments((paymentsRes.data ?? []) as unknown as PaymentRow[]);
       setOverdueRows(
         ((overdueRes.data ?? []) as unknown as Array<{
           amount: number;
@@ -197,6 +192,35 @@ export default function DashboardPage() {
       end: now.toISOString().slice(0, 10),
     };
   }, [periodFilter]);
+
+  // The paid-installment rows exist for exactly one thing: the day-by-day
+  // revenue chart, which only appears under the "today"/"month" filters. It
+  // used to be loaded up front on every dashboard open -- the single biggest
+  // query on the page, every paid installment ever recorded joined to its
+  // contract, thrown away unused in the default view. Now it is fetched only
+  // when that chart is actually on screen, and only for the days it covers.
+  useEffect(() => {
+    if (!configured) return;
+    if (periodFilter !== "today" && periodFilter !== "month") {
+      setAllPayments([]);
+      return;
+    }
+    if (!periodBounds) return;
+    let cancelled = false;
+    createClient()
+      .schema("crm")
+      .from("contract_payments")
+      .select("paid, paid_date, amount, contract:contracts(currency, object_id)")
+      .eq("paid", true)
+      .gte("paid_date", periodBounds.start)
+      .lte("paid_date", periodBounds.end)
+      .then(({ data }) => {
+        if (!cancelled) setAllPayments((data ?? []) as unknown as PaymentRow[]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, periodFilter, periodBounds]);
 
   // Only figures derived from dated events (revenue/debt/who-owes-what) are
   // scoped by the period filter — inventory snapshots (counts, occupancy)

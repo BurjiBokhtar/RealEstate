@@ -10,7 +10,6 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
-import { Modal } from "@/components/Modal";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
 import { UnitEditModal } from "@/components/UnitEditModal";
@@ -22,8 +21,6 @@ import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
 import { useRole } from "@/lib/auth/useRole";
-import { formatCurrency } from "@/lib/currency";
-import { formatArea } from "@/lib/objects/format";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
@@ -84,67 +81,64 @@ export default function BuildingDetailPage() {
 
   const apartmentNumbers = useMemo(() => computeApartmentNumbers(units), [units]);
 
+  // All three queries go out AT ONCE. They used to be a strict chain -- fetch
+  // the units, then fetch the contracts for those unit ids, then fetch the
+  // payments for those contract ids -- so the shakhmatka cost three full
+  // round trips stacked end to end before it could draw anything. Nothing
+  // actually needed the previous result: "the contracts of this building" and
+  // "the paid installments of this building" are expressible directly by
+  // filtering through the relationship, which is what the !inner joins below
+  // do. Same data, one round trip's worth of waiting instead of three.
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
-    const { data } = await supabase
-      .schema("crm")
-      .from("objects")
-      .select("*")
-      .eq("building_id", params.id);
-    const unitRows = (data ?? []) as PropertyObject[];
-    setUnits(unitRows);
-
-    if (unitRows.length > 0) {
-      const { data: contracts } = await supabase
+    const [unitsRes, contractsRes, paymentsRes] = await Promise.all([
+      supabase.schema("crm").from("objects").select("*").eq("building_id", params.id),
+      supabase
         .schema("crm")
         .from("contracts")
-        .select("id, object_id, amount, paid_amount, currency, client:clients(name, phone, source)")
-        .in(
-          "object_id",
-          unitRows.map((u) => u.id)
-        );
-      const contractRows = (contracts ?? []) as unknown as Array<{
-        id: string;
-        object_id: string;
-        amount: number;
-        paid_amount: number;
-        currency: UnitContractInfo["currency"];
-        client: { name: string; phone: string | null; source: string | null } | null;
-      }>;
+        .select(
+          "id, object_id, amount, paid_amount, currency, client:clients(name, phone, source), object:objects!inner(building_id)"
+        )
+        .eq("object.building_id", params.id),
+      supabase
+        .schema("crm")
+        .from("contract_payments")
+        .select("contract_id, contract:contracts!inner(object:objects!inner(building_id))")
+        .eq("paid", true)
+        .eq("contract.object.building_id", params.id),
+    ]);
 
-      const paymentsCountByContract: Record<string, number> = {};
-      if (contractRows.length > 0) {
-        const { data: paymentRows } = await supabase
-          .schema("crm")
-          .from("contract_payments")
-          .select("contract_id")
-          .eq("paid", true)
-          .in(
-            "contract_id",
-            contractRows.map((c) => c.id)
-          );
-        for (const p of (paymentRows ?? []) as Array<{ contract_id: string }>) {
-          paymentsCountByContract[p.contract_id] =
-            (paymentsCountByContract[p.contract_id] ?? 0) + 1;
-        }
-      }
+    setUnits((unitsRes.data ?? []) as PropertyObject[]);
 
-      const map: Record<string, UnitContractInfo> = {};
-      for (const c of contractRows) {
-        map[c.object_id] = {
-          id: c.id,
-          clientName: c.client?.name ?? "—",
-          clientPhone: c.client?.phone ?? null,
-          amount: c.amount,
-          paid: c.paid_amount,
-          remaining: c.amount - c.paid_amount,
-          currency: c.currency,
-          paymentsCount: paymentsCountByContract[c.id] ?? 0,
-          isQuickBooking: c.client?.source === "quick_booking" && c.paid_amount === 0,
-        };
-      }
-      setContractsByUnit(map);
+    const contractRows = (contractsRes.data ?? []) as unknown as Array<{
+      id: string;
+      object_id: string;
+      amount: number;
+      paid_amount: number;
+      currency: UnitContractInfo["currency"];
+      client: { name: string; phone: string | null; source: string | null } | null;
+    }>;
+
+    const paymentsCountByContract: Record<string, number> = {};
+    for (const p of (paymentsRes.data ?? []) as Array<{ contract_id: string }>) {
+      paymentsCountByContract[p.contract_id] = (paymentsCountByContract[p.contract_id] ?? 0) + 1;
     }
+
+    const map: Record<string, UnitContractInfo> = {};
+    for (const c of contractRows) {
+      map[c.object_id] = {
+        id: c.id,
+        clientName: c.client?.name ?? "—",
+        clientPhone: c.client?.phone ?? null,
+        amount: c.amount,
+        paid: c.paid_amount,
+        remaining: c.amount - c.paid_amount,
+        currency: c.currency,
+        paymentsCount: paymentsCountByContract[c.id] ?? 0,
+        isQuickBooking: c.client?.source === "quick_booking" && c.paid_amount === 0,
+      };
+    }
+    setContractsByUnit(map);
   }, [params.id]);
 
   useEffect(() => {

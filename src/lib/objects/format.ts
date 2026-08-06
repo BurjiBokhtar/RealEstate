@@ -1,10 +1,14 @@
 import type { ObjectStatus } from "./types";
 
+// Built once -- this runs per cell of the shakhmatka; see the note in
+// lib/currency.ts.
+const areaFormat = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
+
 export function formatArea(area: number | null) {
   if (area === null) return "—";
   // Round to at most 2 decimals and group thousands, so a stored 55.2999999
   // reads "55.3 м²" instead of a long tail of digits.
-  return `${new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 }).format(area)} м²`;
+  return `${areaFormat.format(area)} м²`;
 }
 
 export const STATUS_COLORS: Record<ObjectStatus, string> = {

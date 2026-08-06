@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import type { Settings } from "./types";
@@ -92,11 +92,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [refresh]);
 
-  return (
-    <SettingsContext.Provider value={{ settings, loading, refresh }}>
-      {children}
-    </SettingsContext.Provider>
+  // Memoised for the same reason as LocaleProvider: it wraps the whole app.
+  const value = useMemo(
+    () => ({ settings, loading, refresh }),
+    [settings, loading, refresh]
   );
+
+  return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
 }
 
 export function useSettings() {

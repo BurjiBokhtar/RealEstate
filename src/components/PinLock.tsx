@@ -44,18 +44,24 @@ export function PinLock() {
   }, []);
 
   // Inactivity auto-lock: only while a PIN exists and we're currently unlocked.
+  // The listener does nothing but stamp a number -- tearing down and rebuilding
+  // a timer on every single mousemove and scroll frame (which is what this did
+  // before) is main-thread work the user pays for as sluggishness. A once-a-
+  // second check is more than precise enough for a three-minute lock.
   useEffect(() => {
     if (!hasPin || locked) return;
-    const arm = () => {
-      window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => setLocked(true), LOCK_AFTER_MS);
+    let lastActivity = Date.now();
+    const mark = () => {
+      lastActivity = Date.now();
     };
     const events = ["mousemove", "keydown", "click", "touchstart", "scroll"];
-    events.forEach((e) => window.addEventListener(e, arm, { passive: true }));
-    arm();
+    events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
+    timer.current = window.setInterval(() => {
+      if (Date.now() - lastActivity >= LOCK_AFTER_MS) setLocked(true);
+    }, 1000);
     return () => {
-      window.clearTimeout(timer.current);
-      events.forEach((e) => window.removeEventListener(e, arm));
+      window.clearInterval(timer.current);
+      events.forEach((e) => window.removeEventListener(e, mark));
     };
   }, [hasPin, locked]);
 

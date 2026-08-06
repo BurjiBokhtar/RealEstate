@@ -14,16 +14,28 @@ const CHECK_EVERY_MS = 60 * 1000;
 // Shared across tabs so a shakhmatka tab being worked in keeps a client-card
 // tab alive too, and one tab logging out doesn't strand the others.
 const STORAGE_KEY = "crm-last-activity";
+// localStorage.setItem is a SYNCHRONOUS, disk-backed write. Doing one per
+// mousemove (which fires 60+ times a second, and again for every scroll frame)
+// blocked the main thread continuously and made the whole app feel like it was
+// dragging. Timing out after 30 minutes does not need second-level precision,
+// so the shared write happens at most this often.
+const WRITE_EVERY_MS = 15_000;
 
 export function IdleLogout() {
   const router = useRouter();
-  const lastActivity = useRef(Date.now());
+  const lastActivity = useRef(0);
+  const lastWrite = useRef(0);
 
   useEffect(() => {
     const mark = () => {
-      lastActivity.current = Date.now();
+      const now = Date.now();
+      lastActivity.current = now;
+      // The in-memory timestamp is what this tab checks; the storage write is
+      // only there so other tabs can see the activity, and can be throttled.
+      if (now - lastWrite.current < WRITE_EVERY_MS) return;
+      lastWrite.current = now;
       try {
-        localStorage.setItem(STORAGE_KEY, String(lastActivity.current));
+        localStorage.setItem(STORAGE_KEY, String(now));
       } catch {
         // Storage can be unavailable (private mode) -- per-tab still works.
       }
@@ -31,7 +43,6 @@ export function IdleLogout() {
     mark();
 
     const events = ["mousedown", "keydown", "touchstart", "scroll", "mousemove"] as const;
-    // Passive + no per-event work beyond a Date.now() write keeps this free.
     for (const e of events) window.addEventListener(e, mark, { passive: true });
 
     const interval = window.setInterval(async () => {

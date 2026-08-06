@@ -12,9 +12,11 @@ const PLOT = 190; // px height of the bar area
 // shorthand that reads as noise in the Tajik locale, so the full
 // space-grouped number goes there instead (still short enough to fit above
 // a column, and unambiguous in either language).
+const nf = new Intl.NumberFormat("ru-RU");
+
 function compact(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")} млн`;
-  return new Intl.NumberFormat("ru-RU").format(Math.round(n));
+  return nf.format(Math.round(n));
 }
 
 // TJS uses the fixed atlas-saffron gold -- a warm accent that reads as

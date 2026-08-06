@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useSettings } from "@/lib/settings/SettingsProvider";
-import { useRole } from "@/lib/auth/useRole";
+import { useAuth } from "@/lib/auth/useRole";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -57,7 +57,10 @@ const navItems = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { t, locale, setLocale } = useLocale();
   const { settings, loading: settingsLoading } = useSettings();
-  const { role, loading: roleLoading } = useRole();
+  // Role AND e-mail come from the same shared snapshot -- the shell used to
+  // fire its own auth.getUser() on top of useRole()'s, for the one string it
+  // prints in the sidebar footer.
+  const { role, loading: roleLoading, email: userEmail } = useAuth();
   // Settings (company data, staff accounts, audit log) is admin territory --
   // the pages themselves refuse non-admins, but showing the menu item just
   // leads staff to an "access denied" dead end. RLS stays the real lock.
@@ -66,7 +69,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
   const pathname = usePathname();
   const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
   const brandName = settings.company_name || t.appName;
 
   // Apply the hero theme app-wide: the company-wide default (admin Settings)
@@ -84,11 +86,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (settingsLoading) return;
     applyHeroTheme(settings.hero_theme, settings.hero_pattern);
   }, [settingsLoading, settings.hero_theme, settings.hero_pattern]);
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null));
-  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -259,7 +256,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* App-style bottom navigation on phones (the sidebar is desktop-only).
             Fixed, safe-area aware, active tab in the theme colour. */}
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-slate-200 bg-white/95 backdrop-blur-sm pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden"
+          // Opaque, not translucent+blurred: a backdrop-filter across the full
+          // width of a fixed bar makes the browser re-composite everything
+          // behind it on every scroll frame, and at bg-white/95 there was
+          // nothing visible to blur anyway.
+          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden"
         >
           {visibleNavItems.map((item) => {
             const active =

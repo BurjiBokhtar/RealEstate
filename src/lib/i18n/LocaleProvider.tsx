@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { dictionaries, type Locale } from "./dictionaries";
 
 const STORAGE_KEY = "crm-locale";
@@ -23,16 +23,20 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const setLocale = (next: Locale) => {
+  const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     window.localStorage.setItem(STORAGE_KEY, next);
-  };
+  }, []);
 
-  return (
-    <LocaleContext.Provider value={{ locale, setLocale, t: dictionaries[locale] }}>
-      {children}
-    </LocaleContext.Provider>
+  // Memoised: this provider sits above the entire app, so handing out a fresh
+  // object on every render made every screen that reads a translation re-render
+  // whenever anything above it did.
+  const value = useMemo(
+    () => ({ locale, setLocale, t: dictionaries[locale] }),
+    [locale, setLocale]
   );
+
+  return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>;
 }
 
 export function useLocale() {

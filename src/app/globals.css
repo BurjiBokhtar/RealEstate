@@ -123,9 +123,17 @@
     var(--hero-2) 45%,
     var(--hero-3) 100%
   );
-  /* Oversized and slowly panned so the gradient itself breathes -- the
-     colours drift a few degrees back and forth over half a minute. Cheap:
-     one compositor-driven background-position animation. */
+}
+
+/* Oversized and slowly panned so the gradient itself breathes -- the colours
+   drift a few degrees back and forth over half a minute.
+   ONLY on .hero-surface, i.e. the one big dashboard hero that opts in.
+   background-position is NOT a compositor-only property: every frame is a real
+   repaint of the whole painted area. `.hero-gradient` is also on the sidebar,
+   the PIN screen, every building card without a photo and every client avatar
+   -- so as written this had a list of fifty clients repainting fifty animated
+   gradients forever, which is a large part of why the app felt like treacle. */
+.hero-surface {
   background-size: 180% 180%;
   animation: hero-pan 28s ease-in-out infinite;
 }
@@ -141,7 +149,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-gradient {
+  .hero-surface {
     animation: none;
   }
 }
