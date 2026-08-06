@@ -83,6 +83,8 @@ export const dictionaries = {
       noData: "Пока нет данных",
       completedSuffix: "завершён",
       completedSummary: "Завершённых ЖК: {buildings} · {units} помещений — не входят в статистику выше",
+      summaryFailed:
+        "Не удалось посчитать статистику. Показанные ниже цифры — нули, а не реальные данные. Проверьте, что в базе выполнена миграция 038_dashboard_summary.sql.",
     },
     objects: {
       title: "Объекты",
@@ -834,6 +836,8 @@ export const dictionaries = {
       noData: "Ҳоло маълумот нест",
       completedSuffix: "анҷомёфта",
       completedSummary: "МИ-и анҷомёфта: {buildings} · {units} хона — дар омори боло дохил нашудаанд",
+      summaryFailed:
+        "Ҳисоб кардани омор муяссар нашуд. Рақамҳои поён сифр мебошанд, на маълумоти воқеӣ. Санҷед, ки дар база миграцияи 038_dashboard_summary.sql иҷро шудааст.",
     },
     objects: {
       title: "Объектҳо",

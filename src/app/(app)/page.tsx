@@ -17,35 +17,63 @@ import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
 
-type Counts = {
-  total: number;
-  available: number;
-  reserved: number;
-  sold: number;
-  in_progress: number;
+// ---------------------------------------------------------------------------
+// Every number on this page is now computed by crm.dashboard_summary() in the
+// database (migration 038) and arrives as one small JSON object.
+//
+// It used to fetch crm.objects, crm.contracts and crm.contract_payments in
+// full and add them up in JavaScript. That is slow, but the real problem was
+// correctness: PostgREST caps a response at 1000 rows, so the moment the
+// company passes a thousand units -- or a thousand contracts, or a thousand
+// installments -- the extra rows were silently dropped and every total on the
+// screen quietly became wrong, with no error anywhere. SQL has no such cap and
+// aggregates on indexes.
+//
+// The RPC is SECURITY INVOKER, so RLS still applies: a manager assigned to two
+// buildings gets totals for those two buildings, exactly as before.
+// ---------------------------------------------------------------------------
+
+type StatusCounts = Record<ObjectStatus, number>;
+
+type OccupancyRow = { id: string; name: string; total: number } & StatusCounts;
+
+type DashboardSummary = {
+  counts: { total: number; available: number; reserved: number; sold: number; in_progress: number };
+  area: { total: number; available: number };
+  potential: MoneyPair;
+  paid: MoneyPair;
+  debt: MoneyPair;
+  overdue: MoneyPair;
+  revenue_months: Array<{ month: string; tjs: number; usd: number }>;
+  revenue_days: Array<{ day: string; tjs: number; usd: number }>;
+  occupancy: OccupancyRow[];
+  revenue_by_building: Array<{ id: string; name: string; tjs: number; usd: number }>;
+  top_debtors: Array<{
+    client_id: string;
+    name: string;
+    currency: Currency;
+    remaining: number;
+  }>;
+  completed: { buildings: number; units: number };
 };
 
-type BuildingOccupancy = {
-  id: string;
-  name: string;
-  counts: Record<ObjectStatus, number>;
-  total: number;
-};
+const ZERO: MoneyPair = { tjs: 0, usd: 0 };
 
-type Debtor = {
-  clientId: string;
-  clientName: string;
-  remaining: number;
-  currency: Currency;
-};
-
-type ObjectRow = {
-  id: string;
-  status: ObjectStatus;
-  building_id: string | null;
-  price: number | null;
-  currency: Currency;
-  area: number | null;
+// What the page renders before the first response lands, and if the request
+// fails -- so every reader below can stay unconditional.
+const EMPTY_SUMMARY: DashboardSummary = {
+  counts: { total: 0, available: 0, reserved: 0, sold: 0, in_progress: 0 },
+  area: { total: 0, available: 0 },
+  potential: ZERO,
+  paid: ZERO,
+  debt: ZERO,
+  overdue: ZERO,
+  revenue_months: [],
+  revenue_days: [],
+  occupancy: [],
+  revenue_by_building: [],
+  top_debtors: [],
+  completed: { buildings: 0, units: 0 },
 };
 
 const areaFormat = new Intl.NumberFormat("ru-RU");
@@ -54,130 +82,18 @@ function formatArea(m2: number) {
   return `${areaFormat.format(Math.round(m2))} м²`;
 }
 
-type ContractRow = {
-  object_id: string;
-  amount: number;
-  paid_amount: number;
-  currency: Currency;
-  signed_date: string | null;
-  status: string;
-  client: { id: string; name: string } | null;
-};
-
-type PaymentRow = {
-  paid: boolean;
-  paid_date: string | null;
-  amount: number;
-  contract: { currency: Currency; object_id: string } | null;
-};
-
 export default function DashboardPage() {
   const { t } = useLocale();
   const { settings } = useSettings();
   const brandName = settings.company_name || t.appName;
-  const [allObjects, setAllObjects] = useState<ObjectRow[]>([]);
-  const [allContracts, setAllContracts] = useState<ContractRow[]>([]);
-  const [allPayments, setAllPayments] = useState<PaymentRow[]>([]);
-  // Unpaid installments whose due date has passed -- powers the "overdue"
-  // tile that links to the Debtors page.
-  const [overdueRows, setOverdueRows] = useState<
-    Array<{ amount: number; currency: Currency; objectId: string; cancelled: boolean }>
-  >([]);
+
+  const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
   const [loading, setLoading] = useState(true);
+  const [failure, setFailure] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
-
-  useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
-    const supabase = createClient();
-
-    Promise.all([
-      supabase
-        .schema("crm")
-        .from("objects")
-        .select("id, status, building_id, price, currency, area"),
-      supabase
-        .schema("crm")
-        .from("contracts")
-        .select(
-          "object_id, amount, paid_amount, currency, signed_date, status, client:clients(id, name)"
-        ),
-      supabase.schema("crm").from("buildings").select("*"),
-      supabase
-        .schema("crm")
-        .from("contract_payments")
-        .select("amount, contract:contracts(currency, object_id, status)")
-        .eq("paid", false)
-        .lt("due_date", new Date().toISOString().slice(0, 10)),
-    ]).then(([objectsRes, contractsRes, buildingsRes, overdueRes]) => {
-      setAllObjects((objectsRes.data ?? []) as ObjectRow[]);
-      setAllContracts((contractsRes.data ?? []) as unknown as ContractRow[]);
-      setBuildings((buildingsRes.data ?? []) as Building[]);
-      setOverdueRows(
-        ((overdueRes.data ?? []) as unknown as Array<{
-          amount: number;
-          contract: { currency: Currency; object_id: string; status: string } | null;
-        }>)
-          .filter((r) => r.contract)
-          .map((r) => ({
-            amount: r.amount,
-            currency: r.contract!.currency,
-            objectId: r.contract!.object_id,
-            cancelled: r.contract!.status === "cancelled",
-          }))
-      );
-      setLoading(false);
-    });
-  }, [configured]);
-
-  const scopedObjectIds = useMemo(() => {
-    if (selectedBuildingId === "all") return null;
-    return new Set(
-      allObjects.filter((o) => o.building_id === selectedBuildingId).map((o) => o.id)
-    );
-  }, [allObjects, selectedBuildingId]);
-
-  // A finished ЖК is done selling -- its numbers are settled history, not
-  // something that needs to keep dominating the "all buildings" overview.
-  // So the aggregate dashboard drops it by default and folds it into one
-  // compact summary line instead (see completedSummary below); picking that
-  // building explicitly in the filter still shows its full data untouched.
-  const completedBuildingIds = useMemo(
-    () => new Set(buildings.filter((b) => b.construction_status === "completed").map((b) => b.id)),
-    [buildings]
-  );
-  const completedObjectIds = useMemo(() => {
-    if (completedBuildingIds.size === 0) return new Set<string>();
-    return new Set(
-      allObjects.filter((o) => o.building_id && completedBuildingIds.has(o.building_id)).map((o) => o.id)
-    );
-  }, [allObjects, completedBuildingIds]);
-
-  const objects = useMemo(() => {
-    if (scopedObjectIds) return allObjects.filter((o) => scopedObjectIds.has(o.id));
-    return allObjects.filter((o) => !completedObjectIds.has(o.id));
-  }, [allObjects, scopedObjectIds, completedObjectIds]);
-
-  const contracts = useMemo(() => {
-    if (scopedObjectIds) return allContracts.filter((c) => scopedObjectIds.has(c.object_id));
-    return allContracts.filter((c) => !completedObjectIds.has(c.object_id));
-  }, [allContracts, scopedObjectIds, completedObjectIds]);
-
-  // Collapsed, one-line stand-in for every completed ЖК that got dropped
-  // from the live figures above -- just enough to know it exists and roughly
-  // how big it was, without re-computing (or re-fetching) its full history.
-  const completedSummary = useMemo(() => {
-    const list = buildings.filter((b) => b.construction_status === "completed");
-    if (list.length === 0) return null;
-    const ids = new Set(list.map((b) => b.id));
-    const unitsCount = allObjects.filter((o) => o.building_id && ids.has(o.building_id)).length;
-    return { buildingsCount: list.length, unitsCount };
-  }, [buildings, allObjects]);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -193,232 +109,114 @@ export default function DashboardPage() {
     };
   }, [periodFilter]);
 
-  // The paid-installment rows exist for exactly one thing: the day-by-day
-  // revenue chart, which only appears under the "today"/"month" filters. It
-  // used to be loaded up front on every dashboard open -- the single biggest
-  // query on the page, every paid installment ever recorded joined to its
-  // contract, thrown away unused in the default view. Now it is fetched only
-  // when that chart is actually on screen, and only for the days it covers.
+  // The building list feeds the filter dropdown only, and doesn't change when
+  // the filter does -- so it is fetched once, not on every re-scope.
   useEffect(() => {
     if (!configured) return;
-    if (periodFilter !== "today" && periodFilter !== "month") {
-      setAllPayments([]);
-      return;
-    }
-    if (!periodBounds) return;
     let cancelled = false;
     createClient()
       .schema("crm")
-      .from("contract_payments")
-      .select("paid, paid_date, amount, contract:contracts(currency, object_id)")
-      .eq("paid", true)
-      .gte("paid_date", periodBounds.start)
-      .lte("paid_date", periodBounds.end)
+      .from("buildings")
+      .select("*")
+      .order("name")
       .then(({ data }) => {
-        if (!cancelled) setAllPayments((data ?? []) as unknown as PaymentRow[]);
+        if (!cancelled) setBuildings((data ?? []) as Building[]);
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, periodFilter, periodBounds]);
+  }, [configured]);
 
-  // Only figures derived from dated events (revenue/debt/who-owes-what) are
-  // scoped by the period filter — inventory snapshots (counts, occupancy)
-  // and the monthly trend chart intentionally stay unfiltered.
-  const periodContracts = useMemo(() => {
-    if (!periodBounds) return contracts;
-    return contracts.filter(
-      (c) =>
-        c.signed_date && c.signed_date >= periodBounds.start && c.signed_date <= periodBounds.end
-    );
-  }, [contracts, periodBounds]);
-
-  const counts: Counts = useMemo(
-    () => ({
-      total: objects.length,
-      available: objects.filter((o) => o.status === "available").length,
-      reserved: objects.filter((o) => o.status === "reserved").length,
-      sold: objects.filter((o) => o.status === "sold").length,
-      in_progress: objects.filter((o) => o.status === "in_progress").length,
-    }),
-    [objects]
-  );
-
-  const occupancy: BuildingOccupancy[] = useMemo(() => {
-    const relevantBuildings =
-      selectedBuildingId === "all"
-        ? buildings.filter((b) => b.construction_status !== "completed")
-        : buildings.filter((b) => b.id === selectedBuildingId);
-    return relevantBuildings
-      .map((b) => {
-        const units = allObjects.filter((o) => o.building_id === b.id);
-        const c: Record<ObjectStatus, number> = {
-          available: 0,
-          reserved: 0,
-          sold: 0,
-          rented: 0,
-          in_progress: 0,
-        };
-        units.forEach((u) => {
-          c[u.status] += 1;
-        });
-        return { id: b.id, name: b.name, counts: c, total: units.length };
+  useEffect(() => {
+    if (!configured) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    createClient()
+      .schema("crm")
+      .rpc("dashboard_summary", {
+        p_building_id: selectedBuildingId === "all" ? null : selectedBuildingId,
+        p_from: periodBounds?.start ?? null,
+        p_to: periodBounds?.end ?? null,
       })
-      .filter((b) => b.total > 0);
-  }, [buildings, allObjects, selectedBuildingId]);
-
-  const revenue: RevenueMonth[] = useMemo(() => {
-    const monthMap = new Map<string, { tjs: number; usd: number }>();
-    contracts
-      .filter((c) => c.signed_date && c.status !== "cancelled")
-      .forEach((c) => {
-        const month = c.signed_date!.slice(0, 7);
-        const entry = monthMap.get(month) ?? { tjs: 0, usd: 0 };
-        if (c.currency === "USD") entry.usd += c.amount;
-        else entry.tjs += c.amount;
-        monthMap.set(month, entry);
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          // Loudly, not silently. The usual cause is that migration 038
+          // hasn't been run on this database yet, and a dashboard full of
+          // confident zeros is worse than an honest error.
+          console.error("dashboard_summary failed:", error.message);
+          setFailure(error.message);
+          setSummary(EMPTY_SUMMARY);
+        } else {
+          setFailure(null);
+          setSummary({ ...EMPTY_SUMMARY, ...(data as DashboardSummary | null) });
+        }
+        setLoading(false);
       });
-    return Array.from(monthMap.keys())
-      .sort()
-      .slice(-6)
-      .map((month) => ({ month, ...monthMap.get(month)! }));
-  }, [contracts]);
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, selectedBuildingId, periodBounds]);
 
+  const counts = summary.counts;
+  const area = summary.area;
+  const paidRevenue = summary.paid;
+  const totalDebt = summary.debt;
+  const overdue = summary.overdue;
+  const potentialRevenue = summary.potential;
+  const revenueByBuilding = summary.revenue_by_building;
+
+  const revenue: RevenueMonth[] = summary.revenue_months;
   // Day-level granularity only makes sense once the period is narrowed down
   // to "today" or "month" -- at "year"/"all" scope it would be hundreds of
-  // unreadable bars, so the existing monthly chart covers those instead.
-  const dailyRevenue: RevenueMonth[] = useMemo(() => {
-    if (periodFilter !== "today" && periodFilter !== "month") return [];
-    if (!periodBounds) return [];
-    const dayMap = new Map<string, { tjs: number; usd: number }>();
-    allPayments
-      .filter((p) => p.paid && p.paid_date && p.contract)
-      .filter((p) =>
-        scopedObjectIds
-          ? scopedObjectIds.has(p.contract!.object_id)
-          : !completedObjectIds.has(p.contract!.object_id)
-      )
-      .filter((p) => p.paid_date! >= periodBounds.start && p.paid_date! <= periodBounds.end)
-      .forEach((p) => {
-        const day = p.paid_date!;
-        const entry = dayMap.get(day) ?? { tjs: 0, usd: 0 };
-        if (p.contract!.currency === "USD") entry.usd += p.amount;
-        else entry.tjs += p.amount;
-        dayMap.set(day, entry);
-      });
-    return Array.from(dayMap.keys())
-      .sort()
-      .map((day) => ({ month: day, ...dayMap.get(day)! }));
-  }, [allPayments, scopedObjectIds, completedObjectIds, periodFilter, periodBounds]);
+  // unreadable bars, so the monthly chart covers those instead. (The RPC
+  // returns nothing here unless a period is set.)
+  const dailyRevenue: RevenueMonth[] = useMemo(
+    () =>
+      periodFilter === "today" || periodFilter === "month"
+        ? summary.revenue_days.map((d) => ({ month: d.day, tjs: d.tjs, usd: d.usd }))
+        : [],
+    [summary.revenue_days, periodFilter]
+  );
 
-  const debtors: Debtor[] = useMemo(() => {
-    const debtorMap = new Map<string, Debtor>();
-    periodContracts
-      .filter((c) => c.status !== "cancelled" && c.client)
-      .forEach((c) => {
-        const remaining = c.amount - c.paid_amount;
-        if (remaining <= 0) return;
-        const key = `${c.client!.id}-${c.currency}`;
-        const existing = debtorMap.get(key);
-        debtorMap.set(key, {
-          clientId: c.client!.id,
-          clientName: c.client!.name,
-          currency: c.currency,
-          remaining: (existing?.remaining ?? 0) + remaining,
-        });
-      });
-    return Array.from(debtorMap.values())
-      .sort((a, b) => b.remaining - a.remaining)
-      .slice(0, 5);
-  }, [periodContracts]);
+  const occupancy = useMemo(
+    () =>
+      summary.occupancy.map((b) => ({
+        id: b.id,
+        name: b.name,
+        total: b.total,
+        counts: {
+          available: b.available,
+          reserved: b.reserved,
+          sold: b.sold,
+          rented: b.rented,
+          in_progress: b.in_progress,
+        } as StatusCounts,
+      })),
+    [summary.occupancy]
+  );
 
-  const paidRevenue: MoneyPair = useMemo(() => {
-    const v: MoneyPair = { tjs: 0, usd: 0 };
-    periodContracts
-      .filter((c) => c.status !== "cancelled")
-      .forEach((c) => {
-        if (c.currency === "USD") v.usd += c.paid_amount;
-        else v.tjs += c.paid_amount;
-      });
-    return v;
-  }, [periodContracts]);
+  const debtors = useMemo(
+    () =>
+      summary.top_debtors.map((d) => ({
+        clientId: d.client_id,
+        clientName: d.name,
+        currency: d.currency,
+        remaining: d.remaining,
+      })),
+    [summary.top_debtors]
+  );
 
-  const totalDebt: MoneyPair = useMemo(() => {
-    const v: MoneyPair = { tjs: 0, usd: 0 };
-    periodContracts
-      .filter((c) => c.status !== "cancelled")
-      .forEach((c) => {
-        const remaining = c.amount - c.paid_amount;
-        if (remaining <= 0) return;
-        if (c.currency === "USD") v.usd += remaining;
-        else v.tjs += remaining;
-      });
-    return v;
-  }, [periodContracts]);
-
-  // Overdue total, respecting the building filter but not the period filter
-  // (a debt is overdue regardless of which reporting period you're viewing).
-  const overdue: MoneyPair = useMemo(() => {
-    const v: MoneyPair = { tjs: 0, usd: 0 };
-    overdueRows.forEach((r) => {
-      if (r.cancelled) return;
-      if (scopedObjectIds) {
-        if (!scopedObjectIds.has(r.objectId)) return;
-      } else if (completedObjectIds.has(r.objectId)) {
-        return;
-      }
-      if (r.currency === "USD") v.usd += r.amount;
-      else v.tjs += r.amount;
-    });
-    return v;
-  }, [overdueRows, scopedObjectIds, completedObjectIds]);
-
-  const potentialRevenue: MoneyPair = useMemo(() => {
-    const v: MoneyPair = { tjs: 0, usd: 0 };
-    objects
-      .filter((o) => o.status === "available" && o.price)
-      .forEach((o) => {
-        if (o.currency === "USD") v.usd += o.price!;
-        else v.tjs += o.price!;
-      });
-    return v;
-  }, [objects]);
-
-  // Floor area: how much is built and how much is still available to sell.
-  const area = useMemo(() => {
-    let total = 0;
-    let availableArea = 0;
-    for (const o of objects) {
-      const a = o.area ?? 0;
-      total += a;
-      if (o.status === "available") availableArea += a;
-    }
-    return { total, available: availableArea };
-  }, [objects]);
-
-  const revenueByBuilding = useMemo(() => {
-    const objectToBuilding = new Map(allObjects.map((o) => [o.id, o.building_id]));
-    const map = new Map<string, MoneyPair>();
-    periodContracts
-      .filter((c) => c.status !== "cancelled")
-      .forEach((c) => {
-        const buildingId = objectToBuilding.get(c.object_id);
-        if (!buildingId) return;
-        const entry = map.get(buildingId) ?? { tjs: 0, usd: 0 };
-        if (c.currency === "USD") entry.usd += c.amount;
-        else entry.tjs += c.amount;
-        map.set(buildingId, entry);
-      });
-    const relevantBuildings =
-      selectedBuildingId === "all"
-        ? buildings.filter((b) => b.construction_status !== "completed")
-        : buildings.filter((b) => b.id === selectedBuildingId);
-    return relevantBuildings
-      .map((b) => ({ id: b.id, name: b.name, ...(map.get(b.id) ?? { tjs: 0, usd: 0 }) }))
-      .filter((b) => b.tjs > 0 || b.usd > 0)
-      .sort((a, b) => b.tjs + b.usd - (a.tjs + a.usd));
-  }, [allObjects, periodContracts, buildings, selectedBuildingId]);
-
+  // A finished ЖК is done selling -- its numbers are settled history, so the
+  // aggregate view drops it and folds it into one compact line instead.
+  // Picking that building explicitly in the filter still shows its full data.
+  const completedSummary =
+    summary.completed.buildings > 0
+      ? { buildingsCount: summary.completed.buildings, unitsCount: summary.completed.units }
+      : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -439,6 +237,13 @@ export default function DashboardPage() {
       />
 
       {!configured && <SetupNotice />}
+
+      {failure && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <p className="font-semibold">{t.dashboard.summaryFailed}</p>
+          <p className="mt-1 text-xs opacity-80">{failure}</p>
+        </div>
+      )}
 
       {selectedBuildingId === "all" && completedSummary && (
         <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">

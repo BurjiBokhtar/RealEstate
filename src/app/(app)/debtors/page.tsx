@@ -34,80 +34,77 @@ type ContractDebt = {
   daysOverdue: number;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// A row exactly as crm.overdue_contracts() returns it.
+type OverdueRow = {
+  contract_id: string;
+  contract_number: string | null;
+  client_id: string | null;
+  client_name: string;
+  client_phone: string | null;
+  object_name: string | null;
+  currency: Currency;
+  missed_count: number;
+  total_overdue: number;
+  earliest_due: string;
+  latest_due: string;
+};
 
 export default function DebtorsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const [rows, setRows] = useState<ContractDebt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failure, setFailure] = useState<string | null>(null);
 
+  // Grouped in SQL, one row per contract. This page used to pull EVERY unpaid
+  // overdue installment and group them in the browser -- and a two-year
+  // installment plan is 20-30 rows on its own, so PostgREST's 1000-row cap was
+  // reachable with only a few dozen debtors. Past that, the list silently went
+  // short: a debtor who owed money simply didn't appear, with no error. One
+  // contract now costs one row.
   useEffect(() => {
     if (!configured) {
       setLoading(false);
       return;
     }
-    const supabase = createClient();
-    supabase
+    let cancelled = false;
+    createClient()
       .schema("crm")
-      .from("contract_payments")
-      .select(
-        "id, due_date, amount, contract:contracts(id, number, currency, status, client:clients(id, name, phone), object:objects(name))"
-      )
-      .eq("paid", false)
-      .lt("due_date", today())
-      .order("due_date", { ascending: true })
-      .then(({ data }) => {
-        const now = Date.now();
-        const byContract = new Map<string, ContractDebt>();
-        for (const p of (data ?? []) as unknown as Array<{
-          id: string;
-          due_date: string;
-          amount: number;
-          contract: {
-            id: string;
-            number: string | null;
-            currency: Currency;
-            status: string;
-            client: { id: string; name: string; phone: string | null } | null;
-            object: { name: string } | null;
-          } | null;
-        }>) {
-          const c = p.contract;
-          // A cancelled contract's leftover schedule rows aren't real debt.
-          if (!c || c.status === "cancelled") continue;
-          const existing = byContract.get(c.id);
-          if (existing) {
-            existing.missedCount += 1;
-            existing.totalOverdue += p.amount;
-            if (p.due_date < existing.earliestDue) existing.earliestDue = p.due_date;
-            if (p.due_date > existing.latestDue) existing.latestDue = p.due_date;
-          } else {
-            byContract.set(c.id, {
-              contractId: c.id,
-              clientId: c.client?.id ?? null,
-              clientName: c.client?.name ?? "—",
-              clientPhone: c.client?.phone ?? null,
-              objectName: c.object?.name ?? null,
-              contractNumber: c.number ?? null,
-              currency: c.currency,
-              missedCount: 1,
-              totalOverdue: p.amount,
-              earliestDue: p.due_date,
-              latestDue: p.due_date,
-              daysOverdue: 0,
-            });
-          }
+      .rpc("overdue_contracts")
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("overdue_contracts failed:", error.message);
+          setFailure(error.message);
+          setRows([]);
+          setLoading(false);
+          return;
         }
-        const grouped = Array.from(byContract.values()).map((d) => ({
-          ...d,
-          daysOverdue: Math.floor((now - new Date(d.latestDue).getTime()) / 86_400_000),
-        }));
-        // Biggest debt first -- the ones to chase.
-        grouped.sort((a, b) => b.totalOverdue - a.totalOverdue);
-        setRows(grouped);
+        const now = Date.now();
+        setFailure(null);
+        setRows(
+          ((data ?? []) as OverdueRow[]).map((r) => ({
+            contractId: r.contract_id,
+            clientId: r.client_id,
+            clientName: r.client_name,
+            clientPhone: r.client_phone,
+            objectName: r.object_name,
+            contractNumber: r.contract_number,
+            currency: r.currency,
+            missedCount: r.missed_count,
+            totalOverdue: Number(r.total_overdue),
+            earliestDue: r.earliest_due,
+            latestDue: r.latest_due,
+            // Measured from the LATEST missed date, so it reflects the current
+            // cycle and rolls forward each month instead of ballooning.
+            daysOverdue: Math.floor((now - new Date(r.latest_due).getTime()) / 86_400_000),
+          }))
+        );
         setLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [configured]);
 
   const totals = useMemo(() => {
@@ -157,6 +154,13 @@ export default function DebtorsPage() {
       </div>
 
       {!configured && <SetupNotice />}
+
+      {failure && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          <p className="font-semibold">{t.dashboard.summaryFailed}</p>
+          <p className="mt-1 text-xs opacity-80">{failure}</p>
+        </div>
+      )}
 
       {totals.length > 0 && (
         <div className="flex flex-wrap gap-3">

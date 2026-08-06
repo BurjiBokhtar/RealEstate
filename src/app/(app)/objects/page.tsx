@@ -88,54 +88,44 @@ export default function ObjectsPage() {
       .then(({ data }) => setBuildings((data ?? []) as Building[]));
   }, [configured]);
 
-  // Roll up each building's units (available count + free area). Paged in
-  // 1000-row batches so it stays correct even for large developments.
+  // Roll up each building's units (available count + free area). Counted in
+  // SQL: this used to read every unit of every building in 1000-row pages, one
+  // request after another -- ten sequential round trips on a 10 000-unit
+  // development, for three numbers per card.
   useEffect(() => {
-    if (!configured || buildings.length === 0) return;
-    const supabase = createClient();
-    const ids = buildings.map((b) => b.id);
+    if (!configured) return;
     let cancelled = false;
-
-    (async () => {
-      const stats: Record<
-        string,
-        { available: number; availableArea: number; total: number }
-      > = {};
-      const BATCH = 1000;
-      for (let from = 0; ; from += BATCH) {
-        const { data, error } = await supabase
-          .schema("crm")
-          .from("objects")
-          .select("building_id,status,area")
-          .in("building_id", ids)
-          .range(from, from + BATCH - 1);
-        if (error || !data || data.length === 0) break;
-        for (const row of data as Array<{
-          building_id: string | null;
-          status: string;
-          area: number | null;
-        }>) {
-          if (!row.building_id) continue;
-          const s = (stats[row.building_id] ??= {
-            available: 0,
-            availableArea: 0,
-            total: 0,
-          });
-          s.total += 1;
-          if (row.status === "available") {
-            s.available += 1;
-            s.availableArea += row.area ?? 0;
-          }
+    createClient()
+      .schema("crm")
+      .rpc("building_unit_stats")
+      .then(({ data, error }) => {
+        if (cancelled || error) {
+          if (error) console.error("building_unit_stats failed:", error.message);
+          return;
         }
-        if (data.length < BATCH) break;
-      }
-      if (!cancelled) setBuildingStats(stats);
-    })();
+        const stats: Record<
+          string,
+          { available: number; availableArea: number; total: number }
+        > = {};
+        for (const row of (data ?? []) as Array<{
+          building_id: string;
+          total: number;
+          available: number;
+          available_area: number;
+        }>) {
+          stats[row.building_id] = {
+            total: row.total,
+            available: row.available,
+            availableArea: Number(row.available_area),
+          };
+        }
+        setBuildingStats(stats);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [configured, buildings]);
+  }, [configured]);
 
   const filteredBuildings = useMemo(() => {
     if (typeFilter !== "all" || statusFilter !== "all") return [];

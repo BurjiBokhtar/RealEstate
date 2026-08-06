@@ -16,6 +16,17 @@ Supabase → **SQL Editor** → откройте [`000_full_setup.sql`](000_full
 Остальных сотрудников создаёте в Supabase → Authentication, а роли им даёте
 в самой программе (Настройки → Сотрудники).
 
+## Обновление уже работающей базы
+
+Дашборд, страница «Должники» и список объектов считают свои итоги **в базе**
+(функции `crm.dashboard_summary`, `crm.overdue_contracts`,
+`crm.building_unit_stats`). Без них дашборд покажет красную плашку «не удалось
+посчитать статистику» и нули.
+
+Supabase → **SQL Editor** → вставить содержимое
+[`migrations/038_dashboard_summary.sql`](migrations/038_dashboard_summary.sql)
+→ **Run**. Файл идемпотентный, повторный запуск безопасен.
+
 ## Папка `migrations/`
 
 Это исходные части, из которых собран `000_full_setup.sql` — их трогать не
