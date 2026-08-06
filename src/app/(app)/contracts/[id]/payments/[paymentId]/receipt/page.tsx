@@ -78,7 +78,10 @@ export default function PaymentReceiptPage() {
     supabase
       .schema("crm")
       .from("contract_payments")
-      .select("id, due_date")
+      // paid/paid_date are what the numbering counts and orders by -- without
+      // them every row would look unpaid here and the printed receipt would
+      // carry a different number from the one in the payment list.
+      .select("id, due_date, paid, paid_date")
       .eq("contract_id", params.id)
       .then(({ data }) =>
         setReceiptNo(receiptNumberFor((data ?? []) as ContractPayment[], params.paymentId))
