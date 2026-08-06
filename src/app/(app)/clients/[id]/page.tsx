@@ -12,12 +12,12 @@ import { ClientForm } from "@/components/ClientForm";
 import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
 import { SendActions } from "@/components/SendActions";
-import { ActionBar, ActionButton } from "@/components/ActionBar";
+import { ActionBar, IconAction } from "@/components/ActionBar";
 import { ContractPayments } from "@/components/ContractPayments";
 import { ContractForm } from "@/components/ContractForm";
 import { UnitPriceModal } from "@/components/UnitPriceModal";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { HomeIcon } from "@/components/icons";
+import { HomeIcon, PencilIcon, TagIcon } from "@/components/icons";
 import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
@@ -619,9 +619,11 @@ export default function ClientDetailPage() {
 
                       {isOpen && (
                         <div className="flex flex-col gap-3 border-t border-slate-100 bg-slate-50/50 p-4">
-                          {/* Icons and words in ONE cluster on the right --
-                              they used to sit at opposite ends of the card
-                              with a gulf between them. */}
+                          {/* Every action for this deal in ONE icon toolbar on
+                              the right -- share, print, re-price the flat,
+                              edit the contract. They used to be two icons at
+                              the far left and two wide text buttons at the far
+                              right of the same row. */}
                           <ActionBar>
                             <SendActions
                               contractId={c.id}
@@ -630,23 +632,34 @@ export default function ClientDetailPage() {
                                 href: `/contracts/${c.id}/print`,
                                 label: t.contracts.print.button,
                               }}
+                              extraActions={
+                                <>
+                                  {role === "admin" && c.object && (
+                                    <IconAction
+                                      label={t.buildings.unitPrice.edit}
+                                      icon={<TagIcon className="h-4 w-4" />}
+                                      onClick={() => setPricingContract(c)}
+                                    />
+                                  )}
+                                  {role !== "director" && (
+                                    <IconAction
+                                      label={
+                                        editingContractId === c.id
+                                          ? t.clients.profile.hideForm
+                                          : t.contracts.cashier.editFull
+                                      }
+                                      icon={<PencilIcon className="h-4 w-4" />}
+                                      active={editingContractId === c.id}
+                                      onClick={() =>
+                                        setEditingContractId(
+                                          editingContractId === c.id ? null : c.id
+                                        )
+                                      }
+                                    />
+                                  )}
+                                </>
+                              }
                             />
-                            {role === "admin" && c.object && (
-                              <ActionButton onClick={() => setPricingContract(c)}>
-                                {t.buildings.unitPrice.edit}
-                              </ActionButton>
-                            )}
-                            {role !== "director" && (
-                              <ActionButton
-                                onClick={() =>
-                                  setEditingContractId(editingContractId === c.id ? null : c.id)
-                                }
-                              >
-                                {editingContractId === c.id
-                                  ? t.clients.profile.hideForm
-                                  : t.contracts.cashier.editFull}
-                              </ActionButton>
-                            )}
                           </ActionBar>
 
                           {/* Contract particulars -- these used to be the whole

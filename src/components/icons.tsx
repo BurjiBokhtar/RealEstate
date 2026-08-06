@@ -120,3 +120,21 @@ export function WarningIcon({ className }: IconProps) {
     </Icon>
   );
 }
+
+export function DuplicateIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="1.8" />
+      <path d="M15.5 5.5H6a1.5 1.5 0 0 0-1.5 1.5v9.5" />
+    </Icon>
+  );
+}
+
+export function TagIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M3.5 11V4.5a1 1 0 0 1 1-1H11l9 9-7.5 7.5-9-9z" />
+      <circle cx="7.75" cy="7.75" r="1.15" />
+    </Icon>
+  );
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 // One row, everything on the right.
@@ -14,36 +15,82 @@ import type { ReactNode } from "react";
 // Wraps to the right on narrow screens rather than stacking to the left, so
 // the grouping survives on a phone.
 export function ActionBar({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap items-center justify-end gap-2">{children}</div>;
+}
+
+// The bordered container that turns a handful of icon buttons into one
+// toolbar. Deliberately NOT `overflow-hidden`: the tooltips below each icon
+// have to be able to escape it. Rounding lives on the individual buttons
+// instead, so hover backgrounds still look right at the ends.
+export function IconToolbar({ children }: { children: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">{children}</div>
+    <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-slate-300 bg-white p-1">
+      {children}
+    </div>
   );
 }
 
-// A text button sized to sit level with the icon segments next to it (h-9),
-// so a mixed row of icons and words lines up on one baseline.
-export function ActionButton({
+// One icon-only action with its name on hover.
+//
+// The label is not decoration: an icon on its own is a guess until you click
+// it. It is exposed three ways -- a styled tooltip for the mouse, `title` for
+// the browser's own tooltip and touch long-press, and `aria-label` for screen
+// readers -- because an icon button with no accessible name is just an
+// unlabelled square to anyone not using their eyes.
+export function IconAction({
+  label,
+  icon,
   onClick,
-  children,
+  href,
+  active = false,
   tone = "quiet",
-  disabled,
+  disabled = false,
 }: {
-  onClick: () => void;
-  children: ReactNode;
-  tone?: "quiet" | "danger";
+  label: string;
+  icon: ReactNode;
+  onClick?: () => void;
+  href?: string;
+  /** Toggled-on look, for actions that hold a state (e.g. edit mode). */
+  active?: boolean;
+  tone?: "quiet" | "brand" | "danger";
   disabled?: boolean;
 }) {
+  const base =
+    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all active:scale-95 disabled:opacity-40";
+  const look = active
+    ? "bg-amber-100 text-amber-800"
+    : tone === "brand"
+      ? "bg-brand-strong text-white hover:brightness-125"
+      : tone === "danger"
+        ? "text-rose-600 hover:bg-rose-50"
+        : "text-slate-600 hover:bg-slate-100";
+
+  const inner = <span className="pointer-events-none">{icon}</span>;
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`h-9 shrink-0 rounded-lg border px-3.5 text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-50 ${
-        tone === "danger"
-          ? "border-rose-300 bg-white text-rose-700 hover:bg-rose-50"
-          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-      }`}
-    >
-      {children}
-    </button>
+    <span className="group/tip relative inline-flex">
+      {href ? (
+        <Link href={href} title={label} aria-label={label} className={`${base} ${look}`}>
+          {inner}
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          title={label}
+          aria-label={label}
+          className={`${base} ${look}`}
+        >
+          {inner}
+        </button>
+      )}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[11px] font-medium text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100"
+      >
+        {label}
+      </span>
+    </span>
   );
 }

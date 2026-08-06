@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BackLink } from "@/components/BackLink";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -16,7 +15,8 @@ import { UnitEditModal } from "@/components/UnitEditModal";
 import { Toast, type ToastType } from "@/components/Toast";
 import { ConstructionStatusBadge } from "@/components/ConstructionStatusBadge";
 import { DuplicateBuildingModal } from "@/components/DuplicateBuildingModal";
-import { DocumentIcon, PencilIcon, GearIcon } from "@/components/icons";
+import { DocumentIcon, PencilIcon, GearIcon, DuplicateIcon } from "@/components/icons";
+import { IconAction, IconToolbar } from "@/components/ActionBar";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -419,43 +419,35 @@ export default function BuildingDetailPage() {
               </div>
               {building.address && <p className="text-sm text-slate-500">{building.address}</p>}
             </div>
+            {/* Four wide labelled buttons became one icon toolbar: the row
+                took most of the header and pushed the building's own name
+                and address into a corner. Each icon names itself on hover
+                (and via title/aria-label for touch and screen readers). */}
             {role === "admin" && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
+              <IconToolbar>
+                <IconAction
+                  label={editMode ? t.buildings.editModeOn : t.buildings.editMode}
+                  icon={<PencilIcon className="h-4 w-4" />}
+                  active={editMode}
                   onClick={() => setEditMode((v) => !v)}
-                  className={`inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium shadow-sm transition-all active:scale-[0.98] ${
-                    editMode
-                      ? "border-amber-400 bg-amber-100 text-amber-800"
-                      : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  <PencilIcon className="h-4 w-4" />
-                  {editMode ? t.buildings.editModeOn : t.buildings.editMode}
-                </button>
-                <Link
+                />
+                <IconAction
+                  label={t.buildings.report.savePdf}
+                  icon={<DocumentIcon className="h-4 w-4" />}
                   href={`/buildings/${building.id}/report`}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  <DocumentIcon className="h-4 w-4" />
-                  {t.buildings.report.savePdf}
-                </Link>
-                <Link
+                />
+                <IconAction
+                  label={t.buildings.configure}
+                  icon={<GearIcon className="h-4 w-4" />}
+                  tone="brand"
                   href={`/buildings/${building.id}/edit`}
-                  className="inline-flex items-center gap-2 rounded-lg btn-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md hover:brightness-110 active:scale-[0.98]"
-                >
-                  <GearIcon className="h-4 w-4" />
-                  {t.buildings.configure}
-                </Link>
-                <button
-                  type="button"
+                />
+                <IconAction
+                  label={t.buildings.duplicate.button}
+                  icon={<DuplicateIcon className="h-4 w-4" />}
                   onClick={() => setShowDuplicate(true)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
-                >
-                  <span aria-hidden="true" className="text-base leading-none">⧉</span>
-                  {t.buildings.duplicate.button}
-                </button>
-              </div>
+                />
+              </IconToolbar>
             )}
           </div>
 

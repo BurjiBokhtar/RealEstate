@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
-import Link from "next/link";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { waLink } from "@/lib/whatsapp";
 import { captureNodeAsPngFile } from "@/lib/receiptImage";
 import { PrintIcon } from "@/components/icons";
+import { IconAction, IconToolbar } from "@/components/ActionBar";
 
 type Kind = "contract" | "receipt";
 
@@ -25,12 +25,6 @@ type ShareNavigator = Navigator & {
   canShare?: (data: { files?: File[] }) => boolean;
 };
 
-// Same square footprint for every segment of the pill (icon buttons and the
-// print link alike), so the group reads as one control regardless of
-// whether a segment is a <button> or a <Link>.
-const SEGMENT =
-  "flex h-9 w-9 shrink-0 items-center justify-center transition-all active:scale-95 disabled:opacity-50";
-
 // One "Поделиться" button hands the message (and, for a receipt, the
 // rendered image) to the OS's own share sheet -- so the client picks
 // whichever messenger or mail app they actually have installed, instead of
@@ -39,15 +33,16 @@ const SEGMENT =
 // don't), it falls back to a small menu with the old WhatsApp/Email links --
 // never a dead end, just one extra tap on unsupported browsers.
 //
-// Rendered as a segmented pill -- Share, and (when the caller passes
-// printAction) Печать as a second segment -- so the two ways to get this
-// document out read as one control instead of competing buttons.
+// Rendered as an IconToolbar -- Share, Печать, and whatever the caller folds
+// in via extraActions -- so everything this document row can do reads as one
+// control instead of competing buttons scattered across the row.
 export function SendActions({
   contractId,
   kind,
   paymentId,
   receiptNodeRef,
   printAction,
+  extraActions,
 }: {
   contractId: string;
   kind: Kind;
@@ -58,9 +53,13 @@ export function SendActions({
   // (the print page) can offer this -- the compact list view has no receipt
   // DOM to capture, so it stays text-only there.
   receiptNodeRef?: RefObject<HTMLElement | null>;
-  // Folds a print action into the same pill as a second segment -- wherever
+  // Folds a print action into the same toolbar -- wherever
   // print and share are genuinely the same "get this document out" decision.
   printAction?: { label: string } & ({ href: string } | { onClick: () => void });
+  // Extra icon segments folded into the SAME toolbar. Everything a document
+  // row can do belongs in one control, not in a pill plus a scattering of
+  // loose buttons beside it.
+  extraActions?: ReactNode;
 }) {
   const { t } = useLocale();
   const [busy, setBusy] = useState(false);
@@ -239,53 +238,41 @@ export function SendActions({
 
   return (
     <div className="relative flex flex-col gap-1.5">
-      <div className="inline-flex w-fit divide-x divide-slate-200 overflow-hidden rounded-lg border border-slate-300">
-        <button
-          type="button"
+      <IconToolbar>
+        <IconAction
+          label={t.contracts.send.share}
           onClick={handleShare}
           disabled={busy}
-          title={t.contracts.send.share}
-          aria-label={t.contracts.send.share}
-          className={`${SEGMENT} text-slate-600 hover:bg-slate-50`}
-        >
-          {busy ? (
-            <span className="text-xs">…</span>
-          ) : (
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4 fill-none stroke-current"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 3v12M8 7l4-4 4 4" />
-              <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
-            </svg>
-          )}
-        </button>
-        {printAction &&
-          ("href" in printAction ? (
-            <Link
-              href={printAction.href}
-              title={printAction.label}
-              aria-label={printAction.label}
-              className={`${SEGMENT} bg-brand text-white hover:brightness-110`}
-            >
-              <PrintIcon className="h-4 w-4" />
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={printAction.onClick}
-              title={printAction.label}
-              aria-label={printAction.label}
-              className={`${SEGMENT} bg-brand text-white hover:brightness-110`}
-            >
-              <PrintIcon className="h-4 w-4" />
-            </button>
-          ))}
-      </div>
+          icon={
+            busy ? (
+              <span className="text-xs">…</span>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 fill-none stroke-current"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 3v12M8 7l4-4 4 4" />
+                <path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />
+              </svg>
+            )
+          }
+        />
+        {printAction && (
+          <IconAction
+            label={printAction.label}
+            tone="brand"
+            icon={<PrintIcon className="h-4 w-4" />}
+            {...("href" in printAction
+              ? { href: printAction.href }
+              : { onClick: printAction.onClick })}
+          />
+        )}
+        {extraActions}
+      </IconToolbar>
 
       {/* Fallback menu: only ever shown when the browser has no share sheet
           (or the user backed out of a share attempt that then errored) --
