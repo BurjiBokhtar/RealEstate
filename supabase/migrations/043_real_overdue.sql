@@ -80,6 +80,11 @@ grant select on crm.overdue_installments to authenticated;
 
 
 -- Строка на договор: только реально не закрытые просроченные платежи.
+--
+-- drop, а не только `create or replace`: у функции появилась новая колонка
+-- remaining_total, а менять состав OUT-параметров заменой нельзя --
+-- Postgres отвечает «cannot change return type of existing function».
+drop function if exists crm.overdue_contracts();
 create or replace function crm.overdue_contracts()
 returns table (
   contract_id uuid,
@@ -129,6 +134,8 @@ $$;
 grant execute on function crm.overdue_contracts() to authenticated;
 
 
+-- Та же история: добавился remaining_total.
+drop function if exists crm.overdue_totals();
 create or replace function crm.overdue_totals()
 returns table (
   currency text,

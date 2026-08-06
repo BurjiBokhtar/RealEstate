@@ -10,6 +10,8 @@ import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
+import { ActionBar } from "@/components/ActionBar";
+import { CalendarIcon } from "@/components/icons";
 import type { Client } from "@/lib/clients/types";
 
 // Paid/total across a client's active contracts, per currency -- fetched
@@ -33,10 +35,14 @@ export default function ClientsPage() {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
   const [sort, setSort] = useState<"new" | "old" | "az" | "za">("new");
+  // Added-on date range. Both ends optional, so "everything since March" and
+  // "everything up to March" work without inventing a second control.
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     setPage(1);
-  }, [search, sort]);
+  }, [search, sort, dateFrom, dateTo]);
 
   useEffect(() => {
     if (!configured) {
@@ -51,6 +57,11 @@ export default function ClientsPage() {
       const q = search.trim();
       query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%,phone2.ilike.%${q}%`);
     }
+    // created_at is a timestamp, so the upper bound has to reach the END of
+    // the chosen day -- `lte` on the bare date would silently drop everyone
+    // added that day.
+    if (dateFrom) query = query.gte("created_at", dateFrom);
+    if (dateTo) query = query.lt("created_at", `${dateTo}T23:59:59.999`);
     const from = (page - 1) * PAGE_SIZE;
     const orderBy =
       sort === "az" || sort === "za"
@@ -93,7 +104,7 @@ export default function ClientsPage() {
       }
       setDebts(map);
     });
-  }, [configured, page, search, sort]);
+  }, [configured, page, search, sort, dateFrom, dateTo]);
 
   // Build the export rows on demand (every client, per-currency debt), fed
   // to the Excel/PDF menu.
@@ -139,7 +150,7 @@ export default function ClientsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
-        <div className="flex items-center gap-2">
+        <ActionBar>
           <ExportMenu
             getData={getExportRows}
             headers={[
@@ -161,7 +172,7 @@ export default function ClientsPage() {
           >
             + {t.clients.newClient}
           </Link>
-        </div>
+        </ActionBar>
       </div>
 
       {!configured && <SetupNotice />}
@@ -173,6 +184,44 @@ export default function ClientsPage() {
           placeholder={t.clients.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
+        {/* Added-on date range, in the same pill shape as the sort control so
+            the filter row reads as one set of controls. */}
+        <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1.5 text-sm shadow-sm">
+          <CalendarIcon className="h-4 w-4 shrink-0 text-slate-400" />
+          <span className="text-xs text-slate-400">{t.clients.dateRange.from}</span>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => setDateFrom(e.target.value)}
+            aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.from}`}
+            className="h-7 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+          />
+          <span className="text-xs text-slate-400">{t.clients.dateRange.to}</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => setDateTo(e.target.value)}
+            aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.to}`}
+            className="h-7 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+          />
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              title={t.clients.dateRange.clear}
+              aria-label={t.clients.dateRange.clear}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         {/* Sort pills: a small segmented control with a sort glyph. */}
         <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
           <span className="pl-2 pr-1 text-slate-400" aria-hidden="true">
@@ -192,7 +241,7 @@ export default function ClientsPage() {
               onClick={() => setSort(opt.id)}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
                 sort === opt.id
-                  ? "bg-brand-strong text-white shadow-sm"
+                  ? "bg-brand text-white shadow-sm"
                   : "text-slate-500 hover:bg-slate-100"
               }`}
             >

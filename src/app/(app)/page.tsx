@@ -41,9 +41,14 @@ type DashboardSummary = {
   counts: { total: number; available: number; reserved: number; sold: number; in_progress: number };
   area: { total: number; available: number };
   potential: MoneyPair;
+  // How many available flats the potential figure is built from, and how many
+  // were left out because they have no price.
+  potential_units: number;
+  potential_no_price: number;
   paid: MoneyPair;
   debt: MoneyPair;
   overdue: MoneyPair;
+  overdue_contracts: number;
   revenue_months: Array<{ month: string; tjs: number; usd: number }>;
   revenue_days: Array<{ day: string; tjs: number; usd: number }>;
   occupancy: OccupancyRow[];
@@ -65,9 +70,12 @@ const EMPTY_SUMMARY: DashboardSummary = {
   counts: { total: 0, available: 0, reserved: 0, sold: 0, in_progress: 0 },
   area: { total: 0, available: 0 },
   potential: ZERO,
+  potential_units: 0,
+  potential_no_price: 0,
   paid: ZERO,
   debt: ZERO,
   overdue: ZERO,
+  overdue_contracts: 0,
   revenue_months: [],
   revenue_days: [],
   occupancy: [],
@@ -295,9 +303,20 @@ export default function DashboardPage() {
           delay={120}
           loading={loading}
         />
+        {/* Both of these tiles were showing a number with nothing to check it
+            against. Overdue now says how many contracts it covers (and that
+            it is only the part not yet covered by money received), and
+            potential says how many flats it is built from -- plus, when some
+            are missing a price, that they are NOT in the total. A silently
+            understated figure is worse than a small warning. */}
         <StatCard
           label={t.dashboard.overdueTile}
           value={<MoneyPairValue value={overdue} animate />}
+          sub={
+            summary.overdue_contracts > 0
+              ? t.dashboard.overdueSub.replace("{n}", String(summary.overdue_contracts))
+              : undefined
+          }
           icon={StatIcons.warning}
           tone="rose"
           href="/debtors"
@@ -307,6 +326,13 @@ export default function DashboardPage() {
         <StatCard
           label={t.dashboard.potentialRevenue}
           value={<MoneyPairValue value={potentialRevenue} animate />}
+          sub={
+            summary.potential_no_price > 0
+              ? t.dashboard.potentialNoPrice
+                  .replace("{n}", String(summary.potential_units))
+                  .replace("{missing}", String(summary.potential_no_price))
+              : t.dashboard.potentialSub.replace("{n}", String(summary.potential_units))
+          }
           icon={StatIcons.wallet}
           tone="plum"
           delay={200}

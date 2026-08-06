@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { createContext, useContext, type ReactNode } from "react";
 
 // One row, everything on the right.
 //
@@ -18,15 +18,41 @@ export function ActionBar({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center justify-end gap-2">{children}</div>;
 }
 
+// Toolbars sit in two kinds of place: page headers, where they are the main
+// controls and can be full size, and inside cards and table rows, where a
+// full-size button would tower over the text beside it. The toolbar declares
+// the size once and every icon in it follows, so a row can't come out with
+// mismatched buttons.
+export type ToolbarSize = "sm" | "md";
+
+const SizeContext = createContext<ToolbarSize>("md");
+
+export const SIZE_CLASSES: Record<ToolbarSize, { button: string; icon: string }> = {
+  sm: { button: "h-8 w-8", icon: "[&_svg]:h-[16px] [&_svg]:w-[16px]" },
+  md: { button: "h-10 w-10", icon: "[&_svg]:h-[19px] [&_svg]:w-[19px]" },
+};
+
 // The bordered container that turns a handful of icon buttons into one
 // toolbar. Deliberately NOT `overflow-hidden`: the tooltips below each icon
 // have to be able to escape it. Rounding lives on the individual buttons
 // instead, so hover backgrounds still look right at the ends.
-export function IconToolbar({ children }: { children: ReactNode }) {
+export function IconToolbar({
+  children,
+  size = "md",
+}: {
+  children: ReactNode;
+  size?: ToolbarSize;
+}) {
   return (
-    <div className="inline-flex w-fit items-center gap-1 rounded-lg border border-slate-300 bg-white p-1">
-      {children}
-    </div>
+    <SizeContext.Provider value={size}>
+      <div
+        className={`inline-flex w-fit items-center rounded-lg border border-slate-300 bg-white ${
+          size === "sm" ? "gap-0.5 p-0.5" : "gap-1 p-1"
+        }`}
+      >
+        {children}
+      </div>
+    </SizeContext.Provider>
   );
 }
 
@@ -45,6 +71,7 @@ export function IconAction({
   active = false,
   tone = "quiet",
   disabled = false,
+  size,
 }: {
   label: string;
   icon: ReactNode;
@@ -54,12 +81,22 @@ export function IconAction({
   active?: boolean;
   tone?: "quiet" | "brand" | "danger";
   disabled?: boolean;
+  /** Overrides the size inherited from the surrounding IconToolbar. */
+  size?: ToolbarSize;
 }) {
+  const inherited = useContext(SizeContext);
+  const s = SIZE_CLASSES[size ?? inherited];
   // The `[&_svg]` rule sizes the icon from here rather than trusting each call
   // site to pass the same h-4 w-4 -- one place to change, and a new toolbar
   // can't quietly come out a different size.
+  //
+  // The lift on hover (-translate-y-0.5 + a shadow) is what makes an icon feel
+  // pressable at all: without a label there is otherwise nothing that answers
+  // the pointer until it's already been clicked.
   const base =
-    "flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-all active:scale-95 disabled:opacity-40 [&_svg]:h-[19px] [&_svg]:w-[19px]";
+    `flex ${s.button} ${s.icon} shrink-0 items-center justify-center rounded-md transition-all duration-150 ` +
+    "hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95 " +
+    "disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none";
   const look = active
     ? "bg-amber-100 text-amber-800"
     : tone === "brand"

@@ -136,7 +136,7 @@ export default function LoginPage() {
                 onClick={() => setLocale(l)}
                 className={`px-2.5 py-1 text-xs font-semibold uppercase transition-colors ${
                   locale === l
-                    ? "bg-brand-strong text-white"
+                    ? "bg-brand text-white"
                     : "bg-white text-slate-500 hover:text-slate-800"
                 }`}
               >

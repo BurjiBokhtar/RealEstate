@@ -138,3 +138,40 @@ export function TagIcon({ className }: IconProps) {
     </Icon>
   );
 }
+
+export function DownloadIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M12 3.5v11M8 10.5l4 4 4-4" />
+      <path d="M4.5 17.5v1.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5" />
+    </Icon>
+  );
+}
+
+export function TableIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" />
+      <path d="M3.5 9.5h17M9.5 9.5v10M15 9.5v10" />
+    </Icon>
+  );
+}
+
+export function PdfIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M6 3.5h7.5L18.5 8.5V20a.5.5 0 0 1-.5.5H6a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5z" />
+      <path d="M13.5 3.5v5h5" />
+      <path d="M8.5 16.5v-4h1.2a1.2 1.2 0 0 1 0 2.4H8.5M13 16.5v-4h1.3a1.2 1.2 0 0 1 1.2 1.2v1.6a1.2 1.2 0 0 1-1.2 1.2H13z" />
+    </Icon>
+  );
+}
+
+export function CalendarIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="1.8" />
+      <path d="M3.5 10h17M8.5 3v4M15.5 3v4" />
+    </Icon>
+  );
+}
