@@ -1,6 +1,6 @@
 import type { ServiceClient } from "@/lib/supabase/serviceClient";
 import { renderContractTemplate } from "@/lib/contracts/renderTemplate";
-import { normalizeTjPhone } from "@/lib/phone";
+import { smsGatewayPhone } from "@/lib/phone";
 
 // The reminder run, in one place, so the nightly cron and the "Отправить
 // сейчас" button in Settings do exactly the same thing -- an admin can prove
@@ -43,12 +43,16 @@ function plusDays(days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Returns why it failed, not just that it did. The run used to report
+// "не доставлено: 3" and throw the gateway's answer away, which left nobody
+// any way to tell a wrong API key from a blocked sender name from a bad
+// number.
 async function sendOne(
   apiKey: string,
   senderName: string,
   phone: string,
   text: string
-): Promise<boolean> {
+): Promise<{ ok: boolean; detail?: string }> {
   try {
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -59,9 +63,11 @@ async function sendOne(
       },
       body: JSON.stringify({ telephone: phone, text, senderName, type: "SMS" }),
     });
-    return res.ok || [200, 201, 202].includes(res.status);
-  } catch {
-    return false;
+    if (res.ok || [200, 201, 202].includes(res.status)) return { ok: true };
+    const body = await res.text().catch(() => "");
+    return { ok: false, detail: `${res.status}${body ? `: ${body.slice(0, 160)}` : ""}` };
+  } catch (err) {
+    return { ok: false, detail: err instanceof Error ? err.message : "сеть недоступна" };
   }
 }
 
@@ -142,6 +148,8 @@ export async function sendPaymentReminders(
   let dueSent = 0;
   let failed = 0;
   let skipped = 0;
+  // First gateway refusal, kept verbatim for the summary.
+  let firstError: string | undefined;
 
   const stages: Array<{ rows: DuePayment[]; marker: "reminder_sent_at" | "due_reminder_sent_at" }> = [
     { rows: (advanceRes.data ?? []) as unknown as DuePayment[], marker: "reminder_sent_at" },
@@ -159,8 +167,8 @@ export async function sendPaymentReminders(
       // Fall back to the second number: a client whose main line is blank
       // (or was only ever recorded as the spare) should still be reminded.
       const phone =
-        normalizeTjPhone(payment.contract.client?.phone) ||
-        normalizeTjPhone(payment.contract.client?.phone2);
+        smsGatewayPhone(payment.contract.client?.phone) ||
+        smsGatewayPhone(payment.contract.client?.phone2);
       if (!phone) {
         skipped++;
         continue;
@@ -174,9 +182,10 @@ export async function sendPaymentReminders(
         due_date: payment.due_date,
       });
 
-      const delivered = await sendOne(apiKey, senderName, phone, text);
-      if (!delivered) {
+      const sent = await sendOne(apiKey, senderName, phone, text);
+      if (!sent.ok) {
         failed++;
+        if (!firstError && sent.detail) firstError = sent.detail;
         continue;
       }
       await supabase
@@ -190,7 +199,7 @@ export async function sendPaymentReminders(
 
   const summary =
     `Отправлено: ${advanceSent} за ${days} дн. + ${dueSent} в день платежа` +
-    (failed ? `, не доставлено: ${failed}` : "") +
+    (failed ? `, не доставлено: ${failed}${firstError ? ` (${firstError})` : ""}` : "") +
     (skipped ? `, пропущено: ${skipped}` : "");
 
   return { ok: failed === 0, summary, advanceSent, dueSent, failed, skipped };

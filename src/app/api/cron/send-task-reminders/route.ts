@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { renderContractTemplate } from "@/lib/contracts/renderTemplate";
-import { normalizeTjPhone } from "@/lib/phone";
+import { smsGatewayPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
   let failed = 0;
 
   for (const task of dueList) {
-    const phone = normalizeTjPhone(task.assignee_phone);
+    const phone = smsGatewayPhone(task.assignee_phone);
     if (!phone) continue;
 
     const text = renderContractTemplate(settings.sms_task_template || DEFAULT_TASK_TEMPLATE, {

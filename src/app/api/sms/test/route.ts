@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceClient, requireAdmin } from "@/lib/supabase/serviceClient";
-import { normalizeTjPhone } from "@/lib/phone";
+import { smsGatewayPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   }
 
   const { phone: rawPhone } = (await request.json().catch(() => ({}))) as { phone?: string };
-  const phone = normalizeTjPhone(rawPhone);
+  const phone = smsGatewayPhone(rawPhone);
   if (!phone) {
     return NextResponse.json({ error: "Укажите номер телефона." }, { status: 400 });
   }
@@ -40,7 +40,10 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         telephone: phone,
-        text: "Тест: настройки SMS в ZAKI CRM работают.",
+        // Goes to a real phone, so it names the company that is sending it --
+        // "ZAKI CRM" was a leftover product name that means nothing to whoever
+        // receives the message.
+        text: `Тест: настройки SMS работают. ${settings.company_name ?? settings.sms_sender_name}`,
         senderName: settings.sms_sender_name,
         type: "SMS",
       }),
