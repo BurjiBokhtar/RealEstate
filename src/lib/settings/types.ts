@@ -5,6 +5,11 @@ export type Settings = {
   sms_reminder_days: number;
   sms_payment_template: string | null;
   sms_task_template: string | null;
+  // The Start/Stop switch for the automatic mailout, plus the last run, so
+  // Settings can show that the schedule is alive.
+  sms_enabled: boolean;
+  sms_last_run_at: string | null;
+  sms_last_result: string | null;
   company_name: string | null;
   company_director: string | null;
   company_address: string | null;

@@ -34,6 +34,9 @@ export async function GET(request: Request) {
   });
 
   const { data: settings } = await supabase.from("settings").select("*").maybeSingle();
+  if (!settings?.sms_enabled) {
+    return NextResponse.json({ message: "SMS mailout is stopped, skipping" });
+  }
   if (!settings?.sms_api_key || !settings?.sms_sender_name) {
     return NextResponse.json({ message: "SMS not configured, skipping" });
   }

@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { FileUploadField } from "@/components/FileUploadField";
 import { Accordion } from "@/components/Accordion";
+import { SmsScheduler } from "@/components/SmsScheduler";
 import { Toast, type ToastType } from "@/components/Toast";
 import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
@@ -391,6 +392,13 @@ export default function SettingsPage() {
               {testSending ? t.settings.sms.testSending : t.settings.sms.testSend}
             </button>
           </div>
+
+          {/* Start/Stop for the automatic run, plus why it can or can't go
+              out. Kept below the test-send: you prove one message works,
+              then switch the schedule on. */}
+          <SmsScheduler
+            onMessage={(text, ok) => setToast({ message: text, type: ok ? "success" : "error" })}
+          />
         </Accordion>
       </div>
 

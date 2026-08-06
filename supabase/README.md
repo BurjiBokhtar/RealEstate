@@ -26,7 +26,23 @@ Supabase → **SQL Editor** → откройте [`000_full_setup.sql`](000_full
 Supabase → **SQL Editor** → вставить содержимое
 [`migrations/038_dashboard_summary.sql`](migrations/038_dashboard_summary.sql),
 затем [`migrations/039_overdue_pagination.sql`](migrations/039_overdue_pagination.sql)
-→ **Run**. Оба файла идемпотентные, повторный запуск безопасен.
+и [`migrations/040_sms_scheduler.sql`](migrations/040_sms_scheduler.sql)
+→ **Run**. Все файлы идемпотентные, повторный запуск безопасен.
+
+## SMS-рассылка
+
+Кроме миграции 040 нужны **две переменные окружения в Vercel** (Project
+Settings → Environment Variables), иначе ночной запуск будет молча
+отклоняться с 401:
+
+- `CRON_SECRET` — любая случайная строка. Vercel сам подставляет её в
+  заголовок `Authorization` при вызове задач из `vercel.json`. **Это самая
+  частая причина, почему рассылка «не работает».**
+- `SUPABASE_SERVICE_ROLE_KEY` — без него маршрут не сможет читать график.
+
+После этого: Настройки → SMS-напоминания → заполнить ключ и имя
+отправителя → «Отправить» (тестовое SMS) → **«Запустить рассылку»**.
+Состояние, последний запуск и то, чего не хватает, показаны там же.
 
 ## Папка `migrations/`
 
