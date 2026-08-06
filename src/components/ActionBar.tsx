@@ -55,12 +55,19 @@ export function IconAction({
   tone?: "quiet" | "brand" | "danger";
   disabled?: boolean;
 }) {
+  // The `[&_svg]` rule sizes the icon from here rather than trusting each call
+  // site to pass the same h-4 w-4 -- one place to change, and a new toolbar
+  // can't quietly come out a different size.
   const base =
-    "flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-all active:scale-95 disabled:opacity-40";
+    "flex h-10 w-10 shrink-0 items-center justify-center rounded-md transition-all active:scale-95 disabled:opacity-40 [&_svg]:h-[19px] [&_svg]:w-[19px]";
   const look = active
     ? "bg-amber-100 text-amber-800"
     : tone === "brand"
-      ? "bg-brand-strong text-white hover:brightness-125"
+      ? // --brand, not --brand-strong: the "strong" variant is near-black in
+        // every theme (#1c1a3a, #06302b, #0c1e4a...), so a themed button made
+        // of it just looked black. --brand is the shade that actually carries
+        // the company's colour.
+        "bg-brand text-white hover:brightness-110"
       : tone === "danger"
         ? "text-rose-600 hover:bg-rose-50"
         : "text-slate-600 hover:bg-slate-100";
