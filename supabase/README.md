@@ -24,8 +24,9 @@ Supabase → **SQL Editor** → откройте [`000_full_setup.sql`](000_full
 посчитать статистику» и нули.
 
 Supabase → **SQL Editor** → вставить содержимое
-[`migrations/038_dashboard_summary.sql`](migrations/038_dashboard_summary.sql)
-→ **Run**. Файл идемпотентный, повторный запуск безопасен.
+[`migrations/038_dashboard_summary.sql`](migrations/038_dashboard_summary.sql),
+затем [`migrations/039_overdue_pagination.sql`](migrations/039_overdue_pagination.sql)
+→ **Run**. Оба файла идемпотентные, повторный запуск безопасен.
 
 ## Папка `migrations/`
 

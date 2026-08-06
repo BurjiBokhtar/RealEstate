@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { Pagination } from "@/components/Pagination";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
 import { waLink } from "@/lib/whatsapp";
+
+const PAGE_SIZE = 25;
+// Batch size for the "export everything" path -- PostgREST will not hand back
+// more than this in one response anyway.
+const EXPORT_BATCH = 1000;
 
 // One reminder PER CONTRACT, not per missed installment. A long installment
 // plan with nothing paid used to spill one row per overdue month (9, 20, 30
@@ -49,73 +55,130 @@ type OverdueRow = {
   latest_due: string;
 };
 
+// Same shape the table renders, built from one RPC row.
+function toDebt(r: OverdueRow, now: number): ContractDebt {
+  return {
+    contractId: r.contract_id,
+    clientId: r.client_id,
+    clientName: r.client_name,
+    clientPhone: r.client_phone,
+    objectName: r.object_name,
+    contractNumber: r.contract_number,
+    currency: r.currency,
+    missedCount: r.missed_count,
+    totalOverdue: Number(r.total_overdue),
+    earliestDue: r.earliest_due,
+    latestDue: r.latest_due,
+    // Measured from the LATEST missed date, so it reflects the current cycle
+    // and rolls forward each month instead of ballooning.
+    daysOverdue: Math.floor((now - new Date(r.latest_due).getTime()) / 86_400_000),
+  };
+}
+
 export default function DebtorsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const [rows, setRows] = useState<ContractDebt[]>([]);
+  const [totals, setTotals] = useState<Array<{ currency: Currency; total: number }>>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<string | null>(null);
 
-  // Grouped in SQL, one row per contract. This page used to pull EVERY unpaid
-  // overdue installment and group them in the browser -- and a two-year
-  // installment plan is 20-30 rows on its own, so PostgREST's 1000-row cap was
-  // reachable with only a few dozen debtors. Past that, the list silently went
-  // short: a debtor who owed money simply didn't appear, with no error. One
-  // contract now costs one row.
+  // Paged, 25 at a time. Two ceilings had to go here. First: the page used to
+  // pull EVERY unpaid overdue installment and group them in the browser -- and
+  // a two-year plan is 20-30 rows on its own, so PostgREST's 1000-row cap was
+  // reachable at a few dozen debtors. Migration 038 fixed that by grouping in
+  // SQL. But one contract still costs one row, so the same cap returns at a
+  // thousand contracts in arrears -- and on THIS page a silently truncated
+  // list means somebody who owes money never gets called. Hence real paging,
+  // with the row count coming from the server rather than from rows.length.
   useEffect(() => {
     if (!configured) {
       setLoading(false);
       return;
     }
     let cancelled = false;
+    setLoading(true);
+    const from = (page - 1) * PAGE_SIZE;
     createClient()
       .schema("crm")
-      .rpc("overdue_contracts")
-      .then(({ data, error }) => {
+      .rpc("overdue_contracts", {}, { count: "exact" })
+      .range(from, from + PAGE_SIZE - 1)
+      .then(({ data, count, error }) => {
         if (cancelled) return;
         if (error) {
           console.error("overdue_contracts failed:", error.message);
           setFailure(error.message);
           setRows([]);
+          setTotalCount(0);
           setLoading(false);
+          return;
+        }
+        const batch = (data ?? []) as OverdueRow[];
+        // Debts get paid while the page is open. If that emptied the page
+        // we're standing on, fall back to the first one rather than showing a
+        // blank table under a "3 / 2" counter.
+        if (batch.length === 0 && page > 1) {
+          setPage(1);
           return;
         }
         const now = Date.now();
         setFailure(null);
-        setRows(
-          ((data ?? []) as OverdueRow[]).map((r) => ({
-            contractId: r.contract_id,
-            clientId: r.client_id,
-            clientName: r.client_name,
-            clientPhone: r.client_phone,
-            objectName: r.object_name,
-            contractNumber: r.contract_number,
-            currency: r.currency,
-            missedCount: r.missed_count,
-            totalOverdue: Number(r.total_overdue),
-            earliestDue: r.earliest_due,
-            latestDue: r.latest_due,
-            // Measured from the LATEST missed date, so it reflects the current
-            // cycle and rolls forward each month instead of ballooning.
-            daysOverdue: Math.floor((now - new Date(r.latest_due).getTime()) / 86_400_000),
-          }))
-        );
+        setRows(batch.map((r) => toDebt(r, now)));
+        setTotalCount(count ?? 0);
         setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, page]);
+
+  // The headline totals cover EVERY debtor, not the 25 on screen, so they come
+  // from their own aggregate instead of being summed from `rows`.
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    createClient()
+      .schema("crm")
+      .rpc("overdue_totals")
+      .then(({ data, error }) => {
+        if (cancelled || error) {
+          if (error) console.error("overdue_totals failed:", error.message);
+          return;
+        }
+        setTotals(
+          ((data ?? []) as Array<{ currency: Currency; total_overdue: number }>)
+            .map((r) => ({ currency: r.currency, total: Number(r.total_overdue) }))
+            .filter((r) => r.total > 0)
+        );
       });
     return () => {
       cancelled = true;
     };
   }, [configured]);
 
-  const totals = useMemo(() => {
-    const v: Record<string, number> = {};
-    for (const r of rows) v[r.currency] = (v[r.currency] ?? 0) + r.totalOverdue;
-    return Object.entries(v).filter(([, n]) => n > 0);
-  }, [rows]);
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
+  // Export is the whole list, not the current page -- an Excel file of 25 rows
+  // out of 1200 would be quietly wrong in exactly the way this change exists
+  // to prevent. Fetched in batches on demand, only when the button is pressed.
   const getExportRows = async () => {
     const num = (n: number) => n.toFixed(2).replace(".", ",");
-    return rows.map((r) => [
+    const supabase = createClient();
+    const all: ContractDebt[] = [];
+    const now = Date.now();
+    for (let from = 0; ; from += EXPORT_BATCH) {
+      const { data, error } = await supabase
+        .schema("crm")
+        .rpc("overdue_contracts")
+        .range(from, from + EXPORT_BATCH - 1);
+      const batch = (data ?? []) as OverdueRow[];
+      if (error || batch.length === 0) break;
+      all.push(...batch.map((r) => toDebt(r, now)));
+      if (batch.length < EXPORT_BATCH) break;
+    }
+    return all.map((r) => [
       r.clientName,
       r.clientPhone ?? "",
       r.objectName ?? "",
@@ -134,7 +197,7 @@ export default function DebtorsPage() {
           <h1 className="text-2xl font-semibold">{t.debtors.title}</h1>
           <p className="text-sm text-slate-500">{t.debtors.subtitle}</p>
         </div>
-        {rows.length > 0 && (
+        {totalCount > 0 && (
           <ExportMenu
             getData={getExportRows}
             headers={[
@@ -164,16 +227,16 @@ export default function DebtorsPage() {
 
       {totals.length > 0 && (
         <div className="flex flex-wrap gap-3">
-          {totals.map(([cur, sum]) => (
+          {totals.map((row) => (
             <div
-              key={cur}
+              key={row.currency}
               className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3"
             >
               <div className="text-xs font-semibold uppercase tracking-wide text-rose-400">
                 {t.debtors.totalOverdue}
               </div>
               <div className="text-xl font-bold text-rose-700">
-                {formatCurrency(sum, cur as Currency)}
+                {formatCurrency(row.total, row.currency)}
               </div>
             </div>
           ))}
@@ -279,6 +342,8 @@ export default function DebtorsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
     </div>
   );
 }
