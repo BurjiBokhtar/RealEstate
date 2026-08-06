@@ -13,12 +13,10 @@ import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
 import { SendActions } from "@/components/SendActions";
 import { ContractPayments } from "@/components/ContractPayments";
-import { PrintIcon, HomeIcon, ReceiptIcon } from "@/components/icons";
+import { HomeIcon } from "@/components/icons";
 import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency } from "@/lib/currency";
-import { formatShortDate } from "@/lib/formatDate";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
-import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { useRole } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
@@ -138,7 +136,12 @@ export default function ClientDetailPage() {
       )
       .eq("client_id", params.id)
       .order("signed_date", { ascending: false });
-    setContracts((data ?? []) as unknown as ClientContract[]);
+    const rows = (data ?? []) as unknown as ClientContract[];
+    setContracts(rows);
+    // One apartment means there is nothing to choose between -- open it, so
+    // the payment history and the cash desk are on screen straight away
+    // instead of one click down.
+    if (rows.length === 1) setExpandedId((prev) => prev ?? rows[0].id);
   }, [params.id]);
 
   // Filtered THROUGH the contract rather than by a list of contract ids, so
@@ -171,12 +174,6 @@ export default function ClientDetailPage() {
     loadContracts();
     loadPayments();
   }, [configured, loadClient, loadContracts, loadPayments]);
-
-  // The history block shows money actually received -- real receipts, in
-  // the order they happened. The unpaid future installments belong to the
-  // schedule on the contract's cash-desk page, not here; mixing them in
-  // made the history read as a wall of "not paid" rows.
-  const paidPayments = payments.filter((p) => p.paid);
 
   const handleSubmit = async (values: ClientInput) => {
     setSubmitting(true);
@@ -556,72 +553,6 @@ export default function ClientDetailPage() {
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </div>
-
-          {/* Full receipt history -- every payment ever taken from this
-              client, with one-click reprint of any receipt. */}
-          <div className="animate-fade-up flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-5 shadow-sm" style={{ animationDelay: "300ms" }}>
-            <p className="text-sm font-semibold text-slate-700">
-              {t.clients.paymentHistory.title}
-            </p>
-            {paidPayments.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                  <ReceiptIcon className="h-5 w-5" />
-                </span>
-                <p className="text-sm text-slate-400">{t.clients.paymentHistory.empty}</p>
-              </div>
-            ) : (
-              <div className="-mx-5 overflow-x-auto">
-                <table className="w-full min-w-[640px] text-left text-sm">
-                  <thead className="border-b border-slate-200 text-slate-500">
-                    <tr>
-                      <th className="px-5 py-2.5 font-medium">
-                        {t.clients.paymentHistory.receiptNo}
-                      </th>
-                      <th className="px-3 py-2.5 font-medium">{t.clients.paymentHistory.date}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.clients.purchases.object}</th>
-                      <th className="px-3 py-2.5 font-medium">{t.contracts.payments.amount}</th>
-                      <th className="px-5 py-2.5 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paidPayments.map((p) => {
-                      const c = contracts.find((cc) => cc.id === p.contract_id);
-                      return (
-                        <tr key={p.id} className="border-b border-slate-100 last:border-0">
-                          <td className="px-5 py-3 font-medium text-slate-500">
-                            №{receiptNumberFor(paymentsByContract[p.contract_id] ?? [], p.id)}
-                          </td>
-                          <td className="px-3 py-3 text-slate-700">
-                            {formatShortDate(p.paid_date ?? p.due_date)}
-                          </td>
-                          <td className="px-3 py-3">
-                            <Link
-                              href={`/contracts/${p.contract_id}`}
-                              className="text-slate-700 hover:underline"
-                            >
-                              {c?.object?.name ?? "—"}
-                            </Link>
-                          </td>
-                          <td className="px-3 py-3 font-medium text-emerald-600">
-                            {formatCurrency(p.amount, c?.currency ?? "TJS")}
-                          </td>
-                          <td className="px-5 py-3 text-right">
-                            <Link
-                              href={`/contracts/${p.contract_id}/payments/${p.id}/receipt`}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
-                            >
-                              <PrintIcon className="h-3.5 w-3.5" /> {t.contracts.receipt.print}
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
               </div>
             )}
           </div>

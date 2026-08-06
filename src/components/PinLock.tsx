@@ -123,6 +123,31 @@ export function PinLock() {
     [complete]
   );
 
+  // Typing on a physical keyboard used to work ONLY while the invisible input
+  // still had focus -- and it lost focus the moment anything else on the
+  // screen was clicked, including the on-screen keypad. So after one tap of a
+  // digit button (or a stray click on the background) the keyboard went dead
+  // with no visible reason. Listening on the window instead means the keys are
+  // picked up no matter what happens to be focused.
+  useEffect(() => {
+    if (!showing) return;
+    const onKey = (e: KeyboardEvent) => {
+      // Let the hidden field handle its own typing -- it is what opens the
+      // phone keyboard -- otherwise one keypress would count twice.
+      if (e.target === inputRef.current) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        setDigits(entry + e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        setDigits(entry.slice(0, -1));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showing, entry, setDigits]);
+
   if (!ready) return null;
   if (hasPin && !locked) return null;
 
@@ -172,12 +197,15 @@ export function PinLock() {
 
       <p className="h-4 text-sm text-amber-200">{error}</p>
 
-      {/* On-screen keypad for mouse / touch. */}
+      {/* On-screen keypad for mouse / touch. preventDefault on mousedown keeps
+          focus on the hidden field, so tapping a digit does not dismiss the
+          phone keyboard. */}
       <div className="grid grid-cols-3 gap-3">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
           <button
             key={d}
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => keypad(d)}
             className="h-16 w-16 rounded-full bg-white/10 text-2xl font-semibold backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
           >
@@ -187,6 +215,7 @@ export function PinLock() {
         <span />
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => keypad("0")}
           className="h-16 w-16 rounded-full bg-white/10 text-2xl font-semibold backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
         >
@@ -194,6 +223,7 @@ export function PinLock() {
         </button>
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => setDigits(entry.slice(0, -1))}
           aria-label="⌫"
           className="flex h-16 w-16 items-center justify-center rounded-full text-2xl text-white/70 transition-colors hover:text-white"
