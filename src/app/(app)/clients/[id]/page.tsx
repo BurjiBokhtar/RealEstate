@@ -207,7 +207,11 @@ export default function ClientDetailPage() {
         client_id: values.client_id,
         object_id: values.object_id,
         amount: Number(values.amount) || 0,
-        paid_amount: Number(values.paid_amount) || 0,
+        // paid_amount is deliberately NOT written here. It is the sum of the
+        // contract's receipts, maintained by a trigger (migration 042).
+        // Saving the form used to overwrite it with whatever stood in the
+        // "Оплачено" box, which is how the balance stopped matching the
+        // payment history.
         currency: values.currency,
         amount_words: values.amount_words || null,
         status: values.status,

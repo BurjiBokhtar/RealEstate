@@ -417,16 +417,35 @@ export function ContractForm({
             className={FIELD_CLASS}
           />
         </label>
+        {/* On an EXISTING contract the paid total is not a field -- it is the
+            sum of the receipts, and typing over it is what made the balance
+            stop matching the payment history. Editable only while drafting a
+            new contract, where it means the down payment and gets written as
+            a real payment row. */}
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.paidAmount}</span>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={values.paid_amount}
-            onChange={(e) => update("paid_amount", e.target.value)}
-            className={FIELD_CLASS}
-          />
+          {isExistingContract ? (
+            <>
+              <div
+                className={`${FIELD_CLASS} flex items-center bg-slate-50 text-slate-500`}
+                aria-readonly="true"
+              >
+                {values.paid_amount || "0"}
+              </div>
+              <span className="text-[11px] text-slate-400">
+                {t.contracts.form.paidFromHistory}
+              </span>
+            </>
+          ) : (
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={values.paid_amount}
+              onChange={(e) => update("paid_amount", e.target.value)}
+              className={FIELD_CLASS}
+            />
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.contracts.form.currency}</span>
@@ -450,18 +469,24 @@ export function ContractForm({
             {pct.toFixed(1)}% {t.contracts.form.percentOfAmount} ·{" "}
             {formatCurrency(paidNum, values.currency)}
           </span>
-          <label className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">{t.contracts.form.enterPercent}</span>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={pct ? Math.round(pct * 10) / 10 : ""}
-              onChange={(e) => handlePercentChange(e.target.value)}
-              className={`w-20 ${FIELD_CLASS_SM}`}
-            />
-          </label>
+          {/* The percent box writes into paid_amount, so on an existing
+              contract it would overwrite the receipts total the same way the
+              field itself did. Drafting only; afterwards the figure is just
+              reported. */}
+          {!isExistingContract && (
+            <label className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">{t.contracts.form.enterPercent}</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={pct ? Math.round(pct * 10) / 10 : ""}
+                onChange={(e) => handlePercentChange(e.target.value)}
+                className={`w-20 ${FIELD_CLASS_SM}`}
+              />
+            </label>
+          )}
         </div>
       )}
 

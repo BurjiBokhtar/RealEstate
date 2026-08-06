@@ -81,7 +81,13 @@ export function ContractPayments({
       .eq("contract_id", contract.id)
       .order("due_date", { ascending: true });
     setPayments((data ?? []) as ContractPayment[]);
-  }, [contract.id]);
+    // updated_at is not read by the query -- it is here on purpose, as a
+    // change signal. This component holds its own copy of the schedule, so
+    // editing the contract (or re-pricing the flat) beside it would otherwise
+    // leave the plan and the receipts showing pre-edit figures until the page
+    // was reloaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contract.id, contract.updated_at]);
 
   useEffect(() => {
     load();

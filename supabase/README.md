@@ -27,7 +27,8 @@ Supabase → **SQL Editor** → вставить содержимое
 [`migrations/038_dashboard_summary.sql`](migrations/038_dashboard_summary.sql),
 затем [`migrations/039_overdue_pagination.sql`](migrations/039_overdue_pagination.sql)
 [`migrations/040_sms_scheduler.sql`](migrations/040_sms_scheduler.sql)
-и [`migrations/041_client_second_phone.sql`](migrations/041_client_second_phone.sql)
+[`migrations/041_client_second_phone.sql`](migrations/041_client_second_phone.sql)
+и [`migrations/042_paid_amount_from_payments.sql`](migrations/042_paid_amount_from_payments.sql)
 → **Run**. Все файлы идемпотентные, повторный запуск безопасен.
 
 ## SMS-рассылка
