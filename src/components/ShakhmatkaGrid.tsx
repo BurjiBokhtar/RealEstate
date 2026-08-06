@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { STATUS_COLORS, formatArea } from "@/lib/objects/format";
+import { STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { ObjectStatus, PropertyObject } from "@/lib/objects/types";
@@ -187,9 +187,13 @@ function UnitCell({
 
         {/* How much of this flat is actually paid for, readable without
             hovering anything: a thin fill along the bottom edge while money is
-            still owed, and a small tick once nothing is. The colour alone
-            can't say this -- "продано" is the same red whether the client has
-            paid 5% or 95%. */}
+            still owed, and a small tick once nothing is. The status colour
+            alone can't say this -- "продано" is the same red whether the
+            client has paid 5% or 95%.
+            The fill is that cell's OWN hue, just stronger, so it reads as more
+            of the cell rather than a second colour system laid on top. The
+            tick stays green everywhere: "nothing left to pay" is the one
+            meaning that shouldn't change shade with the status. */}
         {payProgress != null &&
           (payProgress.settled ? (
             <span
@@ -204,10 +208,10 @@ function UnitCell({
           ) : (
             <span
               aria-hidden="true"
-              className="absolute inset-x-0 bottom-0 h-1.5 bg-black/10"
+              className={`absolute inset-x-0 bottom-0 h-1.5 ${STATUS_PROGRESS_COLORS[unit.status].track}`}
             >
               <span
-                className="block h-full bg-emerald-600/80"
+                className={`block h-full ${STATUS_PROGRESS_COLORS[unit.status].fill}`}
                 style={{ width: `${payProgress.pct}%` }}
               />
             </span>
@@ -539,8 +543,13 @@ export function ShakhmatkaGrid({
             the status pills; once the row wraps it would start a line. */}
         <span className="flex flex-wrap items-center gap-3 text-slate-500 sm:ml-1 sm:border-l sm:border-slate-200 sm:pl-3">
           <span className="flex items-center gap-1.5">
-            <span className="flex h-2.5 w-6 overflow-hidden rounded-sm bg-black/10">
-              <span className="h-full w-3/5 bg-emerald-600/80" />
+            {/* Shown in the "продано" hue: that is the status people are
+                actually chasing a balance on, and the bar takes its colour
+                from the cell it sits in. */}
+            <span
+              className={`flex h-2.5 w-6 overflow-hidden rounded-sm ${STATUS_PROGRESS_COLORS.sold.track}`}
+            >
+              <span className={`h-full w-3/5 ${STATUS_PROGRESS_COLORS.sold.fill}`} />
             </span>
             {t.buildings.hover.partlyPaid}
           </span>
