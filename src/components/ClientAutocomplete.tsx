@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
 import type { Client, ClientInput } from "@/lib/clients/types";
 
 const FIELD_CLASS =
@@ -65,6 +66,11 @@ export function ClientAutocomplete({
     if (!newClient) return;
     onNewClientChange({ ...newClient, [key]: val });
   };
+
+  // Same rule as the full client form -- this quick-add path was a second way
+  // in with no bounds at all.
+  const birthBounds = DATE_BOUNDS.birth();
+  const birthInvalid = !isDateInRange(newClient?.birth_date ?? "", birthBounds.min, birthBounds.max);
 
   if (newClient) {
     return (
@@ -146,9 +152,18 @@ export function ClientAutocomplete({
               required
               type="date"
               value={newClient.birth_date}
+              min={birthBounds.min}
+              max={birthBounds.max}
               onChange={(e) => updateNew("birth_date", e.target.value)}
-              className={FIELD_CLASS}
+              className={`${FIELD_CLASS} ${birthInvalid ? "border-red-400" : ""}`}
             />
+            {birthInvalid && (
+              <span className="text-xs font-medium text-red-600">
+                {t.clients.form.birthDateRange
+                  .replace("{min}", birthBounds.min)
+                  .replace("{max}", birthBounds.max)}
+              </span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700">{t.clients.form.address}</span>

@@ -12,6 +12,7 @@ import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
 import { ActionBar, ControlGroup, GroupDivider, IconAction, PillButton } from "@/components/ActionBar";
 import { CalendarIcon, CloseIcon, PlusIcon, SortIcon } from "@/components/icons";
+import { MIN_BUSINESS_DATE, todayISO } from "@/lib/dates";
 import type { Client } from "@/lib/clients/types";
 
 // Paid/total across a client's active contracts, per currency -- fetched
@@ -200,7 +201,8 @@ export default function ClientsPage() {
           <input
             type="date"
             value={dateFrom}
-            max={dateTo || undefined}
+            min={MIN_BUSINESS_DATE}
+            max={dateTo || todayISO()}
             onChange={(e) => setDateFrom(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.from}`}
             className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
@@ -209,7 +211,8 @@ export default function ClientsPage() {
           <input
             type="date"
             value={dateTo}
-            min={dateFrom || undefined}
+            min={dateFrom || MIN_BUSINESS_DATE}
+            max={todayISO()}
             onChange={(e) => setDateTo(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.to}`}
             className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"

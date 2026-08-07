@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
+import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
 import type { ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
@@ -53,10 +54,18 @@ export function ClientForm({
   const update = <K extends keyof ClientInput>(key: K, value: ClientInput[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
 
+  // Checked here as well as through min/max: the attributes only guide the
+  // picker, and a value can still be typed or pasted straight past them.
+  const birthBounds = DATE_BOUNDS.birth();
+  const birthInvalid = !isDateInRange(values.birth_date, birthBounds.min, birthBounds.max);
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        // An implausible date is unrecoverable once stored -- it sorts and
+        // filters wrongly from then on. Refuse it instead of cleaning up later.
+        if (birthInvalid) return;
         onSubmit(values);
       }}
       className="flex max-w-xl flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
@@ -130,9 +139,18 @@ export function ClientForm({
           <input
             type="date"
             value={values.birth_date}
+            min={birthBounds.min}
+            max={birthBounds.max}
             onChange={(e) => update("birth_date", e.target.value)}
-            className={FIELD_CLASS}
+            className={`${FIELD_CLASS} ${birthInvalid ? "border-red-400" : ""}`}
           />
+          {birthInvalid && (
+            <span className="text-xs font-medium text-red-600">
+              {t.clients.form.birthDateRange
+                .replace("{min}", birthBounds.min)
+                .replace("{max}", birthBounds.max)}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.clients.form.address}</span>
@@ -175,7 +193,7 @@ export function ClientForm({
       <div className="flex items-center gap-3 pt-2">
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || birthInvalid}
           className="rounded-lg bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {t.clients.form.save}

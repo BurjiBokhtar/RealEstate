@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { formatCurrency, CURRENCIES } from "@/lib/currency";
 import { formatArea } from "@/lib/objects/format";
@@ -112,6 +113,9 @@ export function ContractForm({
   const [creatingClient, setCreatingClient] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
   const isExistingContract = Boolean(initial?.number);
+  // A contract is signed on a real, past date -- not in year 0202 or 20260.
+  const signedBounds = DATE_BOUNDS.past();
+  const signedInvalid = !isDateInRange(values.signed_date, signedBounds.min, signedBounds.max);
 
   const amountNum = Number(values.amount) || 0;
   const paidNum = Number(values.paid_amount) || 0;
@@ -512,9 +516,18 @@ export function ContractForm({
           <input
             type="date"
             value={values.signed_date}
+            min={signedBounds.min}
+            max={signedBounds.max}
             onChange={(e) => update("signed_date", e.target.value)}
-            className={FIELD_CLASS}
+            className={`${FIELD_CLASS} ${signedInvalid ? "border-red-400" : ""}`}
           />
+          {signedInvalid && (
+            <span className="text-xs font-medium text-red-600">
+              {t.common.dateOutOfRange
+                .replace("{min}", signedBounds.min)
+                .replace("{max}", signedBounds.max)}
+            </span>
+          )}
         </label>
       </div>
 

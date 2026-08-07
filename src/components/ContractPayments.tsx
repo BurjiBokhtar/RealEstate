@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { formatCurrency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
@@ -120,6 +121,15 @@ export function ContractPayments({
   const handleRecordPayment = async () => {
     const amount = Number(newAmount);
     if (!amount || amount <= 0) return;
+    // Re-checked here, not just via min/max on the input: a receipt dated
+    // outside any plausible range lands outside every report it belongs to.
+    const b = DATE_BOUNDS.past();
+    if (!isDateInRange(newDate, b.min, b.max)) {
+      setRecordError(
+        t.common.dateOutOfRange.replace("{min}", b.min).replace("{max}", b.max)
+      );
+      return;
+    }
     setRecording(true);
     setRecordError(null);
     const supabase = createClient();
@@ -161,6 +171,9 @@ export function ContractPayments({
     await load();
     onPaymentAdded?.();
   };
+
+  const payBounds = DATE_BOUNDS.past();
+  const payDateInvalid = !isDateInRange(newDate, payBounds.min, payBounds.max);
 
   const readOnly = role === "director";
 
@@ -237,18 +250,25 @@ export function ContractPayments({
             </label>
             <label className="flex flex-col gap-1 text-xs">
               <span className="font-semibold text-slate-600">{t.contracts.payments.dueDate}</span>
+              {/* Money is received on a date that has happened. A receipt dated
+                  next year (or year 0202) would land outside every report it
+                  belongs to and never be found again. */}
               <input
                 type="date"
                 value={newDate}
+                min={payBounds.min}
+                max={payBounds.max}
                 onChange={(e) => setNewDate(e.target.value)}
-                className="h-12 rounded-lg border-2 border-slate-200 bg-white px-2.5 text-sm transition-colors focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--brand)_25%,transparent)]"
+                className={`h-12 rounded-lg border-2 bg-white px-2.5 text-sm transition-colors focus:border-[var(--brand)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_srgb,var(--brand)_25%,transparent)] ${
+                  payDateInvalid ? "border-red-400" : "border-slate-200"
+                }`}
               />
             </label>
           </div>
           <button
             type="button"
             onClick={handleRecordPayment}
-            disabled={recording || !newAmount}
+            disabled={recording || !newAmount || payDateInvalid}
             className="btn-brand relative h-12 w-full rounded-lg text-base font-bold text-white shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg hover:brightness-110 active:translate-y-0 active:scale-[0.99] disabled:opacity-50 disabled:hover:translate-y-0"
           >
             {recording ? (

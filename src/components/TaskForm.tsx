@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
 import { createClient } from "@/lib/supabase/client";
 import { TASK_STATUSES, type TaskInput } from "@/lib/tasks/types";
 import type { Client } from "@/lib/clients/types";
@@ -53,10 +54,14 @@ export function TaskForm({
   const update = <K extends keyof TaskInput>(key: K, value: TaskInput[K]) =>
     setValues((v) => ({ ...v, [key]: value }));
 
+  const dueBounds = DATE_BOUNDS.future();
+  const dueInvalid = !isDateInRange(values.due_date, dueBounds.min, dueBounds.max);
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        if (dueInvalid) return;
         onSubmit(values);
       }}
       className="flex max-w-xl flex-col gap-4"
@@ -84,12 +89,25 @@ export function TaskForm({
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.tasks.form.dueDate}</span>
+          {/* A deadline may be in the future, so this window allows it -- but
+              not year 20260. */}
           <input
             type="date"
             value={values.due_date}
+            min={dueBounds.min}
+            max={dueBounds.max}
             onChange={(e) => update("due_date", e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2"
+            className={`rounded-md border px-3 py-2 ${
+              dueInvalid ? "border-red-400" : "border-slate-300"
+            }`}
           />
+          {dueInvalid && (
+            <span className="text-xs font-medium text-red-600">
+              {t.common.dateOutOfRange
+                .replace("{min}", dueBounds.min)
+                .replace("{max}", dueBounds.max)}
+            </span>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.tasks.form.status}</span>
