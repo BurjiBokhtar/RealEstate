@@ -10,8 +10,10 @@ import { useCountUp } from "@/lib/useCountUp";
 
 type PeriodFilter = "all" | "today" | "month" | "year";
 
+// Borderless now: the two selects sit inside one shared bordered group (see
+// below), so each carrying its own outline would draw a box inside a box.
 const GLASS_SELECT =
-  "rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40";
+  "h-8 rounded-md border-0 bg-transparent px-2.5 text-xs font-medium text-white transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40";
 
 // The dashboard's one bold move: a sales-progress hero (the single figure
 // that answers "how is the portfolio doing" faster than four separate
@@ -100,7 +102,10 @@ export function DashboardHero({
       <div className="relative flex flex-col gap-7">
         <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
           <h1 className="text-lg font-semibold tracking-tight sm:text-xl">{brandName}</h1>
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Building and period are ONE control, not two glass pills with a
+              gap. Same rule as every other filter row in the app -- kept on
+              the hero's own translucent surface rather than a white group. */}
+          <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-white/25 bg-white/10 p-1 backdrop-blur-sm">
             <select
               value={selectedBuildingId}
               onChange={(e) => onBuildingChange(e.target.value)}
@@ -116,6 +121,7 @@ export function DashboardHero({
                 </option>
               ))}
             </select>
+            <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-white/25" />
             <select
               value={periodFilter}
               onChange={(e) => onPeriodChange(e.target.value as PeriodFilter)}

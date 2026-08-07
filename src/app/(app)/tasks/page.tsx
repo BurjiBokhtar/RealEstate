@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { ControlGroup, IconAction, PillButton } from "@/components/ActionBar";
+import { PlusIcon } from "@/components/icons";
 import { Pagination } from "@/components/Pagination";
 import { TASK_STATUS_COLORS } from "@/lib/tasks/format";
 import { TASK_STATUSES, type Task, type TaskStatusValue } from "@/lib/tasks/types";
@@ -54,29 +56,37 @@ export default function TasksPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.tasks.title}</h1>
-        <Link
-          href="/tasks/new"
-          className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98]"
-        >
-          + {t.tasks.newTask}
-        </Link>
+        <ControlGroup>
+          <IconAction
+            label={t.tasks.newTask}
+            icon={<PlusIcon />}
+            tone="brand"
+            href="/tasks/new"
+          />
+        </ControlGroup>
       </div>
 
       {!configured && <SetupNotice />}
 
+      {/* One option per status rather than a dropdown: there are only four,
+          and as pills the current filter is visible without opening anything.
+          Glued into one control, list-page size. */}
       <div className="flex flex-wrap gap-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as TaskStatusValue | "all")}
-          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-        >
-          <option value="all">{t.tasks.filters.allStatuses}</option>
+        <ControlGroup>
+          <PillButton
+            label={t.tasks.filters.allStatuses}
+            active={statusFilter === "all"}
+            onClick={() => setStatusFilter("all")}
+          />
           {TASK_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {t.tasks.statuses[status]}
-            </option>
+            <PillButton
+              key={status}
+              label={t.tasks.statuses[status]}
+              active={statusFilter === status}
+              onClick={() => setStatusFilter(status)}
+            />
           ))}
-        </select>
+        </ControlGroup>
       </div>
 
       <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">

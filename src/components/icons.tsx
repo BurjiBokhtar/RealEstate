@@ -175,3 +175,27 @@ export function CalendarIcon({ className }: IconProps) {
     </Icon>
   );
 }
+
+export function PlusIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M12 5.5v13M5.5 12h13" />
+    </Icon>
+  );
+}
+
+export function CloseIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />
+    </Icon>
+  );
+}
+
+export function SortIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <path d="M3 6h13M3 12h9M3 18h5M17 8l3-3 3 3M20 5v14" />
+    </Icon>
+  );
+}

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ControlGroup, IconAction } from "@/components/ActionBar";
+import { PlusIcon } from "@/components/icons";
 
 export function AddMenu({
   label,
@@ -24,14 +26,18 @@ export function AddMenu({
   }, []);
 
   return (
+    // Same bordered group and same themed plus icon as the "add" action on
+    // every other list page, so the header reads identically everywhere.
     <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98]"
-      >
-        + {label}
-      </button>
+      <ControlGroup>
+        <IconAction
+          label={label}
+          icon={<PlusIcon />}
+          tone="brand"
+          active={open}
+          onClick={() => setOpen((v) => !v)}
+        />
+      </ControlGroup>
       {open && (
         <div className="animate-modal-panel absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
           {items.map((item) => (

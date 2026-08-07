@@ -32,27 +32,86 @@ export const SIZE_CLASSES: Record<ToolbarSize, { button: string; icon: string }>
   md: { button: "h-10 w-10", icon: "[&_svg]:h-[19px] [&_svg]:w-[19px]" },
 };
 
-// The bordered container that turns a handful of icon buttons into one
-// toolbar. Deliberately NOT `overflow-hidden`: the tooltips below each icon
-// have to be able to escape it. Rounding lives on the individual buttons
-// instead, so hover backgrounds still look right at the ends.
-export function IconToolbar({
+// The bordered container that glues neighbouring controls into ONE control.
+// Anything that sits shoulder to shoulder belongs in here -- icon buttons,
+// text pills, a date range, a select -- so a row never reads as a scattering
+// of separate widgets.
+//
+// Deliberately NOT `overflow-hidden`: the tooltips below each icon have to be
+// able to escape it. Rounding lives on the individual children instead, so
+// hover backgrounds still look right at the ends.
+export function ControlGroup({
   children,
   size = "md",
+  className = "",
 }: {
   children: ReactNode;
   size?: ToolbarSize;
+  className?: string;
 }) {
   return (
     <SizeContext.Provider value={size}>
       <div
         className={`inline-flex w-fit items-center rounded-lg border border-slate-300 bg-white ${
           size === "sm" ? "gap-0.5 p-0.5" : "gap-1 p-1"
-        }`}
+        } ${className}`}
       >
         {children}
       </div>
     </SizeContext.Provider>
+  );
+}
+
+// Kept as the name most call sites already use; a toolbar is just a control
+// group that happens to hold only icons.
+export const IconToolbar = ControlGroup;
+
+// A hairline between two clusters inside one group -- so "filter by date" and
+// "sort" can share a single control without blurring into each other.
+export function GroupDivider() {
+  const size = useContext(SizeContext);
+  return (
+    <span
+      aria-hidden="true"
+      className={`mx-0.5 w-px shrink-0 bg-slate-200 ${size === "sm" ? "h-5" : "h-6"}`}
+    />
+  );
+}
+
+// A text option inside a group (sort order, status filter, period). Same
+// height as the icon buttons beside it, so a mixed group sits on one line.
+export function PillButton({
+  label,
+  active = false,
+  onClick,
+  size,
+  title,
+}: {
+  label: ReactNode;
+  active?: boolean;
+  onClick: () => void;
+  size?: ToolbarSize;
+  title?: string;
+}) {
+  const inherited = useContext(SizeContext);
+  const s = size ?? inherited;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className={`shrink-0 whitespace-nowrap rounded-md font-medium transition-all active:scale-[0.97] ${
+        s === "sm" ? "h-8 px-2.5 text-xs" : "h-10 px-3.5 text-sm"
+      } ${
+        active
+          ? // --brand carries the company colour; --brand-strong is near-black
+            // in every theme and made the active option look simply black.
+            "bg-brand text-white shadow-sm"
+          : "text-slate-600 hover:bg-slate-100"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 

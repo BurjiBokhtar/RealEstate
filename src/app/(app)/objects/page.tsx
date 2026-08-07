@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
+import { ControlGroup, GroupDivider } from "@/components/ActionBar";
 import { AddMenu } from "@/components/AddMenu";
 import { useRole } from "@/lib/auth/useRole";
 import { Pagination } from "@/components/Pagination";
@@ -163,30 +164,35 @@ export default function ObjectsPage() {
           placeholder={t.objects.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as ObjectType | "all")}
-          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-        >
-          <option value="all">{t.objects.filters.allTypes}</option>
-          {OBJECT_TYPES.map((type) => (
-            <option key={type} value={type}>
-              {t.objects.types[type]}
-            </option>
-          ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as ObjectStatus | "all")}
-          className="h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
-        >
-          <option value="all">{t.objects.filters.allStatuses}</option>
-          {OBJECT_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {t.objects.statuses[status]}
-            </option>
-          ))}
-        </select>
+        {/* The two filters were separate bordered selects sitting side by
+            side; glued into one control with a hairline between them. */}
+        <ControlGroup>
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as ObjectType | "all")}
+            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
+          >
+            <option value="all">{t.objects.filters.allTypes}</option>
+            {OBJECT_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {t.objects.types[type]}
+              </option>
+            ))}
+          </select>
+          <GroupDivider />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as ObjectStatus | "all")}
+            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
+          >
+            <option value="all">{t.objects.filters.allStatuses}</option>
+            {OBJECT_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {t.objects.statuses[status]}
+              </option>
+            ))}
+          </select>
+        </ControlGroup>
       </div>
 
       <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">

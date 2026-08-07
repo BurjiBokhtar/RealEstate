@@ -10,8 +10,8 @@ import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
-import { ActionBar } from "@/components/ActionBar";
-import { CalendarIcon } from "@/components/icons";
+import { ActionBar, ControlGroup, GroupDivider, IconAction, PillButton } from "@/components/ActionBar";
+import { CalendarIcon, CloseIcon, PlusIcon, SortIcon } from "@/components/icons";
 import type { Client } from "@/lib/clients/types";
 
 // Paid/total across a client's active contracts, per currency -- fetched
@@ -150,28 +150,34 @@ export default function ClientsPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
+        {/* Export and "add client" live in ONE group -- they were two loose
+            controls with a gap between them. Page header, so full size. */}
         <ActionBar>
-          <ExportMenu
-            getData={getExportRows}
-            headers={[
-              t.clients.table.name,
-              t.clients.table.phone,
-              t.clients.form.email,
-              t.clients.stats.bought,
-              "Оплачено TJS",
-              "Долг TJS",
-              "Оплачено USD",
-              "Долг USD",
-            ]}
-            filenameBase="clients"
-            title={t.clients.title}
-          />
-          <Link
-            href="/clients/new"
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 hover:shadow-md active:scale-[0.98]"
-          >
-            + {t.clients.newClient}
-          </Link>
+          <ControlGroup>
+            <ExportMenu
+              bare
+              getData={getExportRows}
+              headers={[
+                t.clients.table.name,
+                t.clients.table.phone,
+                t.clients.form.email,
+                t.clients.stats.bought,
+                "Оплачено TJS",
+                "Долг TJS",
+                "Оплачено USD",
+                "Долг USD",
+              ]}
+              filenameBase="clients"
+              title={t.clients.title}
+            />
+            <GroupDivider />
+            <IconAction
+              label={t.clients.newClient}
+              icon={<PlusIcon />}
+              tone="brand"
+              href="/clients/new"
+            />
+          </ControlGroup>
         </ActionBar>
       </div>
 
@@ -184,10 +190,12 @@ export default function ClientsPage() {
           placeholder={t.clients.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
-        {/* Added-on date range, in the same pill shape as the sort control so
-            the filter row reads as one set of controls. */}
-        <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white py-1 pl-3 pr-1.5 text-sm shadow-sm">
-          <CalendarIcon className="h-4 w-4 shrink-0 text-slate-400" />
+        {/* Dates and sort are ONE glued control, not two floating pills.
+            List page, so full size; a divider keeps the two jobs legible. */}
+        <ControlGroup>
+          <span className="pl-1.5 pr-0.5 text-slate-400" aria-hidden="true">
+            <CalendarIcon className="h-[19px] w-[19px]" />
+          </span>
           <span className="text-xs text-slate-400">{t.clients.dateRange.from}</span>
           <input
             type="date"
@@ -195,7 +203,7 @@ export default function ClientsPage() {
             max={dateTo || undefined}
             onChange={(e) => setDateFrom(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.from}`}
-            className="h-7 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
           />
           <span className="text-xs text-slate-400">{t.clients.dateRange.to}</span>
           <input
@@ -204,28 +212,23 @@ export default function ClientsPage() {
             min={dateFrom || undefined}
             onChange={(e) => setDateTo(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.to}`}
-            className="h-7 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
           />
           {(dateFrom || dateTo) && (
-            <button
-              type="button"
+            <IconAction
+              label={t.clients.dateRange.clear}
+              icon={<CloseIcon />}
               onClick={() => {
                 setDateFrom("");
                 setDateTo("");
               }}
-              title={t.clients.dateRange.clear}
-              aria-label={t.clients.dateRange.clear}
-              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
-            >
-              ✕
-            </button>
+            />
           )}
-        </div>
 
-        {/* Sort pills: a small segmented control with a sort glyph. */}
-        <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-sm">
-          <span className="pl-2 pr-1 text-slate-400" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4"><path d="M3 6h13M3 12h9M3 18h5M17 8l3-3 3 3M20 5v14" /></svg>
+          <GroupDivider />
+
+          <span className="pl-0.5 text-slate-400" aria-hidden="true">
+            <SortIcon className="h-[19px] w-[19px]" />
           </span>
           {(
             [
@@ -235,20 +238,14 @@ export default function ClientsPage() {
               { id: "za", label: t.clients.sort.za },
             ] as const
           ).map((opt) => (
-            <button
+            <PillButton
               key={opt.id}
-              type="button"
+              label={opt.label}
+              active={sort === opt.id}
               onClick={() => setSort(opt.id)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                sort === opt.id
-                  ? "bg-brand text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-100"
-              }`}
-            >
-              {opt.label}
-            </button>
+            />
           ))}
-        </div>
+        </ControlGroup>
       </div>
 
       <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">

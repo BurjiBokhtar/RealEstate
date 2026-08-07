@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { IconAction, IconToolbar, type ToolbarSize } from "@/components/ActionBar";
+import { ControlGroup, IconAction, type ToolbarSize } from "@/components/ActionBar";
 import { DownloadIcon, TableIcon, PdfIcon } from "@/components/icons";
 
 // One "Экспорт" button that opens a small menu: Excel or PDF. The parent
@@ -14,6 +14,7 @@ export function ExportMenu({
   filenameBase,
   title,
   size = "md",
+  bare = false,
 }: {
   // Returns the rows to export; async so the page can fetch the full set.
   getData: () => Promise<Array<Array<string | number | null | undefined>>>;
@@ -21,6 +22,8 @@ export function ExportMenu({
   filenameBase: string;
   title: string;
   size?: ToolbarSize;
+  /** Render just the icon -- for when a parent ControlGroup owns the border. */
+  bare?: boolean;
 }) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
@@ -54,15 +57,19 @@ export function ExportMenu({
     // were typographic stand-ins that rendered differently on every OS and
     // ignored the theme.
     <div ref={ref} className="relative">
-      <IconToolbar size={size}>
-        <IconAction
-          label={busy ? t.common.loading : t.exportMenu.export}
-          icon={<DownloadIcon />}
-          active={open}
-          disabled={busy}
-          onClick={() => setOpen((o) => !o)}
-        />
-      </IconToolbar>
+      {(() => {
+        const trigger = (
+          <IconAction
+            label={busy ? t.common.loading : t.exportMenu.export}
+            icon={<DownloadIcon />}
+            active={open}
+            disabled={busy}
+            size={size}
+            onClick={() => setOpen((o) => !o)}
+          />
+        );
+        return bare ? trigger : <ControlGroup size={size}>{trigger}</ControlGroup>;
+      })()}
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
           <button

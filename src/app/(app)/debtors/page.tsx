@@ -10,6 +10,8 @@ import { Pagination } from "@/components/Pagination";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
+import { ControlGroup, PillButton } from "@/components/ActionBar";
+import { SortIcon } from "@/components/icons";
 import { waLink } from "@/lib/whatsapp";
 
 const PAGE_SIZE = 25;
@@ -303,33 +305,33 @@ export default function DebtorsPage() {
         </div>
       )}
 
-      {/* The order is a choice now, and it says which one is active. */}
+      {/* The order is a choice, it says which one is active, and the three
+          options are ONE glued control instead of three loose pills. */}
       {totalCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-500">{t.debtors.sortLabel}:</span>
-          {(
-            [
-              ["overdue", t.debtors.sortByOverdue],
-              ["oldest", t.debtors.sortByOldest],
-              ["name", t.debtors.sortByName],
-            ] as Array<[SortKey, string]>
-          ).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => {
-                setSort(key);
-                setPage(1);
-              }}
-              className={`rounded-full border px-3 py-1 text-xs font-medium transition-all active:scale-[0.98] ${
-                sort === key
-                  ? "border-brand bg-brand-soft text-brand"
-                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          <ControlGroup size="sm">
+            <span className="pl-1 text-slate-400" aria-hidden="true">
+              <SortIcon className="h-4 w-4" />
+            </span>
+            {(
+              [
+                ["overdue", t.debtors.sortByOverdue],
+                ["oldest", t.debtors.sortByOldest],
+                ["name", t.debtors.sortByName],
+              ] as Array<[SortKey, string]>
+            ).map(([key, label]) => (
+              <PillButton
+                key={key}
+                label={label}
+                active={sort === key}
+                onClick={() => {
+                  setSort(key);
+                  setPage(1);
+                }}
+              />
+            ))}
+          </ControlGroup>
         </div>
       )}
 
