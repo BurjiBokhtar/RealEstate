@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
@@ -12,7 +12,8 @@ import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
 import { ControlGroup, GroupDivider, PillButton } from "@/components/ActionBar";
 import { SortIcon } from "@/components/icons";
-import { BarChart } from "@/components/charts/BarChart";
+import { HBarChart } from "@/components/charts/HBarChart";
+import { STATUS_HUES } from "@/components/charts/palette";
 import { waLink } from "@/lib/whatsapp";
 
 const PAGE_SIZE = 25;
@@ -245,6 +246,18 @@ export default function DebtorsPage() {
     };
   }, [configured]);
 
+  // Grouped by currency: one panel and one scale per currency, because TJS and
+  // USD on a shared axis compare nothing.
+  const byCurrency = useMemo(() => {
+    const seen: Currency[] = [];
+    for (const r of byBuilding) if (!seen.includes(r.currency)) seen.push(r.currency);
+    return seen.map((currency) => ({
+      currency,
+      rows: byBuilding.filter((r) => r.currency === currency),
+      total: totals.find((tt) => tt.currency === currency) ?? null,
+    }));
+  }, [byBuilding, totals]);
+
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   // Export is the whole list, not the current page -- an Excel file of 25 rows
@@ -317,42 +330,47 @@ export default function DebtorsPage() {
         </div>
       )}
 
-      {/* Arrears as a chart, not tiles: WHERE the money is owed matters more
-          than one company-wide sum, and a bar per building answers that at a
-          glance. The two overall totals stay as a line above the chart, so
-          nothing was lost by dropping the cards. */}
-      {(byBuilding.length > 0 || totals.length > 0) && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">{t.debtors.chartTitle}</p>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-              {totals.map((row) => (
-                <span key={row.currency} className="text-slate-500">
-                  {t.debtors.overdueNow}:{" "}
-                  <span className="font-semibold text-rose-600">
-                    {formatCurrency(row.overdue, row.currency)}
-                  </span>{" "}
-                  <span className="text-slate-400">
-                    · {t.debtors.remainingTotal.toLowerCase()}{" "}
-                    {formatCurrency(row.remaining, row.currency)}
+      {/* One panel PER CURRENCY, each on its own scale.
+          The previous version put every building on a single axis regardless of
+          currency, so 1 072 475 TJS and 99 205 USD were compared as if they
+          were the same unit -- the USD bars were flattened to slivers and every
+          building appeared twice with no hint why. Currencies do not share an
+          axis. Horizontal bars, so "Кайҳонавадон 36 Б" gets the card width
+          instead of 40px under a column. */}
+      {byCurrency.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {byCurrency.map(({ currency, rows: cRows, total }) => (
+            <div
+              key={currency}
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+            >
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-700">
+                  {t.debtors.chartTitle} · {currency}
+                </p>
+                {total && (
+                  <span className="text-xs text-slate-500">
+                    <span className="font-semibold text-rose-600">
+                      {formatCurrency(total.overdue, currency)}
+                    </span>{" "}
+                    <span className="text-slate-400">
+                      / {formatCurrency(total.remaining, currency)}
+                    </span>
                   </span>
-                </span>
-              ))}
+                )}
+              </div>
+              <HBarChart
+                data={cRows.map((b) => ({
+                  label: b.name,
+                  value: b.overdue,
+                  hue: STATUS_HUES.sold,
+                  hint: `${b.contracts} ${t.contracts.title.toLowerCase()}`,
+                }))}
+                formatValue={(n) => formatCurrency(n, currency)}
+              />
+              {total && <p className="mt-3 text-xs text-slate-400">{t.debtors.chartHint}</p>}
             </div>
-          </div>
-          {byBuilding.length > 0 ? (
-            <BarChart
-              data={byBuilding.map((b) => ({
-                label: b.name,
-                value: b.overdue,
-                hint: `${b.contracts} ${t.contracts.title.toLowerCase()} · ${b.currency}`,
-              }))}
-              formatTooltip={(d) => formatCurrency(d.value, byBuilding[0].currency)}
-            />
-          ) : (
-            <p className="text-sm text-slate-400">{t.debtors.empty}</p>
-          )}
-          <p className="mt-3 text-xs text-slate-400">{t.debtors.cardsHint}</p>
+          ))}
         </div>
       )}
 

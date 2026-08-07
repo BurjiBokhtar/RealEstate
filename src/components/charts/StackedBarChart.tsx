@@ -21,6 +21,10 @@ export function StackedBarChart({
   height?: number;
 }) {
   const [hover, setHover] = useState<string | null>(null);
+  // Which STATUS the pointer is on, not just which column. Hovering a colour
+  // should tell you about that colour -- the whole-column tooltip made you read
+  // five numbers to find the one you pointed at.
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
 
   const plotH = height - 40;
 
@@ -78,14 +82,19 @@ export function StackedBarChart({
                     {series.map((se) => {
                       const v = row.values[se.key] ?? 0;
                       if (!v || !total) return null;
+                      const segHot = hoverKey === se.key;
+                      const segDim = hoverKey !== null && !segHot;
                       return (
                         <div
                           key={se.key}
-                          className="w-full transition-[filter]"
+                          onMouseEnter={() => setHoverKey(se.key)}
+                          onMouseLeave={() => setHoverKey(null)}
+                          className="w-full transition-[filter,opacity] duration-200"
                           style={{
                             height: `${(v / total) * 100}%`,
                             background: `linear-gradient(180deg, ${se.hue.from}, ${se.hue.to})`,
-                            filter: isH ? "brightness(1.08)" : undefined,
+                            filter: segHot ? "brightness(1.12)" : undefined,
+                            opacity: segDim ? 0.32 : 1,
                           }}
                         />
                       );
@@ -97,18 +106,31 @@ export function StackedBarChart({
                       <p className="mb-1 font-semibold text-slate-700">{row.label}</p>
                       {series
                         .filter((se) => (row.values[se.key] ?? 0) > 0)
-                        .map((se) => (
-                          <p key={se.key} className="flex items-center gap-2">
-                            <span
-                              className="h-2 w-2 shrink-0 rounded-full"
-                              style={{ background: se.hue.solid }}
-                            />
-                            <span className="text-slate-400">{se.label}</span>
-                            <span className="ml-auto font-semibold tabular-nums text-slate-800">
-                              {row.values[se.key]}
-                            </span>
-                          </p>
-                        ))}
+                        .map((se) => {
+                          const on = hoverKey === se.key;
+                          return (
+                            <p
+                              key={se.key}
+                              className={`flex items-center gap-2 ${on ? "" : "opacity-55"}`}
+                            >
+                              <span
+                                className="h-2 w-2 shrink-0 rounded-full"
+                                style={{ background: se.hue.solid }}
+                              />
+                              <span className={on ? "text-slate-600" : "text-slate-400"}>
+                                {se.label}
+                              </span>
+                              <span className="ml-auto font-semibold tabular-nums text-slate-800">
+                                {row.values[se.key]}
+                                {total > 0 && (
+                                  <span className="ml-1.5 font-normal text-slate-400">
+                                    {Math.round(((row.values[se.key] ?? 0) / total) * 100)}%
+                                  </span>
+                                )}
+                              </span>
+                            </p>
+                          );
+                        })}
                     </div>
                   )}
                 </div>

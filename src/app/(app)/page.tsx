@@ -9,10 +9,10 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
-import { BarChart } from "@/components/charts/BarChart";
+import { HBarChart } from "@/components/charts/HBarChart";
 import { StackedBarChart } from "@/components/charts/StackedBarChart";
 import { DonutChart } from "@/components/charts/DonutChart";
-import { STATUS_HUES } from "@/components/charts/palette";
+import { STATUS_HUES, hueAt } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -398,58 +398,65 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Occupancy as stacked columns: each building drawn to 100% of its own
-          total, so the chart answers "how much of THIS one is sold" -- which is
-          what occupancy means -- with the absolute count above the column so
-          size isn't lost. Replaces a stack of horizontal strips. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-700">
-            {t.dashboard.occupancyByBuilding}
-          </p>
-          <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
-            {occupancySeries.map((s) => (
-              <span key={s.key} className="flex items-center gap-1.5">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ background: s.hue.solid }}
-                />
-                {s.label}
-              </span>
-            ))}
+      {/* Side by side, not stacked a screen apart: these two answer the same
+          question about the same buildings ("how is each ЖК doing"), and
+          comparing them meant scrolling between them. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* Occupancy as stacked columns: each building drawn to 100% of its own
+            total, so the chart answers "how much of THIS one is sold" -- which
+            is what occupancy means -- with the absolute count above the column
+            so size isn't lost. */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">
+              {t.dashboard.occupancyByBuilding}
+            </p>
+            <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
+              {occupancySeries.map((s) => (
+                <span key={s.key} className="flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ background: s.hue.solid }}
+                  />
+                  {s.label}
+                </span>
+              ))}
+            </div>
           </div>
+          {occupancy.length > 0 ? (
+            <StackedBarChart series={occupancySeries} rows={occupancyRows} />
+          ) : (
+            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          )}
         </div>
-        {occupancy.length > 0 ? (
-          <StackedBarChart series={occupancySeries} rows={occupancyRows} />
-        ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-        )}
-      </div>
 
-      {/* Revenue by building: real bars on a value axis instead of proportional
-          strips, so the amounts can be read and not only ranked. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">
-          {t.dashboard.revenueByBuilding}
-        </p>
-        {revenueByBuilding.length > 0 ? (
-          <BarChart
-            data={revenueByBuilding.map((b) => ({
-              label: b.name,
-              // One axis, so the two currencies are summed for bar height and
-              // the tooltip shows the honest split.
-              value: b.tjs + b.usd,
-              hint: [
-                b.tjs > 0 ? formatCurrency(b.tjs, "TJS") : null,
-                b.usd > 0 ? formatCurrency(b.usd, "USD") : null,
-              ]
-                .filter(Boolean)
-                .join(" · "),
-            }))}
-          />
-        ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-        )}
+        {/* Revenue by building: horizontal bars, because these are names, not
+            dates -- a building name under a 40px column truncates, beside a bar
+            it has the whole card. */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-slate-700">
+            {t.dashboard.revenueByBuilding}
+          </p>
+          {revenueByBuilding.length > 0 ? (
+            <HBarChart
+              data={revenueByBuilding.map((b, i) => ({
+                label: b.name,
+                // Summed for bar length; the line underneath keeps the split
+                // honest so the two currencies are never implied to be one.
+                value: b.tjs + b.usd,
+                hue: hueAt(i),
+                hint: [
+                  b.tjs > 0 ? formatCurrency(b.tjs, "TJS") : null,
+                  b.usd > 0 ? formatCurrency(b.usd, "USD") : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+              }))}
+            />
+          ) : (
+            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          )}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

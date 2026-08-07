@@ -34,11 +34,17 @@ export const STATUS_HUES: Record<string, ChartHue> = {
   in_progress: { from: "#c084fc", to: "#9333ea", solid: "#a855f7" },
 };
 
-// The two currencies follow the company theme (see RevenueChart's history):
-// --brand carries the theme colour, --hero-3 is its light accent.
-export const CURRENCY_HUES: Record<"TJS" | "USD", string> = {
-  TJS: "var(--brand)",
-  USD: "var(--hero-3)",
+// The two currencies get colours from DIFFERENT hue families, fixed rather
+// than theme-derived.
+//
+// They used to be --brand and --hero-3. On the emerald theme that is #0f766e
+// against #6ee7b7 -- teal and mint, both unmistakably green, so a two-line
+// revenue chart read as one colour and nobody could tell TJS from USD. A
+// legend does not rescue a chart whose series look identical. Following the
+// theme is worth less here than being able to read the chart at all.
+export const CURRENCY_HUES: Record<"TJS" | "USD", ChartHue> = {
+  TJS: { from: "#4ade80", to: "#16a34a", solid: "#22c55e" }, // green
+  USD: { from: "#60a5fa", to: "#1d4ed8", solid: "#3b82f6" }, // blue
 };
 
 export const AXIS_TEXT = "fill-slate-400 text-[10px] tabular-nums";

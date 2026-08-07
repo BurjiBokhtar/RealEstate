@@ -25,6 +25,9 @@ export function AreaChart({
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const [hover, setHover] = useState<number | null>(null);
+  // Which series the pointer is over (via the legend or a dot), so the other
+  // line can step back instead of both shouting at once.
+  const [hoverSeries, setHoverSeries] = useState<string | null>(null);
 
   const PAD_L = 44;
   const PAD_R = 10;
@@ -75,8 +78,13 @@ export function AreaChart({
               key={s.key}
               // CSS-only reveal, so the line is drawn correctly even if the
               // animation never plays.
-              className="animate-chart-fade"
-              style={{ animationDelay: `${si * 90}ms` }}
+              className="animate-chart-fade transition-opacity duration-200"
+              style={{
+                animationDelay: `${si * 90}ms`,
+                opacity: hoverSeries && hoverSeries !== s.key ? 0.25 : 1,
+              }}
+              onMouseEnter={() => setHoverSeries(s.key)}
+              onMouseLeave={() => setHoverSeries(null)}
             >
               <path d={areaPath} fill={`url(#${uid}-g${si})`} />
               <polyline

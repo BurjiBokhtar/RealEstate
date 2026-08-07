@@ -61,12 +61,16 @@ export function DonutChart({
                   r={r}
                   fill="none"
                   stroke={s.hue.solid}
-                  strokeWidth={hover === s.key ? thickness + 6 : thickness}
+                  strokeWidth={thickness}
                   strokeDasharray={dash}
                   strokeDashoffset={-thisOffset}
                   strokeLinecap="butt"
-                  opacity={dim ? 0.35 : 1}
-                  className="cursor-pointer transition-all duration-700 ease-out"
+                  opacity={dim ? 0.28 : 1}
+                  className="cursor-pointer transition-[opacity,filter] duration-200"
+                  style={{
+                    filter:
+                      hover === s.key ? `brightness(1.12) drop-shadow(0 0 6px ${s.hue.solid}88)` : undefined,
+                  }}
                   onMouseEnter={() => setHover(s.key)}
                   onMouseLeave={() => setHover(null)}
                 />

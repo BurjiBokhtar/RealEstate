@@ -10,8 +10,8 @@ export type RevenueMonth = { month: string; tjs: number; usd: number };
 // grouped bars this used to be. A trend is a shape, and a filled line shows
 // the shape; paired bars made the reader re-derive it column by column.
 //
-// The two currencies keep the theme colours (--brand and its light accent) so
-// the chart still answers to whichever theme the company picked.
+// The two currencies are green and blue -- different hue families, so the two
+// lines can never be mistaken for each other (see CURRENCY_HUES).
 export function RevenueAreaChart({ data }: { data: RevenueMonth[] }) {
   const anyTjs = data.some((d) => d.tjs > 0);
   const anyUsd = data.some((d) => d.usd > 0);
@@ -21,7 +21,7 @@ export function RevenueAreaChart({ data }: { data: RevenueMonth[] }) {
       ? {
           key: "tjs",
           label: "TJS",
-          color: CURRENCY_HUES.TJS,
+          color: CURRENCY_HUES.TJS.solid,
           values: data.map((d) => d.tjs),
         }
       : null,
@@ -29,7 +29,7 @@ export function RevenueAreaChart({ data }: { data: RevenueMonth[] }) {
       ? {
           key: "usd",
           label: "USD",
-          color: CURRENCY_HUES.USD,
+          color: CURRENCY_HUES.USD.solid,
           values: data.map((d) => d.usd),
         }
       : null,

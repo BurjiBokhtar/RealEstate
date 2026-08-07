@@ -449,6 +449,20 @@
     animation: chart-grow-up 0.7s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  @keyframes chart-grow-sideways {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .animate-chart-grow-x {
+    transform-origin: left;
+    animation: chart-grow-sideways 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   @keyframes chart-fade-in {
     from {
       opacity: 0;
