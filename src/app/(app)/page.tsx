@@ -379,7 +379,7 @@ export default function DashboardPage() {
           <p className="mb-4 text-sm font-semibold text-slate-700">
             {t.dashboard.revenueByDay}
           </p>
-          {dailyRevenue.length > 0 ? (
+          {dailyRevenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
             <RevenueAreaChart data={dailyRevenue} />
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
@@ -391,7 +391,7 @@ export default function DashboardPage() {
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.revenueByMonth}
         </p>
-        {revenue.length > 0 ? (
+        {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
           <RevenueAreaChart data={revenue} />
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
