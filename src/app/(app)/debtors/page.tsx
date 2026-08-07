@@ -10,8 +10,9 @@ import { Pagination } from "@/components/Pagination";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
-import { ControlGroup, PillButton } from "@/components/ActionBar";
+import { ControlGroup, GroupDivider, PillButton } from "@/components/ActionBar";
 import { SortIcon } from "@/components/icons";
+import { BarChart } from "@/components/charts/BarChart";
 import { waLink } from "@/lib/whatsapp";
 
 const PAGE_SIZE = 25;
@@ -102,6 +103,13 @@ export default function DebtorsPage() {
   // Explicit, and visible on screen. The order used to be fixed and unstated,
   // so there was no way to tell what the list was sorted by.
   const [sort, setSort] = useState<SortKey>("overdue");
+  // Filter by ЖК: collections are organised per development, so "show me only
+  // this one" is the first thing anybody asks of this list.
+  const [buildingId, setBuildingId] = useState<string>("all");
+  const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
+  const [byBuilding, setByBuilding] = useState<
+    Array<{ name: string; overdue: number; contracts: number; currency: Currency }>
+  >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -126,7 +134,7 @@ export default function DebtorsPage() {
     const order = SORTS[sort];
     createClient()
       .schema("crm")
-      .rpc("overdue_contracts", {}, { count: "exact" })
+      .rpc("overdue_contracts", { p_building_id: buildingId === "all" ? null : buildingId }, { count: "exact" })
       // Sorted in the database, so the order holds ACROSS pages -- sorting the
       // 25 rows on screen would be a different list on every page. contract_id
       // second: without a unique tiebreaker, equal values can come back in a
@@ -161,7 +169,7 @@ export default function DebtorsPage() {
     return () => {
       cancelled = true;
     };
-  }, [configured, page, sort]);
+  }, [configured, page, sort, buildingId]);
 
   // The headline totals cover EVERY debtor, not the 25 on screen, so they come
   // from their own aggregate instead of being summed from `rows`.
@@ -170,7 +178,7 @@ export default function DebtorsPage() {
     let cancelled = false;
     createClient()
       .schema("crm")
-      .rpc("overdue_totals")
+      .rpc("overdue_totals", { p_building_id: buildingId === "all" ? null : buildingId })
       .then(({ data, error }) => {
         if (cancelled || error) {
           if (error) console.error("overdue_totals failed:", error.message);
@@ -197,6 +205,44 @@ export default function DebtorsPage() {
     return () => {
       cancelled = true;
     };
+  }, [configured, buildingId]);
+
+  // The chart shows every building regardless of the filter -- narrowing the
+  // list to one ЖК shouldn't hide the comparison that tells you which ЖК to
+  // narrow to. Fetched once.
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    const supabase = createClient();
+    Promise.all([
+      supabase.schema("crm").from("buildings").select("id, name").order("name"),
+      supabase.schema("crm").rpc("overdue_by_building"),
+    ]).then(([bRes, oRes]) => {
+      if (cancelled) return;
+      setBuildings((bRes.data ?? []) as Array<{ id: string; name: string }>);
+      if (oRes.error) {
+        console.error("overdue_by_building failed:", oRes.error.message);
+        return;
+      }
+      setByBuilding(
+        (
+          (oRes.data ?? []) as Array<{
+            building_name: string;
+            currency: Currency;
+            contracts: number;
+            total_overdue: number;
+          }>
+        ).map((r) => ({
+          name: r.building_name,
+          currency: r.currency,
+          contracts: r.contracts,
+          overdue: Number(r.total_overdue),
+        }))
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [configured]);
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
@@ -212,7 +258,10 @@ export default function DebtorsPage() {
     for (let from = 0; ; from += EXPORT_BATCH) {
       const { data, error } = await supabase
         .schema("crm")
-        .rpc("overdue_contracts")
+        // The export follows the same filter as the list on screen -- a file
+        // covering every ЖК while the page shows one would disagree with what
+        // the person exporting it was looking at.
+        .rpc("overdue_contracts", { p_building_id: buildingId === "all" ? null : buildingId })
         .range(from, from + EXPORT_BATCH - 1);
       const batch = (data ?? []) as OverdueRow[];
       if (error || batch.length === 0) break;
@@ -268,40 +317,42 @@ export default function DebtorsPage() {
         </div>
       )}
 
-      {/* Two figures per currency, side by side and labelled, because they are
-          different things and were being read as one: what is actually late,
-          and the whole balance of those same contracts. */}
-      {totals.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap gap-3">
-            {totals.map((row) => (
-              <div
-                key={row.currency}
-                className="flex flex-wrap items-stretch gap-px overflow-hidden rounded-xl border border-slate-200 bg-slate-200"
-              >
-                <div className="bg-rose-50 px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-rose-400">
-                    {t.debtors.overdueNow} · {row.currency}
-                  </div>
-                  <div className="text-xl font-bold text-rose-700">
+      {/* Arrears as a chart, not tiles: WHERE the money is owed matters more
+          than one company-wide sum, and a bar per building answers that at a
+          glance. The two overall totals stay as a line above the chart, so
+          nothing was lost by dropping the cards. */}
+      {(byBuilding.length > 0 || totals.length > 0) && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">{t.debtors.chartTitle}</p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+              {totals.map((row) => (
+                <span key={row.currency} className="text-slate-500">
+                  {t.debtors.overdueNow}:{" "}
+                  <span className="font-semibold text-rose-600">
                     {formatCurrency(row.overdue, row.currency)}
-                  </div>
-                  <div className="text-[11px] text-rose-400">
-                    {row.contracts} {t.contracts.title.toLowerCase()}
-                  </div>
-                </div>
-                <div className="bg-white px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                    {t.debtors.remainingTotal}
-                  </div>
-                  <div className="text-xl font-bold text-slate-700">
+                  </span>{" "}
+                  <span className="text-slate-400">
+                    · {t.debtors.remainingTotal.toLowerCase()}{" "}
                     {formatCurrency(row.remaining, row.currency)}
-                  </div>
-                </div>
-              </div>
-            ))}
+                  </span>
+                </span>
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-slate-400">{t.debtors.cardsHint}</p>
+          {byBuilding.length > 0 ? (
+            <BarChart
+              data={byBuilding.map((b) => ({
+                label: b.name,
+                value: b.overdue,
+                hint: `${b.contracts} ${t.contracts.title.toLowerCase()} · ${b.currency}`,
+              }))}
+              formatTooltip={(d) => formatCurrency(d.value, byBuilding[0].currency)}
+            />
+          ) : (
+            <p className="text-sm text-slate-400">{t.debtors.empty}</p>
+          )}
+          <p className="mt-3 text-xs text-slate-400">{t.debtors.cardsHint}</p>
         </div>
       )}
 
@@ -311,6 +362,24 @@ export default function DebtorsPage() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <span className="text-slate-500">{t.debtors.sortLabel}:</span>
           <ControlGroup size="sm">
+            {/* Filter by ЖК, in the same glued control as the sort options. */}
+            <select
+              value={buildingId}
+              onChange={(e) => {
+                setBuildingId(e.target.value);
+                setPage(1);
+              }}
+              aria-label={t.dashboard.allBuildings}
+              className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700 focus:outline-none"
+            >
+              <option value="all">{t.dashboard.allBuildings}</option>
+              {buildings.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+            <GroupDivider />
             <span className="pl-1 text-slate-400" aria-hidden="true">
               <SortIcon className="h-4 w-4" />
             </span>

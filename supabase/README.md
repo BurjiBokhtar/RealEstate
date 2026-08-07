@@ -30,7 +30,8 @@ Supabase → **SQL Editor** → вставить содержимое
 [`migrations/041_client_second_phone.sql`](migrations/041_client_second_phone.sql)
 [`migrations/042_paid_amount_from_payments.sql`](migrations/042_paid_amount_from_payments.sql)
 [`migrations/043_real_overdue.sql`](migrations/043_real_overdue.sql)
-и [`migrations/044_potential_revenue_detail.sql`](migrations/044_potential_revenue_detail.sql)
+[`migrations/044_potential_revenue_detail.sql`](migrations/044_potential_revenue_detail.sql)
+и [`migrations/045_area_split_and_overdue_by_building.sql`](migrations/045_area_split_and_overdue_by_building.sql)
 → **Run**. Все файлы идемпотентные, повторный запуск безопасен.
 
 ## SMS-рассылка

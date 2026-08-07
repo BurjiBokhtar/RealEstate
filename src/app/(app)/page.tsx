@@ -8,8 +8,11 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
-import { RevenueChart, type RevenueMonth } from "@/components/RevenueChart";
-import { OccupancyBar, occShade } from "@/components/OccupancyBar";
+import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
+import { BarChart } from "@/components/charts/BarChart";
+import { StackedBarChart } from "@/components/charts/StackedBarChart";
+import { DonutChart } from "@/components/charts/DonutChart";
+import { STATUS_HUES } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -40,6 +43,9 @@ type OccupancyRow = { id: string; name: string; total: number } & StatusCounts;
 type DashboardSummary = {
   counts: { total: number; available: number; reserved: number; sold: number; in_progress: number };
   area: { total: number; available: number };
+  // Area per status: the ring needs the sold and reserved shares too, which no
+  // tile ever showed.
+  area_split: { sold: number; reserved: number; available: number; rented: number; in_progress: number };
   potential: MoneyPair;
   // How many available flats the potential figure is built from, and how many
   // were left out because they have no price.
@@ -69,6 +75,7 @@ const ZERO: MoneyPair = { tjs: 0, usd: 0 };
 const EMPTY_SUMMARY: DashboardSummary = {
   counts: { total: 0, available: 0, reserved: 0, sold: 0, in_progress: 0 },
   area: { total: 0, available: 0 },
+  area_split: { sold: 0, reserved: 0, available: 0, rented: 0, in_progress: 0 },
   potential: ZERO,
   potential_units: 0,
   potential_no_price: 0,
@@ -173,7 +180,6 @@ export default function DashboardPage() {
   const area = summary.area;
   const paidRevenue = summary.paid;
   const totalDebt = summary.debt;
-  const overdue = summary.overdue;
   const potentialRevenue = summary.potential;
   const revenueByBuilding = summary.revenue_by_building;
 
@@ -206,6 +212,57 @@ export default function DashboardPage() {
       })),
     [summary.occupancy]
   );
+
+  // Occupancy, shaped for the stacked chart. Only the three statuses that
+  // actually occur in a sales pipeline get a band; rented / in-progress are
+  // folded in only when a building really has them, so a normal building isn't
+  // carrying two empty legend entries.
+  const occupancySeries = useMemo(() => {
+    const base: Array<{ key: ObjectStatus; label: string }> = [
+      { key: "sold", label: t.objects.statuses.sold },
+      { key: "reserved", label: t.objects.statuses.reserved },
+      { key: "available", label: t.objects.statuses.available },
+    ];
+    const extra: Array<{ key: ObjectStatus; label: string }> = (
+      ["rented", "in_progress"] as ObjectStatus[]
+    )
+      .filter((k) => summary.occupancy.some((b) => (b[k] ?? 0) > 0))
+      .map((k) => ({ key: k, label: t.objects.statuses[k] }));
+    return [...base, ...extra].map((s) => ({
+      key: s.key,
+      label: s.label,
+      hue: STATUS_HUES[s.key],
+    }));
+  }, [summary.occupancy, t]);
+
+  const occupancyRows = useMemo(
+    () =>
+      occupancy.map((b) => ({
+        label: b.name,
+        values: b.counts as unknown as Record<string, number>,
+      })),
+    [occupancy]
+  );
+
+  // Floor area as a composition. Only non-zero statuses become slices, so a
+  // building with no rentals doesn't get a zero-width band in the ring.
+  const areaSlices = useMemo(() => {
+    const order: Array<{ key: ObjectStatus; value: number }> = [
+      { key: "sold", value: summary.area_split.sold },
+      { key: "reserved", value: summary.area_split.reserved },
+      { key: "available", value: summary.area_split.available },
+      { key: "rented", value: summary.area_split.rented },
+      { key: "in_progress", value: summary.area_split.in_progress },
+    ];
+    return order
+      .filter((s) => s.value > 0)
+      .map((s) => ({
+        key: s.key,
+        label: t.objects.statuses[s.key],
+        value: s.value,
+        hue: STATUS_HUES[s.key],
+      }));
+  }, [summary.area_split, t]);
 
   const debtors = useMemo(
     () =>
@@ -264,29 +321,26 @@ export default function DashboardPage() {
       {/* Only what the hero doesn't already say: total/available/sold and
           paid revenue live up there now, so this row carries just the
           three numbers that don't. */}
+      {/* Floor area is a composition, not two independent numbers -- "total"
+          and "still for sale" were two tiles you had to divide in your head to
+          learn anything. As a ring the split reads at a glance, and the sold
+          and reserved shares (which no tile showed at all) come free. */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
+        {area.total > 0 ? (
+          <DonutChart
+            slices={areaSlices}
+            centerLabel={t.dashboard.totalArea}
+            formatValue={formatArea}
+          />
+        ) : (
+          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+        )}
+      </div>
+
+      {/* Overdue is gone from here: it now has a chart of its own on the
+          debtors page, where the follow-up actually happens. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
-        <StatCard
-          label={t.dashboard.totalArea}
-          value={formatArea(area.total)}
-          sub={t.dashboard.totalAreaSub}
-          icon={StatIcons.area}
-          tone="indigo"
-          delay={0}
-          loading={loading}
-        />
-        <StatCard
-          label={t.dashboard.areaForSale}
-          value={formatArea(area.available)}
-          sub={
-            area.total > 0
-              ? `${Math.round((area.available / area.total) * 100)}%`
-              : undefined
-          }
-          icon={StatIcons.tag}
-          tone="emerald"
-          delay={40}
-          loading={loading}
-        />
         <StatCard
           label={t.dashboard.totalIncome}
           value={<MoneyPairValue value={paidRevenue} animate />}
@@ -301,26 +355,6 @@ export default function DashboardPage() {
           icon={StatIcons.debt}
           tone="rose"
           delay={120}
-          loading={loading}
-        />
-        {/* Both of these tiles were showing a number with nothing to check it
-            against. Overdue now says how many contracts it covers (and that
-            it is only the part not yet covered by money received), and
-            potential says how many flats it is built from -- plus, when some
-            are missing a price, that they are NOT in the total. A silently
-            understated figure is worse than a small warning. */}
-        <StatCard
-          label={t.dashboard.overdueTile}
-          value={<MoneyPairValue value={overdue} animate />}
-          sub={
-            summary.overdue_contracts > 0
-              ? t.dashboard.overdueSub.replace("{n}", String(summary.overdue_contracts))
-              : undefined
-          }
-          icon={StatIcons.warning}
-          tone="rose"
-          href="/debtors"
-          delay={160}
           loading={loading}
         />
         <StatCard
@@ -346,7 +380,7 @@ export default function DashboardPage() {
             {t.dashboard.revenueByDay}
           </p>
           {dailyRevenue.length > 0 ? (
-            <RevenueChart data={dailyRevenue} />
+            <RevenueAreaChart data={dailyRevenue} />
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
           )}
@@ -358,94 +392,61 @@ export default function DashboardPage() {
           {t.dashboard.revenueByMonth}
         </p>
         {revenue.length > 0 ? (
-          <RevenueChart data={revenue} />
+          <RevenueAreaChart data={revenue} />
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
 
+      {/* Occupancy as stacked columns: each building drawn to 100% of its own
+          total, so the chart answers "how much of THIS one is sold" -- which is
+          what occupancy means -- with the absolute count above the column so
+          size isn't lost. Replaces a stack of horizontal strips. */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">
-          {t.dashboard.occupancyByBuilding}
-        </p>
-        {occupancy.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {occupancy.map((b) => {
-              const soldPct = b.total ? Math.round((b.counts.sold / b.total) * 100) : 0;
-              return (
-                <div key={b.id} className="flex flex-col gap-1.5">
-                  <div className="flex items-baseline justify-between text-sm">
-                    <Link
-                      href={`/buildings/${b.id}`}
-                      className="font-medium text-slate-700 hover:underline"
-                    >
-                      {b.name}
-                    </Link>
-                    <span className="text-xs text-slate-400">
-                      <span className="font-semibold text-brand">{soldPct}%</span> продано ·{" "}
-                      {b.total}
-                    </span>
-                  </div>
-                  <OccupancyBar counts={b.counts} total={b.total} labels={t.objects.statuses} />
-                </div>
-              );
-            })}
-            {/* Legend: which brand shade means which status. */}
-            <div className="flex flex-wrap gap-3 pt-1 text-[11px] text-slate-500">
-              {(["available", "reserved", "sold"] as ObjectStatus[]).map((s) => (
-                <span key={s} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-sm"
-                    style={{ background: occShade(s).background }}
-                  />
-                  {t.objects.statuses[s]}
-                </span>
-              ))}
-            </div>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-slate-700">
+            {t.dashboard.occupancyByBuilding}
+          </p>
+          <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
+            {occupancySeries.map((s) => (
+              <span key={s.key} className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: s.hue.solid }}
+                />
+                {s.label}
+              </span>
+            ))}
           </div>
+        </div>
+        {occupancy.length > 0 ? (
+          <StackedBarChart series={occupancySeries} rows={occupancyRows} />
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
 
+      {/* Revenue by building: real bars on a value axis instead of proportional
+          strips, so the amounts can be read and not only ranked. */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">
           {t.dashboard.revenueByBuilding}
         </p>
         {revenueByBuilding.length > 0 ? (
-          (() => {
-            // Bar length = this building's revenue relative to the top one
-            // (TJS + USD combined just for the visual proportion).
-            const peak = Math.max(...revenueByBuilding.map((b) => b.tjs + b.usd), 1);
-            return (
-              <div className="flex flex-col gap-3">
-                {revenueByBuilding.map((b) => (
-                  <div key={b.id} className="flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <Link
-                        href={`/buildings/${b.id}`}
-                        className="text-sm font-medium text-slate-700 hover:underline"
-                      >
-                        {b.name}
-                      </Link>
-                      <span className="text-sm text-slate-700">
-                        <MoneyPairValue value={{ tjs: b.tjs, usd: b.usd }} align="right" />
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
-                        style={{
-                          width: `${((b.tjs + b.usd) / peak) * 100}%`,
-                          background: "var(--brand)",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()
+          <BarChart
+            data={revenueByBuilding.map((b) => ({
+              label: b.name,
+              // One axis, so the two currencies are summed for bar height and
+              // the tooltip shows the honest split.
+              value: b.tjs + b.usd,
+              hint: [
+                b.tjs > 0 ? formatCurrency(b.tjs, "TJS") : null,
+                b.usd > 0 ? formatCurrency(b.usd, "USD") : null,
+              ]
+                .filter(Boolean)
+                .join(" · "),
+            }))}
+          />
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}

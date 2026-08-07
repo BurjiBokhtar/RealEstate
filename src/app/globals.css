@@ -420,3 +420,63 @@
   page-break-inside: avoid;
 }
 
+
+/* ---- Chart reveal animations ----
+   Deliberately pure CSS, with the element ALREADY at its final size in the
+   DOM. The first version gated the size behind a React state flag flipped
+   from requestAnimationFrame -- and when rAF doesn't run (a background tab, a
+   throttled or non-compositing page), the flag never flipped and every bar,
+   stacked column and donut slice rendered at zero. A chart that shows no data
+   when an animation frame is skipped is broken, not merely un-animated.
+   Here the animation only ever plays ON TOP of correct output: remove it and
+   the chart is simply static. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes chart-grow-up {
+    from {
+      transform: scaleY(0);
+    }
+    to {
+      transform: scaleY(1);
+    }
+  }
+
+  /* No fill-mode here. "both" holds the element in the FROM state (scaleY(0),
+     opacity 0) until the animation actually starts -- and if it never starts,
+     the data stays invisible for good. Without it the element sits at its real
+     size and the animation only ever plays on top of correct output. */
+  .animate-chart-grow {
+    transform-origin: bottom;
+    animation: chart-grow-up 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes chart-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-chart-fade {
+    animation: chart-fade-in 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes chart-donut-in {
+    from {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.85);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(-90deg) scale(1);
+    }
+  }
+
+  /* Keeps the -90deg start offset the donut is drawn with. */
+  .animate-chart-donut {
+    animation: chart-donut-in 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
