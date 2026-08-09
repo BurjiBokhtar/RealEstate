@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LoginScene } from "@/components/LoginScene";
+import { LoginAside } from "@/components/LoginAside";
+import { quoteOfTheDay } from "@/lib/quotes";
 import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 
 const FIELD_CLASS =
@@ -23,6 +25,8 @@ export default function LoginPage() {
   // full settings are staff-only -- public_branding() (026) exposes exactly
   // the name and logo, nothing else. Falls back to the app name until the
   // RPC answers (or if the migration isn't applied yet).
+  // One pick per render, shared by the desktop panel and the phone copy.
+  const dailyQuote = quoteOfTheDay();
   const [brand, setBrand] = useState<{ name: string | null; logo: string | null }>({
     name: null,
     logo: null,
@@ -86,8 +90,11 @@ export default function LoginPage() {
             <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow">
               {brand.name || t.appName}
             </h1>
-            <p className="mt-2 max-w-md text-sm text-white/75">{t.login.title}</p>
           </div>
+          {/* Clock, real local weather and the quote of the day. The panel used
+              to be a name and one static line -- the scene behind it was the
+              only thing that ever changed. */}
+          <LoginAside />
         </div>
         <p className="text-xs tracking-wide text-white/60">
           developed by{" "}
@@ -200,6 +207,18 @@ export default function LoginPage() {
           {t.login.forgot}
         </button>
       </form>
+
+      {/* The brand panel is desktop-only, so phones would lose the quote
+          entirely. A compact copy, no clock or weather -- on a small screen
+          those compete with the form instead of framing it. */}
+      <figure className="mt-6 max-w-sm border-l-2 border-white/30 pl-3 lg:hidden">
+        <blockquote className="text-[13px] italic leading-relaxed text-white/85">
+          “{dailyQuote[locale === "tj" ? "tj" : "ru"]}”
+        </blockquote>
+        <figcaption className="mt-1 text-[11px] text-white/55">
+          — {dailyQuote.author[locale === "tj" ? "tj" : "ru"]}
+        </figcaption>
+      </figure>
 
       {/* Credit -- shown under the form on phones (the desktop copy lives in
           the brand panel). */}

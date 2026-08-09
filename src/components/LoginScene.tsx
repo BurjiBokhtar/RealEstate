@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useLocalWeather } from "@/lib/weather";
+import { useNow } from "@/lib/useClock";
 
 // Full-screen living construction scene behind the auth card: sky follows
 // the local time of day, colours shift with the real weather (Open-Meteo,
@@ -8,11 +10,10 @@ import { useEffect, useMemo, useState } from "react";
 // clouds drift, rain falls when it actually rains, windows light up at
 // night. Pure SVG + CSS keyframes -- no images, nothing to load.
 
-type Weather = "clear" | "cloudy" | "rain" | "snow";
 type Phase = "dawn" | "day" | "dusk" | "night";
 
-function phaseOfDay(): Phase {
-  const h = new Date().getHours();
+function phaseOfDay(at: Date): Phase {
+  const h = at.getHours();
   if (h >= 5 && h < 8) return "dawn";
   if (h >= 8 && h < 17) return "day";
   if (h >= 17 && h < 20) return "dusk";
@@ -52,45 +53,12 @@ const SCENE_CSS = `
 `;
 
 export function LoginScene() {
-  const [phase, setPhase] = useState<Phase>("day");
-  const [weather, setWeather] = useState<Weather>("clear");
-
-  useEffect(() => {
-    setPhase(phaseOfDay());
-    const id = setInterval(() => setPhase(phaseOfDay()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
-    // Weather where the VISITOR is: coarse IP geolocation first (silent, no
-    // browser permission popup on a login page), Bokhtar as the fallback.
-    // Weather-code buckets: 0-1 clear, 2-3 + fog cloudy, 51-67 + 80-99
-    // rain/storm, 71-77 + 85-86 snow.
-    const locate = fetch("https://get.geojs.io/v1/ip/geo.json")
-      .then((r) => r.json())
-      .then((g) => ({
-        lat: Number(g?.latitude) || 37.84,
-        lon: Number(g?.longitude) || 68.78,
-      }))
-      .catch(() => ({ lat: 37.84, lon: 68.78 }));
-    locate
-      .then(({ lat, lon }) =>
-        fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=weather_code`
-        )
-      )
-      .then((r) => r.json())
-      .then((d) => {
-        const code = Number(d?.current?.weather_code);
-        if (Number.isNaN(code)) return;
-        if ((code >= 71 && code <= 77) || code === 85 || code === 86) setWeather("snow");
-        else if ((code >= 51 && code <= 67) || (code >= 80 && code <= 99))
-          setWeather("rain");
-        else if (code >= 2) setWeather("cloudy");
-        else setWeather("clear");
-      })
-      .catch(() => {});
-  }, []);
+  // Once a minute, not once a second -- the scene is a large SVG and the sky
+  // only ever changes on the hour boundaries. Daytime is the pre-hydration
+  // guess: the scene is decoration, so a neutral sky is better than a blank one.
+  const now = useNow(60_000);
+  const phase: Phase = now ? phaseOfDay(now) : "day";
+  const { kind: weather } = useLocalWeather();
 
   const grey = weather === "rain" || weather === "cloudy";
   const [top, mid, bottom] = SKIES[phase][grey ? "grey" : "bright"];
