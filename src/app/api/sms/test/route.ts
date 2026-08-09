@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServiceClient, requireAdmin } from "@/lib/supabase/serviceClient";
+import { adminErrorMessage, checkAdmin, getServiceClient } from "@/lib/supabase/serviceClient";
 import { smsGatewayPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +13,12 @@ export async function POST(request: Request) {
   if (!supabase) {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
-  const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Says WHICH of the four things failed. "Unauthorized" alone covered an
+  // expired session, a service key from the wrong Supabase project, a missing
+  // profile row and a non-admin role -- four problems fixed four different
+  // ways, and no way to tell them apart from the screen.
+  const admin = await checkAdmin(supabase, request);
+  if (!admin.ok) return NextResponse.json({ error: adminErrorMessage(admin) }, { status: 403 });
 
   const { data: settings } = await supabase.from("settings").select("*").maybeSingle();
   if (!settings?.sms_api_key || !settings?.sms_sender_name) {

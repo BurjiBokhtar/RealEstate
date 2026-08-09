@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getServiceClient, requireAdmin } from "@/lib/supabase/serviceClient";
+import {
+  adminErrorMessage,
+  checkAdmin,
+  getServiceClient,
+  serviceKeyProjectRef,
+} from "@/lib/supabase/serviceClient";
 
 export const dynamic = "force-dynamic";
 
@@ -28,8 +33,22 @@ export async function GET(request: Request) {
       { status: 500 }
     );
   }
-  const admin = await requireAdmin(supabase, request);
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  // Says WHICH of the four things failed. A bare "Unauthorized" covered an
+  // expired session, a service key from the wrong Supabase project, a missing
+  // profile row and a non-admin role -- four problems fixed four different
+  // ways, with nothing on screen to tell them apart.
+  const admin = await checkAdmin(supabase, request);
+  if (!admin.ok) {
+    const refs = serviceKeyProjectRef();
+    // The commonest cause, stated as fact rather than as a guess: the service
+    // key and the URL name different projects, so no token from this project
+    // can ever validate.
+    const mismatch =
+      refs && refs.keyRef !== refs.urlRef
+        ? ` Ключ SUPABASE_SERVICE_ROLE_KEY принадлежит проекту "${refs.keyRef}", а приложение работает с проектом "${refs.urlRef}" — это и есть причина.`
+        : "";
+    return NextResponse.json({ error: adminErrorMessage(admin) + mismatch }, { status: 403 });
+  }
 
   const { data: settings } = await supabase
     .from("settings")
@@ -43,6 +62,11 @@ export async function GET(request: Request) {
     // Without this, Vercel's scheduler cannot authenticate to the cron route
     // and every nightly run is rejected.
     hasCronSecret: !!process.env.CRON_SECRET,
+    // null when it cannot be told (the newer sb_secret_… keys carry no ref).
+    projectRefMismatch: (() => {
+      const refs = serviceKeyProjectRef();
+      return refs ? refs.keyRef !== refs.urlRef : null;
+    })(),
     lastRunAt: settings?.sms_last_run_at ?? null,
     lastResult: settings?.sms_last_result ?? null,
   });

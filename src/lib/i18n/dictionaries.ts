@@ -684,6 +684,8 @@ export const dictionaries = {
         blockerCreds: "Не заполнены API-ключ или имя отправителя",
         blockerCronSecret:
           "На сервере не задана переменная CRON_SECRET (Vercel → Project Settings → Environment Variables). Без неё ночной запуск отклоняется, и SMS не уходят.",
+        blockerProjectMismatch:
+          "SUPABASE_SERVICE_ROLE_KEY на сервере принадлежит другому проекту Supabase. Возьмите service_role из того же проекта (Project Settings → API) и сделайте Redeploy.",
       },
       save: "Сохранить настройки",
       saved: "Настройки сохранены",
@@ -1494,6 +1496,8 @@ export const dictionaries = {
         blockerCreds: "Калиди API ё номи фиристанда холӣ аст",
         blockerCronSecret:
           "Дар сервер тағйирёбандаи CRON_SECRET муқаррар нашудааст (Vercel → Project Settings → Environment Variables). Бе он иҷрои шабона рад мешавад ва SMS намеравад.",
+        blockerProjectMismatch:
+          "SUPABASE_SERVICE_ROLE_KEY дар сервер ба лоиҳаи дигари Supabase тааллуқ дорад. service_role-ро аз ҳамон лоиҳа гиред (Project Settings → API) ва Redeploy кунед.",
       },
       save: "Танзимотро захира кардан",
       saved: "Танзимот захира шуд",

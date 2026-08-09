@@ -9,6 +9,7 @@ type Status = {
   hasApiKey: boolean;
   hasSenderName: boolean;
   hasCronSecret: boolean;
+  projectRefMismatch: boolean | null;
   lastRunAt: string | null;
   lastResult: string | null;
 };
@@ -88,7 +89,7 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
       <div className="border-t border-slate-100 pt-4">
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5">
           <p className="text-xs font-semibold text-rose-800">{t.settings.sms.blockersTitle}</p>
-          <p className="mt-1 text-xs text-rose-800">{loadError}</p>
+          <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-rose-800">{loadError}</p>
         </div>
       </div>
     );
@@ -99,6 +100,7 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
   const blockers: string[] = [];
   if (!status.hasApiKey || !status.hasSenderName) blockers.push(t.settings.sms.blockerCreds);
   if (!status.hasCronSecret) blockers.push(t.settings.sms.blockerCronSecret);
+  if (status.projectRefMismatch) blockers.push(t.settings.sms.blockerProjectMismatch);
 
   return (
     <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
