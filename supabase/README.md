@@ -32,8 +32,13 @@ Supabase → **SQL Editor** → вставить содержимое
 [`migrations/043_real_overdue.sql`](migrations/043_real_overdue.sql)
 [`migrations/044_potential_revenue_detail.sql`](migrations/044_potential_revenue_detail.sql)
 [`migrations/045_area_split_and_overdue_by_building.sql`](migrations/045_area_split_and_overdue_by_building.sql)
-и [`migrations/046_gapless_revenue_series.sql`](migrations/046_gapless_revenue_series.sql)
+[`migrations/046_gapless_revenue_series.sql`](migrations/046_gapless_revenue_series.sql)
+и [`migrations/047_retire_hero_theme_options.sql`](migrations/047_retire_hero_theme_options.sql)
 → **Run**. Все файлы идемпотентные, повторный запуск безопасен.
+
+Файл 047 — не про статистику: он убирает из настроек тему «Уқёнус» и узоры
+«Ситора», «Панҷара». Без него на экране Настройки → Оформление может не
+подсветиться ни одна тема (в базе останется значение, которого больше нет).
 
 ## Переменные окружения на сервере
 

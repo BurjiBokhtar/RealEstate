@@ -8,7 +8,7 @@ export const HERO_THEMES = [
   { id: "atlas", label: "Атлас", swatch: ["#1c1a3a", "#5b3468", "#e3a73b"] },
   { id: "emerald", label: "Зумуррад", swatch: ["#06302b", "#0f766e", "#6ee7b7"] },
   { id: "sunset", label: "Шафақ", swatch: ["#3b0764", "#be185d", "#f59e0b"] },
-  { id: "ocean", label: "Уқёнус", swatch: ["#0c1e4a", "#1d4ed8", "#38bdf8"] },
+  { id: "lemon", label: "Лимӯ", swatch: ["#18181b", "#3f3f46", "#facc15"] },
 ] as const;
 
 export type HeroThemeId = (typeof HERO_THEMES)[number]["id"];
@@ -22,16 +22,6 @@ export const HERO_PATTERNS = [
     id: "ikat",
     label: "Атлас нақш",
     css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='23' height='23'%3E%3Cpath d='M11.5 1 L22 11.5 L11.5 22 L1 11.5 Z' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E\")",
-  },
-  {
-    id: "trellis",
-    label: "Панҷара",
-    css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M0 10 L10 0 L20 10 L10 20 Z'/%3E%3Cpath d='M10 0 V20 M0 10 H20'/%3E%3C/g%3E%3C/svg%3E\")",
-  },
-  {
-    id: "star",
-    label: "Ситора",
-    css: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Crect x='6' y='6' width='12' height='12'/%3E%3Crect x='6' y='6' width='12' height='12' transform='rotate(45 12 12)'/%3E%3C/g%3E%3C/svg%3E\")",
   },
   {
     id: "dots",

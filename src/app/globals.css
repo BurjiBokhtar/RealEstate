@@ -82,12 +82,15 @@
   accent-color: #be185d;
 }
 
-/* Уқёнус — an ocean blue theme. */
-:root[data-hero-theme="ocean"] {
-  --hero-1: #0c1e4a;
-  --hero-2: #1d4ed8;
-  --hero-3: #38bdf8;
-  accent-color: #1d4ed8;
+/* Лимӯ — onyx graphite with an acid-lemon accent.
+   The lemon is the third stop only. It cannot be --brand: the primary buttons
+   put white text on --brand, and white on #facc15 is roughly 1.9:1 -- illegible.
+   So the buttons stay graphite and the lemon does the accent work. */
+:root[data-hero-theme="lemon"] {
+  --hero-1: #18181b;
+  --hero-2: #3f3f46;
+  --hero-3: #facc15;
+  accent-color: #eab308;
 }
 
 /* Brand accent for buttons/pills -- follows the company theme so switching to
@@ -99,7 +102,7 @@
 }
 :root[data-hero-theme="emerald"] { --brand: #0f766e; --brand-strong: #06302b; }
 :root[data-hero-theme="sunset"] { --brand: #be185d; --brand-strong: #3b0764; }
-:root[data-hero-theme="ocean"] { --brand: #1d4ed8; --brand-strong: #0c1e4a; }
+:root[data-hero-theme="lemon"] { --brand: #3f3f46; --brand-strong: #18181b; }
 
 .btn-brand {
   background-image: linear-gradient(to right, var(--brand-strong), var(--brand));
@@ -176,26 +179,11 @@
   --hero-pattern-opacity: 0.16;
 }
 
-/* Панҷара — a geometric trellis (diamond + cross). */
-:root[data-hero-pattern="trellis"] {
-  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Cpath d='M0 20 L20 0 L40 20 L20 40 Z'/%3E%3Cpath d='M20 0 V40 M0 20 H40'/%3E%3C/g%3E%3C/svg%3E");
-  --hero-pattern-size: 40px 40px;
-  --hero-pattern-opacity: 0.13;
-}
-
 /* Нуқтаҳо — a quiet dot grid. */
 :root[data-hero-pattern="dots"] {
   --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Ccircle cx='2' cy='2' r='1.4' fill='%23fff'/%3E%3C/svg%3E");
   --hero-pattern-size: 22px 22px;
   --hero-pattern-opacity: 0.2;
-}
-
-/* Ситора — an eight-point girih star (two overlaid squares), a nod to Tajik
-   khatam/girih geometry. */
-:root[data-hero-pattern="star"] {
-  --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23fff' stroke-width='1'%3E%3Crect x='13' y='13' width='22' height='22'/%3E%3Crect x='13' y='13' width='22' height='22' transform='rotate(45 24 24)'/%3E%3C/g%3E%3C/svg%3E");
-  --hero-pattern-size: 48px 48px;
-  --hero-pattern-opacity: 0.15;
 }
 
 /* Мавҷ — flowing waves. */
