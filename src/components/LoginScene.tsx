@@ -3,12 +3,17 @@
 import { useMemo } from "react";
 import { useLocalWeather } from "@/lib/weather";
 import { useNow } from "@/lib/useClock";
+import { skylineOfTheDay } from "@/components/LoginSkylines";
 
-// Full-screen living construction scene behind the auth card: sky follows
-// the local time of day, colours shift with the real weather (Open-Meteo,
-// no key, falls back to clear sky offline), a tower crane sways gently,
-// clouds drift, rain falls when it actually rains, windows light up at
-// night. Pure SVG + CSS keyframes -- no images, nothing to load.
+// Full-screen living scene behind the auth card: sky follows the local time
+// of day, colours shift with the real weather (Open-Meteo, no key, falls back
+// to clear sky offline), clouds drift, rain falls when it actually rains,
+// windows light up at night. Pure SVG + CSS keyframes -- no images, nothing
+// to load.
+//
+// What stands on the ground changes daily -- see LoginSkylines. This file owns
+// everything the four drawings have in common (sky, sun, moon, stars, clouds,
+// precipitation) so a skyline only has to supply its own silhouette.
 
 type Phase = "dawn" | "day" | "dusk" | "night";
 
@@ -48,7 +53,9 @@ const SCENE_CSS = `
 @keyframes rain-fall { from { transform: translateY(-140px); } to { transform: translateY(900px); } }
 @keyframes snow-fall { from { transform: translateY(-40px) translateX(0); } to { transform: translateY(900px) translateX(60px); } }
 @keyframes beacon { 0%, 100% { opacity: 1; } 50% { opacity: 0.15; } }
+@keyframes lamp-glow { 0%, 100% { opacity: 0.16; } 50% { opacity: 0.30; } }
 @keyframes star-twinkle { 0%, 100% { opacity: 0.9; } 50% { opacity: 0.25; } }
+@keyframes skyline-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .scene-anim { animation: none !important; } }
 `;
 
@@ -60,31 +67,18 @@ export function LoginScene() {
   const phase: Phase = now ? phaseOfDay(now) : "day";
   const { kind: weather } = useLocalWeather();
 
+  // The silhouette waits for the browser. Which day it is depends on the
+  // viewer's timezone, and this page is prerendered at build time -- picking
+  // on the server would freeze one drawing into the HTML until the next
+  // deploy, then swap it the moment React took over. Holding it back one
+  // frame and fading it in is honest and reads as intentional.
+  const skyline = now ? skylineOfTheDay(now) : null;
+
   const grey = weather === "rain" || weather === "cloudy";
   const [top, mid, bottom] = SKIES[phase][grey ? "grey" : "bright"];
   const night = phase === "night" || phase === "dusk";
   const dark = grey ? "#171a26" : phase === "day" ? "#2e4057" : "#12142a";
   const darker = grey ? "#10121b" : phase === "day" ? "#22303f" : "#0b0c1c";
-
-  // Deterministic layouts so server and client render identically.
-  const windows = useMemo(() => {
-    const out: Array<{ x: number; y: number; on: boolean }> = [];
-    let seed = 7;
-    const rnd = () => ((seed = (seed * 9301 + 49297) % 233280) / 233280);
-    const towers = [
-      { x: 40, y: 300, w: 110, h: 300, cols: 4, rows: 9 },
-      { x: 1120, y: 260, w: 130, h: 340, cols: 5, rows: 10 },
-      { x: 1290, y: 350, w: 90, h: 250, cols: 3, rows: 8 },
-    ];
-    for (const t of towers) {
-      const cw = t.w / (t.cols + 1);
-      const rh = t.h / (t.rows + 1);
-      for (let c = 1; c <= t.cols; c++)
-        for (let r = 1; r <= t.rows; r++)
-          out.push({ x: t.x + c * cw - 4, y: t.y + r * rh - 5, on: rnd() > 0.45 });
-    }
-    return out;
-  }, []);
 
   const raindrops = useMemo(
     () => Array.from({ length: 60 }, (_, i) => ({ x: (i * 137) % 1440, d: (i * 53) % 100 })),
@@ -103,20 +97,12 @@ export function LoginScene() {
     <div aria-hidden="true" className="absolute inset-0 overflow-hidden">
       <style>{SCENE_CSS}</style>
 
-      <svg
-        viewBox="0 0 1440 810"
-        preserveAspectRatio="xMidYMax slice"
-        className="h-full w-full"
-      >
+      <svg viewBox="0 0 1440 810" preserveAspectRatio="xMidYMax slice" className="h-full w-full">
         <defs>
           <linearGradient id="login-sky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={top} style={{ transition: "stop-color 1.5s" }} />
             <stop offset="55%" stopColor={mid} style={{ transition: "stop-color 1.5s" }} />
-            <stop
-              offset="100%"
-              stopColor={bottom}
-              style={{ transition: "stop-color 1.5s" }}
-            />
+            <stop offset="100%" stopColor={bottom} style={{ transition: "stop-color 1.5s" }} />
           </linearGradient>
         </defs>
         <rect width="1440" height="810" fill="url(#login-sky)" />
@@ -175,90 +161,15 @@ export function LoginScene() {
           <ellipse cx="110" cy="195" rx="90" ry="26" />
         </g>
 
-        {/* far skyline */}
-        <g fill={darker} opacity="0.85">
-          <rect x="240" y="420" width="90" height="390" />
-          <rect x="360" y="470" width="70" height="340" />
-          <rect x="620" y="440" width="80" height="370" />
-          <rect x="880" y="480" width="100" height="330" />
-          <rect x="1020" y="430" width="60" height="380" />
-          <polygon points="700,440 740,400 740,810 700,810" />
-        </g>
-
-        {/* near towers with windows */}
-        <g fill={dark}>
-          <rect x="40" y="300" width="110" height="510" />
-          <rect x="30" y="286" width="130" height="14" />
-          <rect x="1120" y="260" width="130" height="550" />
-          <rect x="1110" y="246" width="150" height="14" />
-          <rect x="1290" y="350" width="90" height="460" />
-        </g>
-        <g>
-          {windows.map((w, i) => (
-            <rect
-              key={i}
-              x={w.x}
-              y={w.y}
-              width="9"
-              height="11"
-              rx="1"
-              fill={night && w.on ? "#ffd782" : "#000000"}
-              opacity={night && w.on ? 0.9 : 0.25}
-            />
-          ))}
-        </g>
-
-        {/* unfinished building under the crane: slab lines + rebar stubs */}
-        <g fill={dark}>
-          <rect x="470" y="560" width="180" height="250" />
-          <rect x="470" y="600" width="180" height="6" fill={bottom} opacity="0.25" />
-          <rect x="470" y="660" width="180" height="6" fill={bottom} opacity="0.25" />
-          <rect x="470" y="720" width="180" height="6" fill={bottom} opacity="0.25" />
-          <rect x="486" y="530" width="5" height="30" />
-          <rect x="516" y="536" width="5" height="24" />
-          <rect x="546" y="530" width="5" height="30" />
-          <rect x="576" y="538" width="5" height="22" />
-          <rect x="606" y="530" width="5" height="30" />
-        </g>
-
-        {/* tower crane: mast fixed, everything above the slew ring sways */}
-        <g fill={darker} stroke={darker}>
-          <rect x="770" y="330" width="16" height="480" />
+        {skyline && (
           <g
+            key={skyline.id}
             className="scene-anim"
-            style={{
-              animation: "crane-sway 9s ease-in-out infinite",
-              transformOrigin: "778px 330px",
-            }}
+            style={{ animation: "skyline-rise 0.9s ease-out" }}
           >
-            <rect x="640" y="318" width="140" height="10" />
-            <rect x="640" y="328" width="26" height="26" />
-            <rect x="778" y="318" width="330" height="10" />
-            <line x1="778" y1="260" x2="1100" y2="322" strokeWidth="3" />
-            <line x1="778" y1="260" x2="648" y2="322" strokeWidth="3" />
-            <rect x="770" y="252" width="16" height="70" />
-            <rect x="762" y="330" width="34" height="26" />
-            <g
-              className="scene-anim"
-              style={{ animation: "hook-swing 7s ease-in-out infinite" }}
-            >
-              <rect x="1000" y="328" width="20" height="10" />
-              <line x1="1010" y1="338" x2="1010" y2="470" strokeWidth="2.5" />
-              <path d="M1002 470 h16 v12 h-6 a6 6 0 0 1 -10 -6 z" />
-            </g>
-            {night && (
-              <circle
-                cx="1104"
-                cy="318"
-                r="4.5"
-                fill="#ff5a5a"
-                stroke="none"
-                className="scene-anim"
-                style={{ animation: "beacon 2.2s ease-in-out infinite" }}
-              />
-            )}
+            <skyline.Silhouette dark={dark} darker={darker} bottom={bottom} night={night} />
           </g>
-        </g>
+        )}
 
         {weather === "rain" && (
           <g stroke="#cfe0ee" strokeWidth="1.6" opacity="0.5">
@@ -296,6 +207,13 @@ export function LoginScene() {
           </g>
         )}
       </svg>
+
+      {/* Scrim. The panel text is white and the drawing behind it changes
+          every day -- a midday sky bottoms out at #bfe0f5, which white type
+          disappears into. This keeps the left column readable whatever is
+          drawn there, without darkening the picture as a whole. */}
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/60 via-slate-950/15 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-slate-950/45 to-transparent" />
     </div>
   );
 }

@@ -73,29 +73,14 @@ export default function LoginPage() {
     <div className="relative flex min-h-screen flex-col lg:flex-row">
       <LoginScene />
 
-      {/* Brand panel -- the company's identity over the living scene. Desktop
-          only; on phones the form's own header carries the branding. */}
+      {/* Left column -- the living half: clock, real local weather, quote of
+          the day. The logo, company name and "sign in" caption used to be
+          repeated here as well as in the form, so on a desktop screen the
+          same two lines were printed twice, side by side. Identity now lives
+          in exactly one place: the form header, on every screen size. */}
       <div className="relative z-10 hidden flex-1 flex-col justify-between p-14 text-white lg:flex">
         <div />
-        <div className="flex flex-col gap-5">
-          {brand.logo && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={brand.logo}
-              alt=""
-              className="h-20 w-20 rounded-2xl border border-white/25 bg-white/90 object-contain p-1.5 shadow-lg"
-            />
-          )}
-          <div>
-            <h1 className="text-4xl font-bold leading-tight tracking-tight drop-shadow">
-              {brand.name || t.appName}
-            </h1>
-          </div>
-          {/* Clock, real local weather and the quote of the day. The panel used
-              to be a name and one static line -- the scene behind it was the
-              only thing that ever changed. */}
-          <LoginAside />
-        </div>
+        <LoginAside />
         <p className="text-xs tracking-wide text-white/60">
           developed by{" "}
           <a
@@ -125,7 +110,7 @@ export default function LoginPage() {
               <img
                 src={brand.logo}
                 alt=""
-                className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 shadow-sm lg:hidden"
+                className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-1 shadow-sm"
               />
             )}
             <div>

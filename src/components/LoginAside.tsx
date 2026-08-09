@@ -63,7 +63,7 @@ function longDate(d: Date, lang: "ru" | "tj") {
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function LoginAside() {
-  const { t, locale } = useLocale();
+  const { locale } = useLocale();
   const weather = useLocalWeather();
   const quote = quoteOfTheDay();
   const lang = locale === "tj" ? "tj" : "ru";
@@ -108,8 +108,6 @@ export function LoginAside() {
         </blockquote>
         <figcaption className="mt-1.5 text-xs text-white/55">— {quote.author[lang]}</figcaption>
       </figure>
-
-      <p className="text-xs text-white/50">{t.login.title}</p>
     </div>
   );
 }
