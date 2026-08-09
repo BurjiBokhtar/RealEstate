@@ -264,6 +264,21 @@ export default function DashboardPage() {
       }));
   }, [summary.area_split, t]);
 
+  // Revenue per building, split by currency and ranked WITHIN each currency.
+  // Buildings that earned nothing in a currency drop out of that block rather
+  // than sitting there as a zero-length bar.
+  const revenueByCurrency = useMemo(() => {
+    return (["TJS", "USD"] as Currency[])
+      .map((currency) => ({
+        currency,
+        rows: revenueByBuilding
+          .map((b) => ({ name: b.name, value: currency === "USD" ? b.usd : b.tjs }))
+          .filter((r) => r.value > 0)
+          .sort((a, b) => b.value - a.value),
+      }))
+      .filter((block) => block.rows.length > 0);
+  }, [revenueByBuilding]);
+
   const debtors = useMemo(
     () =>
       summary.top_debtors.map((d) => ({
@@ -430,29 +445,41 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Revenue by building: horizontal bars, because these are names, not
-            dates -- a building name under a 40px column truncates, beside a bar
-            it has the whole card. */}
+        {/* Revenue by building, ONE BLOCK PER CURRENCY.
+            The bar used to be as long as tjs + usd and the headline number was
+            that sum -- 10 265 129 TJS plus 419 395 USD shown as "10,7 млн",
+            which is 10.7 million of nothing. Adding two currencies produces a
+            figure that does not exist, and the real amounts were relegated to
+            grey small print underneath. Each currency now gets its own block,
+            its own scale and its own full-size figures. */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-slate-700">
             {t.dashboard.revenueByBuilding}
           </p>
-          {revenueByBuilding.length > 0 ? (
-            <HBarChart
-              data={revenueByBuilding.map((b, i) => ({
-                label: b.name,
-                // Summed for bar length; the line underneath keeps the split
-                // honest so the two currencies are never implied to be one.
-                value: b.tjs + b.usd,
-                hue: hueAt(i),
-                hint: [
-                  b.tjs > 0 ? formatCurrency(b.tjs, "TJS") : null,
-                  b.usd > 0 ? formatCurrency(b.usd, "USD") : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · "),
-              }))}
-            />
+          {revenueByCurrency.length > 0 ? (
+            <div className="flex flex-col gap-5">
+              {revenueByCurrency.map(({ currency, rows }) => (
+                <div key={currency} className="flex flex-col gap-2">
+                  <div className="flex items-baseline justify-between gap-2 text-xs">
+                    <span className="font-semibold text-slate-600">{currency}</span>
+                    <span className="text-slate-400">
+                      {formatCurrency(
+                        rows.reduce((s, r) => s + r.value, 0),
+                        currency
+                      )}
+                    </span>
+                  </div>
+                  <HBarChart
+                    data={rows.map((r, i) => ({
+                      label: r.name,
+                      value: r.value,
+                      hue: hueAt(i),
+                    }))}
+                    formatValue={(n) => formatCurrency(n, currency)}
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
           )}
