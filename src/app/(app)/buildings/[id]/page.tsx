@@ -15,7 +15,14 @@ import { UnitEditModal } from "@/components/UnitEditModal";
 import { Toast, type ToastType } from "@/components/Toast";
 import { ConstructionStatusBadge } from "@/components/ConstructionStatusBadge";
 import { DuplicateBuildingModal } from "@/components/DuplicateBuildingModal";
-import { DocumentIcon, PencilIcon, GearIcon, DuplicateIcon } from "@/components/icons";
+import { PlanViewerModal } from "@/components/PlanViewerModal";
+import {
+  DocumentIcon,
+  PencilIcon,
+  GearIcon,
+  DuplicateIcon,
+  BlueprintIcon,
+} from "@/components/icons";
 import { IconAction, IconToolbar } from "@/components/ActionBar";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
@@ -43,6 +50,7 @@ export default function BuildingDetailPage() {
   const [pendingQuickBook, setPendingQuickBook] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
   // A stack of reversible structural edits (merge / split / delete / add) made
   // this session, so a mis-click can be undone with one button -- the data is
   // captured before each action and re-applied on undo.
@@ -422,9 +430,26 @@ export default function BuildingDetailPage() {
             {/* Four wide labelled buttons became one icon toolbar: the row
                 took most of the header and pushed the building's own name
                 and address into a corner. Each icon names itself on hover
-                (and via title/aria-label for touch and screen readers). */}
-            {role === "admin" && (
-              <IconToolbar>
+                (and via title/aria-label for touch and screen readers).
+                The plan sits in the same group but OUTSIDE the admin check:
+                the person who needs the floor plan open is the manager
+                sitting with a buyer, and the rest of this toolbar edits the
+                building, which they may not do. It appears only when a plan
+                has actually been uploaded. */}
+            {/* Guarded as a whole: ControlGroup always draws its bordered
+                box, so rendering it for a manager looking at a building with
+                no plan would leave an empty bordered stub in the header. */}
+            {(building.plan_url || role === "admin") && (
+            <IconToolbar>
+              {building.plan_url && (
+                <IconAction
+                  label={t.buildings.planTitle}
+                  icon={<BlueprintIcon className="h-4 w-4" />}
+                  onClick={() => setShowPlan(true)}
+                />
+              )}
+              {role === "admin" && (
+                <>
                 <IconAction
                   label={editMode ? t.buildings.editModeOn : t.buildings.editMode}
                   icon={<PencilIcon className="h-4 w-4" />}
@@ -447,9 +472,19 @@ export default function BuildingDetailPage() {
                   icon={<DuplicateIcon className="h-4 w-4" />}
                   onClick={() => setShowDuplicate(true)}
                 />
-              </IconToolbar>
+                </>
+              )}
+            </IconToolbar>
             )}
           </div>
+
+          {showPlan && building.plan_url && (
+            <PlanViewerModal
+              title={t.buildings.planTitle}
+              url={building.plan_url}
+              onClose={() => setShowPlan(false)}
+            />
+          )}
 
           {showDuplicate && (
             <DuplicateBuildingModal

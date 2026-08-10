@@ -63,6 +63,7 @@ function UnitCell({
   readOnly,
   onViewUnit,
   statusFilter,
+  roomsFilter,
   editMode,
 }: {
   unit: PropertyObject;
@@ -80,6 +81,7 @@ function UnitCell({
   readOnly: boolean;
   onViewUnit: (unit: PropertyObject) => void;
   statusFilter: ObjectStatus | null;
+  roomsFilter: number | null;
   editMode: boolean;
 }) {
   const { t } = useLocale();
@@ -100,7 +102,13 @@ function UnitCell({
   // Merging is a structural edit -- admins only (canEditSold gates that).
   const canMerge =
     canEditSold && unit.status === "available" && nextUnit && nextUnit.status === "available";
-  const dimmed = statusFilter !== null && unit.status !== statusFilter;
+  // Both filters narrow together, and a cell that fails either one is
+  // dimmed rather than removed: dropping cells would collapse the floors and
+  // the grid would stop being a shakhmatka -- the point of it is that every
+  // flat keeps its place whether or not it matches what you asked for.
+  const dimmed =
+    (statusFilter !== null && unit.status !== statusFilter) ||
+    (roomsFilter !== null && unit.rooms !== roomsFilter);
   const typeMeta = TYPE_META[unit.type ?? "apartment"];
 
   // Payment standing of this cell. Only meaningful where there IS a contract:
@@ -418,6 +426,7 @@ export function ShakhmatkaGrid({
 }) {
   const { t } = useLocale();
   const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
+  const [roomsFilter, setRoomsFilter] = useState<number | null>(null);
 
   if (units.length === 0) {
     return <p className="text-slate-400">{t.buildings.noUnits}</p>;
@@ -433,6 +442,18 @@ export function ShakhmatkaGrid({
   ).filter(
     (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
   );
+
+  // Room counts come from the units in THIS building, not from a fixed
+  // 1/2/3 list: a building with only two- and three-room flats gets exactly
+  // two buttons, and one where nobody filled the field in gets none at all
+  // rather than a filter that matches nothing. Counting alongside means the
+  // button can say how many there are, which is usually the actual question.
+  const roomCounts = new Map<number, number>();
+  for (const u of units) {
+    if (u.rooms == null) continue;
+    roomCounts.set(u.rooms, (roomCounts.get(u.rooms) ?? 0) + 1);
+  }
+  const presentRooms = Array.from(roomCounts.keys()).sort((a, b) => a - b);
 
   // Split the main residential grid from everything else. The main grid's
   // blocks, floors and column widths are computed from residential units ONLY,
@@ -527,10 +548,45 @@ export function ShakhmatkaGrid({
             </button>
           );
         })}
-        {statusFilter && (
+        {/* Rooms. Glued into one segmented control and divided from the
+            status pills, so the two filters read as two controls rather than
+            one long undifferentiated row. They combine: "available" + "2
+            rooms" answers the question a manager is actually asked. */}
+        {presentRooms.length > 0 && (
+          <span className="flex items-center gap-2 sm:ml-1 sm:border-l sm:border-slate-200 sm:pl-3">
+            <span className="text-slate-400">{t.buildings.roomsFilter}</span>
+            <span className="flex overflow-hidden rounded-lg border border-slate-200">
+              {presentRooms.map((rooms, i) => {
+                const active = roomsFilter === rooms;
+                return (
+                  <button
+                    key={rooms}
+                    type="button"
+                    onClick={() => setRoomsFilter((prev) => (prev === rooms ? null : rooms))}
+                    className={`px-2.5 py-1 transition-colors ${i > 0 ? "border-l border-slate-200" : ""} ${
+                      active
+                        ? "bg-brand text-white"
+                        : "bg-white text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {rooms} {t.buildings.roomsFilterShort}{" "}
+                    <span className={active ? "text-white/70" : "text-slate-400"}>
+                      {roomCounts.get(rooms)}
+                    </span>
+                  </button>
+                );
+              })}
+            </span>
+          </span>
+        )}
+
+        {(statusFilter || roomsFilter !== null) && (
           <button
             type="button"
-            onClick={() => setStatusFilter(null)}
+            onClick={() => {
+              setStatusFilter(null);
+              setRoomsFilter(null);
+            }}
             className="text-slate-400 hover:text-slate-600"
           >
             × {t.buildings.clearFilter}
@@ -635,6 +691,7 @@ export function ShakhmatkaGrid({
                             readOnly={readOnly}
                             onViewUnit={onViewUnit}
                             statusFilter={statusFilter}
+                            roomsFilter={roomsFilter}
                             editMode={editMode}
                           />
                         ) : canEditSold ? (
@@ -748,6 +805,7 @@ export function ShakhmatkaGrid({
                               readOnly={readOnly}
                               onViewUnit={onViewUnit}
                               statusFilter={statusFilter}
+                              roomsFilter={roomsFilter}
                               editMode={editMode}
                             />
                           </div>

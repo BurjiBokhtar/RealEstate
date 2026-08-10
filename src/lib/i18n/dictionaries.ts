@@ -531,6 +531,10 @@ export const dictionaries = {
       noUnits: "Помещений ещё нет — добавьте их по этажам ниже.",
       noBlock: "Без блока",
       clearFilter: "Сбросить фильтр",
+      planTitle: "План здания",
+      planOpenOriginal: "Открыть оригинал",
+      roomsFilter: "Комнат",
+      roomsFilterShort: "комн.",
       addUnitHere: "Добавить квартиру в это место",
       addUnitPrefilled:
         "Поля заполнены по образцу такой же позиции на другом этаже — проверьте перед сохранением.",
@@ -1342,6 +1346,10 @@ export const dictionaries = {
       noUnits: "Ҳоло ҳуҷра нест — онҳоро аз рӯи ошёна дар поён илова кунед.",
       noBlock: "Бе блок",
       clearFilter: "Бекор кардани филтр",
+      planTitle: "Плани бино",
+      planOpenOriginal: "Кушодани асл",
+      roomsFilter: "Ҳуҷраҳо",
+      roomsFilterShort: "хона",
       addUnitHere: "Дар ин ҷо хона илова кардан",
       addUnitPrefilled:
         "Майдонҳо аз рӯи ҳамин мавқеъ дар ошёнаи дигар пур карда шуданд — пеш аз захира санҷед.",
