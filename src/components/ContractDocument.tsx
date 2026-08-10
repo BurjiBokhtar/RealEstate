@@ -392,7 +392,15 @@ export function ContractDocument({
               </div>
             </div>
 
-            <div className="flex-1 px-3.5 py-1.5">
+            {/* Spread over the full height rather than stacked at the top.
+                The rail beside this is the taller of the two columns -- the
+                big flat number, the spec line and two stats add up to more
+                than five data rows -- so the rows used to end partway down
+                and leave a blank block of panel under them. Distributing
+                them costs nothing and invents no figures: the alternative
+                was padding the panel with numbers that are already printed
+                under the payment table. */}
+            <div className="flex flex-1 flex-col justify-between px-3.5 py-1.5">
               <SummaryRow label="Фурӯшанда" value={`ҶДММ «${companyName}»`} />
               <SummaryRow label="Харидор" value={contract.client?.name ?? "____________"} />
               <SummaryRow label="Шиноснома" value={contract.client?.passport ?? "—"} />
