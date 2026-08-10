@@ -63,11 +63,15 @@ export function RingChart({ data }: { data: RingDatum[] }) {
             key={d.id}
             onMouseEnter={() => setHover(d.id)}
             onMouseLeave={() => setHover(null)}
-            className="flex min-w-0 flex-1 basis-[92px] flex-col items-center transition-opacity"
+            className="flex min-w-0 flex-1 basis-[96px] flex-col items-center transition-opacity"
             style={{ opacity: dim ? 0.35 : 1 }}
             title={`${d.label} — ${d.sold}/${d.total}`}
           >
-            <svg viewBox="0 0 68 68" className="w-full max-w-[76px]">
+            {/* Grows with the card rather than sitting at a fixed 76px. The
+                card shares a row with the area donut and stretches to its
+                height, so a fixed ring left 90px of slack above and below on
+                a wide screen; letting it scale spends that on legibility. */}
+            <svg viewBox="0 0 68 68" className="w-full max-w-[124px]">
               <circle cx="34" cy="34" r={R} fill="none" stroke="#f1f5f9" strokeWidth="9" />
               <Arc from={soldFrac} span={reservedFrac} color={d.hue.soft} />
               <Arc from={0} span={soldFrac} color={d.hue.solid} />
@@ -75,12 +79,12 @@ export function RingChart({ data }: { data: RingDatum[] }) {
                 x="34"
                 y="38"
                 textAnchor="middle"
-                className="fill-slate-900 text-[15px] font-semibold tabular-nums"
+                className="fill-slate-900 text-[14px] font-semibold tabular-nums"
               >
                 {pct}%
               </text>
             </svg>
-            <p className="mt-1.5 w-full truncate text-center text-[11px] text-slate-600">
+            <p className="mt-2 w-full truncate text-center text-[11.5px] text-slate-600">
               {d.label}
             </p>
             <p className="text-center text-[10px] tabular-nums text-slate-400">

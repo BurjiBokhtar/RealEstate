@@ -10,7 +10,6 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
 import { RingChart } from "@/components/charts/RingChart";
-import { TreemapChart } from "@/components/charts/TreemapChart";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
@@ -340,23 +339,6 @@ export default function DashboardPage() {
       {/* Only what the hero doesn't already say: total/available/sold and
           paid revenue live up there now, so this row carries just the
           three numbers that don't. */}
-      {/* Floor area is a composition, not two independent numbers -- "total"
-          and "still for sale" were two tiles you had to divide in your head to
-          learn anything. As a ring the split reads at a glance, and the sold
-          and reserved shares (which no tile showed at all) come free. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
-        {area.total > 0 ? (
-          <DonutChart
-            slices={areaSlices}
-            centerLabel={t.dashboard.totalArea}
-            formatValue={formatArea}
-          />
-        ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-        )}
-      </div>
-
       {/* Overdue is gone from here: it now has a chart of its own on the
           debtors page, where the follow-up actually happens. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
@@ -420,7 +402,13 @@ export default function DashboardPage() {
       {/* Side by side, not stacked a screen apart: these two answer the same
           question about the same buildings ("how is each ЖК doing"), and
           comparing them meant scrolling between them. */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      {/* Occupancy and the area split share one row. The area donut used to
+          have a full-width card to itself, which put a 210px ring in the
+          middle of a 1150px card and left the rest of it blank -- the widest
+          stretch of nothing on the page. Both cards stretch to the same
+          height and centre their chart inside it, so the shorter of the two
+          does not end in a void either. */}
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
         {/* Occupancy as one horizontal bar per building, each drawn to 100% of
             its own total, sorted by the share sold. Columns shared the card's
             width between them, so every building added made all of them
@@ -428,7 +416,7 @@ export default function DashboardPage() {
             dropped out of the chart entirely. Rows spend width on the bar and
             height on the list, so the name stays readable at any number of
             buildings, and the order answers "what is nearly gone" on sight. */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-slate-700">
               {t.dashboard.occupancyByBuilding}
@@ -448,52 +436,73 @@ export default function DashboardPage() {
             </div>
           </div>
           {occupancy.length > 0 ? (
-            <RingChart data={occupancyRings} />
-          ) : (
-            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-          )}
-        </div>
-
-        {/* Revenue by building, ONE BLOCK PER CURRENCY.
-            The bar used to be as long as tjs + usd and the headline number was
-            that sum -- 10 265 129 TJS plus 419 395 USD shown as "10,7 млн",
-            which is 10.7 million of nothing. Adding two currencies produces a
-            figure that does not exist, and the real amounts were relegated to
-            grey small print underneath. Each currency now gets its own block,
-            its own scale and its own full-size figures. */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-slate-700">
-            {t.dashboard.revenueByBuilding}
-          </p>
-          {revenueByCurrency.length > 0 ? (
-            <div className="flex flex-col gap-5">
-              {revenueByCurrency.map(({ currency, rows }) => (
-                <div key={currency} className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-2 text-xs">
-                    <span className="font-semibold text-slate-600">{currency}</span>
-                    <span className="text-slate-400">
-                      {formatCurrency(
-                        rows.reduce((s, r) => s + r.value, 0),
-                        currency
-                      )}
-                    </span>
-                  </div>
-                  <TreemapChart
-                    data={rows.map((r) => ({
-                      id: r.id,
-                      label: r.name,
-                      value: r.value,
-                      hue: hueById.get(r.id) ?? BUILDING_HUES[0],
-                    }))}
-                    formatValue={(n) => formatCurrency(n, currency)}
-                  />
-                </div>
-              ))}
+            <div className="flex flex-1 items-center">
+              <RingChart data={occupancyRings} />
             </div>
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
           )}
         </div>
+
+        {/* Floor area as a composition: "total" and "still for sale" were two
+            tiles you had to divide in your head. As a ring the split reads at
+            a glance, and the sold/reserved shares come free. Sized smaller
+            than the revenue ring -- this is the supporting figure. */}
+        <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
+          {area.total > 0 ? (
+            <div className="flex flex-1 items-center justify-center">
+              <DonutChart
+                slices={areaSlices}
+                size={170}
+                thickness={26}
+                centerLabel={t.dashboard.totalArea}
+                formatValue={formatArea}
+              />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          )}
+        </div>
+
+      </div>
+
+      {/* Revenue by building, ONE BLOCK PER CURRENCY.
+          The bar used to be as long as tjs + usd and the headline number was
+          that sum -- 10 265 129 TJS plus 419 395 USD shown as "10,7 млн",
+          which is 10.7 million of nothing. Adding two currencies produces a
+          figure that does not exist, and the real amounts were relegated to
+          grey small print underneath. Each currency now gets its own block,
+          its own scale and its own full-size figures. */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="mb-4 text-sm font-semibold text-slate-700">
+          {t.dashboard.revenueByBuilding}
+        </p>
+        {revenueByCurrency.length > 0 ? (
+          <div
+            className={`grid gap-6 ${
+              revenueByCurrency.length > 1 ? "lg:grid-cols-2" : "grid-cols-1"
+            }`}
+          >
+            {revenueByCurrency.map(({ currency, rows }) => (
+              <DonutChart
+                key={currency}
+                size={240}
+                thickness={34}
+                centerLabel={currency}
+                slices={rows.map((r) => ({
+                  key: r.id,
+                  label: r.name,
+                  value: r.value,
+                  hue: hueById.get(r.id) ?? BUILDING_HUES[0],
+                }))}
+                formatValue={(n) => formatCurrency(n, currency)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+        )}
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
