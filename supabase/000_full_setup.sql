@@ -26,21 +26,27 @@
 
 create schema if not exists crm;
 
-create type crm.object_type as enum (
+do $idem$ begin
+  create type crm.object_type as enum (
   'apartment',
   'house',
   'commercial',
   'land',
   'construction_site'
 );
+exception when duplicate_object then null;
+end $idem$;
 
-create type crm.object_status as enum (
+do $idem$ begin
+  create type crm.object_status as enum (
   'available',
   'reserved',
   'sold',
   'rented',
   'in_progress'
 );
+exception when duplicate_object then null;
+end $idem$;
 
 create table if not exists crm.objects (
   id uuid primary key default gen_random_uuid(),
@@ -61,6 +67,7 @@ create index if not exists objects_status_idx on crm.objects (status);
 alter table crm.objects enable row level security;
 
 -- Permissive policy for initial development; tighten once auth/roles are added.
+drop policy if exists "Allow all access to objects" on crm.objects;
 create policy "Allow all access to objects" on crm.objects
   for all using (true) with check (true);
 
@@ -72,6 +79,7 @@ begin
 end;
 $$ language plpgsql;
 
+drop trigger if exists objects_set_updated_at on crm.objects;
 create trigger objects_set_updated_at
   before update on crm.objects
   for each row execute function crm.set_updated_at();
@@ -93,13 +101,16 @@ alter default privileges in schema crm grant all on sequences to anon, authentic
 
 -- ===== Clients / leads =====
 
-create type crm.lead_status as enum (
+do $idem$ begin
+  create type crm.lead_status as enum (
   'new',
   'contacted',
   'negotiation',
   'client',
   'lost'
 );
+exception when duplicate_object then null;
+end $idem$;
 
 create table if not exists crm.clients (
   id uuid primary key default gen_random_uuid(),
@@ -117,20 +128,25 @@ create table if not exists crm.clients (
 create index if not exists clients_status_idx on crm.clients (status);
 
 alter table crm.clients enable row level security;
+drop policy if exists "Allow all access to clients" on crm.clients;
 create policy "Allow all access to clients" on crm.clients
   for all using (true) with check (true);
 
+drop trigger if exists clients_set_updated_at on crm.clients;
 create trigger clients_set_updated_at
   before update on crm.clients
   for each row execute function crm.set_updated_at();
 
 -- ===== Tasks =====
 
-create type crm.task_status as enum (
+do $idem$ begin
+  create type crm.task_status as enum (
   'todo',
   'in_progress',
   'done'
 );
+exception when duplicate_object then null;
+end $idem$;
 
 create table if not exists crm.tasks (
   id uuid primary key default gen_random_uuid(),
@@ -148,21 +164,26 @@ create table if not exists crm.tasks (
 create index if not exists tasks_status_idx on crm.tasks (status);
 
 alter table crm.tasks enable row level security;
+drop policy if exists "Allow all access to tasks" on crm.tasks;
 create policy "Allow all access to tasks" on crm.tasks
   for all using (true) with check (true);
 
+drop trigger if exists tasks_set_updated_at on crm.tasks;
 create trigger tasks_set_updated_at
   before update on crm.tasks
   for each row execute function crm.set_updated_at();
 
 -- ===== Contracts =====
 
-create type crm.contract_status as enum (
+do $idem$ begin
+  create type crm.contract_status as enum (
   'draft',
   'active',
   'completed',
   'cancelled'
 );
+exception when duplicate_object then null;
+end $idem$;
 
 create table if not exists crm.contracts (
   id uuid primary key default gen_random_uuid(),
@@ -183,9 +204,11 @@ create index if not exists contracts_client_idx on crm.contracts (client_id);
 create index if not exists contracts_object_idx on crm.contracts (object_id);
 
 alter table crm.contracts enable row level security;
+drop policy if exists "Allow all access to contracts" on crm.contracts;
 create policy "Allow all access to contracts" on crm.contracts
   for all using (true) with check (true);
 
+drop trigger if exists contracts_set_updated_at on crm.contracts;
 create trigger contracts_set_updated_at
   before update on crm.contracts
   for each row execute function crm.set_updated_at();
@@ -203,9 +226,11 @@ create table if not exists crm.buildings (
 );
 
 alter table crm.buildings enable row level security;
+drop policy if exists "Allow all access to buildings" on crm.buildings;
 create policy "Allow all access to buildings" on crm.buildings
   for all using (true) with check (true);
 
+drop trigger if exists buildings_set_updated_at on crm.buildings;
 create trigger buildings_set_updated_at
   before update on crm.buildings
   for each row execute function crm.set_updated_at();
@@ -244,9 +269,11 @@ create table if not exists crm.settings (
 insert into crm.settings (id) values (true) on conflict (id) do nothing;
 
 alter table crm.settings enable row level security;
+drop policy if exists "Allow all access to settings" on crm.settings;
 create policy "Allow all access to settings" on crm.settings
   for all using (true) with check (true);
 
+drop trigger if exists settings_set_updated_at on crm.settings;
 create trigger settings_set_updated_at
   before update on crm.settings
   for each row execute function crm.set_updated_at();
@@ -268,18 +295,25 @@ insert into storage.buckets (id, name, public)
 values ('crm-media', 'crm-media', true)
 on conflict (id) do nothing;
 
+drop policy if exists "Public read crm-media" on storage.objects;
 create policy "Public read crm-media" on storage.objects
   for select using (bucket_id = 'crm-media');
+drop policy if exists "Public upload crm-media" on storage.objects;
 create policy "Public upload crm-media" on storage.objects
   for insert with check (bucket_id = 'crm-media');
+drop policy if exists "Public update crm-media" on storage.objects;
 create policy "Public update crm-media" on storage.objects
   for update using (bucket_id = 'crm-media');
+drop policy if exists "Public delete crm-media" on storage.objects;
 create policy "Public delete crm-media" on storage.objects
   for delete using (bucket_id = 'crm-media');
 
 -- ===== Contract payment type + installment schedule =====
 
-create type crm.payment_type as enum ('full', 'installment', 'barter');
+do $idem$ begin
+  create type crm.payment_type as enum ('full', 'installment', 'barter');
+exception when duplicate_object then null;
+end $idem$;
 
 alter table crm.contracts add column if not exists payment_type crm.payment_type not null default 'full';
 alter table crm.contracts add column if not exists installment_months integer;
@@ -300,6 +334,7 @@ create index if not exists contract_payments_contract_idx on crm.contract_paymen
 create index if not exists contract_payments_due_date_idx on crm.contract_payments (due_date);
 
 alter table crm.contract_payments enable row level security;
+drop policy if exists "Allow all access to contract_payments" on crm.contract_payments;
 create policy "Allow all access to contract_payments" on crm.contract_payments
   for all using (true) with check (true);
 
@@ -331,44 +366,54 @@ update crm.settings set sms_sender_name = null where sms_sender_name = 'BurjiBoh
 -- since anonymous access to every table below is removed.
 
 drop policy if exists "Allow all access to objects" on crm.objects;
+drop policy if exists "Authenticated access to objects" on crm.objects;
 create policy "Authenticated access to objects" on crm.objects
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to clients" on crm.clients;
+drop policy if exists "Authenticated access to clients" on crm.clients;
 create policy "Authenticated access to clients" on crm.clients
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to tasks" on crm.tasks;
+drop policy if exists "Authenticated access to tasks" on crm.tasks;
 create policy "Authenticated access to tasks" on crm.tasks
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to contracts" on crm.contracts;
+drop policy if exists "Authenticated access to contracts" on crm.contracts;
 create policy "Authenticated access to contracts" on crm.contracts
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to buildings" on crm.buildings;
+drop policy if exists "Authenticated access to buildings" on crm.buildings;
 create policy "Authenticated access to buildings" on crm.buildings
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to settings" on crm.settings;
+drop policy if exists "Authenticated access to settings" on crm.settings;
 create policy "Authenticated access to settings" on crm.settings
   for all to authenticated using (true) with check (true);
 
 drop policy if exists "Allow all access to contract_payments" on crm.contract_payments;
+drop policy if exists "Authenticated access to contract_payments" on crm.contract_payments;
 create policy "Authenticated access to contract_payments" on crm.contract_payments
   for all to authenticated using (true) with check (true);
 
 -- Storage stays public-read (facade photos/plans are non-sensitive marketing
 -- images), but only logged-in users may upload/modify/delete.
 drop policy if exists "Public upload crm-media" on storage.objects;
+drop policy if exists "Authenticated upload crm-media" on storage.objects;
 create policy "Authenticated upload crm-media" on storage.objects
   for insert to authenticated with check (bucket_id = 'crm-media');
 
 drop policy if exists "Public update crm-media" on storage.objects;
+drop policy if exists "Authenticated update crm-media" on storage.objects;
 create policy "Authenticated update crm-media" on storage.objects
   for update to authenticated using (bucket_id = 'crm-media');
 
 drop policy if exists "Public delete crm-media" on storage.objects;
+drop policy if exists "Authenticated delete crm-media" on storage.objects;
 create policy "Authenticated delete crm-media" on storage.objects
   for delete to authenticated using (bucket_id = 'crm-media');
 
@@ -390,7 +435,10 @@ alter table crm.tasks add column if not exists reminder_sent_at timestamptz;
 
 -- ===== Currency per object / per contract =====
 
-create type crm.currency as enum ('TJS', 'USD');
+do $idem$ begin
+  create type crm.currency as enum ('TJS', 'USD');
+exception when duplicate_object then null;
+end $idem$;
 
 alter table crm.objects add column if not exists currency crm.currency not null default 'TJS';
 alter table crm.contracts add column if not exists currency crm.currency not null default 'TJS';
@@ -562,17 +610,21 @@ $$;
 -- moved past that, only an admin can edit it further.
 drop policy if exists "Authenticated access to objects" on crm.objects;
 
+drop policy if exists "objects_select" on crm.objects;
 create policy "objects_select" on crm.objects
   for select to authenticated using (true);
 
+drop policy if exists "objects_insert" on crm.objects;
 create policy "objects_insert" on crm.objects
   for insert to authenticated with check (true);
 
+drop policy if exists "objects_update" on crm.objects;
 create policy "objects_update" on crm.objects
   for update to authenticated
   using (status = 'available' or crm.is_admin())
   with check (true);
 
+drop policy if exists "objects_delete" on crm.objects;
 create policy "objects_delete" on crm.objects
   for delete to authenticated using (true);
 
@@ -580,17 +632,21 @@ create policy "objects_delete" on crm.objects
 -- an existing contract is admin-only.
 drop policy if exists "Authenticated access to contracts" on crm.contracts;
 
+drop policy if exists "contracts_select" on crm.contracts;
 create policy "contracts_select" on crm.contracts
   for select to authenticated using (true);
 
+drop policy if exists "contracts_insert" on crm.contracts;
 create policy "contracts_insert" on crm.contracts
   for insert to authenticated with check (true);
 
+drop policy if exists "contracts_update" on crm.contracts;
 create policy "contracts_update" on crm.contracts
   for update to authenticated
   using (crm.is_admin())
   with check (true);
 
+drop policy if exists "contracts_delete" on crm.contracts;
 create policy "contracts_delete" on crm.contracts
   for delete to authenticated using (crm.is_admin());
 
@@ -620,17 +676,21 @@ alter table crm.objects add column if not exists rooms smallint;
 -- one is admin-only, same as contracts.
 drop policy if exists "Authenticated access to buildings" on crm.buildings;
 
+drop policy if exists "buildings_select" on crm.buildings;
 create policy "buildings_select" on crm.buildings
   for select to authenticated using (true);
 
+drop policy if exists "buildings_insert" on crm.buildings;
 create policy "buildings_insert" on crm.buildings
   for insert to authenticated with check (true);
 
+drop policy if exists "buildings_update" on crm.buildings;
 create policy "buildings_update" on crm.buildings
   for update to authenticated
   using (crm.is_admin())
   with check (true);
 
+drop policy if exists "buildings_delete" on crm.buildings;
 create policy "buildings_delete" on crm.buildings
   for delete to authenticated using (crm.is_admin());
 
@@ -853,9 +913,13 @@ drop policy if exists "clients_select" on crm.clients;
 drop policy if exists "clients_insert" on crm.clients;
 drop policy if exists "clients_update" on crm.clients;
 drop policy if exists "clients_delete" on crm.clients;
+drop policy if exists "clients_select" on crm.clients;
 create policy "clients_select" on crm.clients for select to authenticated using (true);
+drop policy if exists "clients_insert" on crm.clients;
 create policy "clients_insert" on crm.clients for insert to authenticated with check (true);
+drop policy if exists "clients_update" on crm.clients;
 create policy "clients_update" on crm.clients for update to authenticated using (true) with check (true);
+drop policy if exists "clients_delete" on crm.clients;
 create policy "clients_delete" on crm.clients for delete to authenticated using (crm.is_admin());
 
 drop policy if exists "Authenticated access to contract_payments" on crm.contract_payments;
@@ -863,9 +927,13 @@ drop policy if exists "contract_payments_select" on crm.contract_payments;
 drop policy if exists "contract_payments_insert" on crm.contract_payments;
 drop policy if exists "contract_payments_update" on crm.contract_payments;
 drop policy if exists "contract_payments_delete" on crm.contract_payments;
+drop policy if exists "contract_payments_select" on crm.contract_payments;
 create policy "contract_payments_select" on crm.contract_payments for select to authenticated using (true);
+drop policy if exists "contract_payments_insert" on crm.contract_payments;
 create policy "contract_payments_insert" on crm.contract_payments for insert to authenticated with check (true);
+drop policy if exists "contract_payments_update" on crm.contract_payments;
 create policy "contract_payments_update" on crm.contract_payments for update to authenticated using (crm.is_admin()) with check (true);
+drop policy if exists "contract_payments_delete" on crm.contract_payments;
 create policy "contract_payments_delete" on crm.contract_payments for delete to authenticated using (crm.is_admin());
 
 drop policy if exists "objects_delete" on crm.objects;
@@ -943,9 +1011,11 @@ drop policy if exists "Authenticated access to settings" on crm.settings;
 drop policy if exists "settings_select" on crm.settings;
 drop policy if exists "settings_update" on crm.settings;
 
+drop policy if exists "settings_select" on crm.settings;
 create policy "settings_select" on crm.settings
   for select to authenticated using (true);
 
+drop policy if exists "settings_update" on crm.settings;
 create policy "settings_update" on crm.settings
   for update to authenticated using (crm.is_admin()) with check (crm.is_admin());
 
@@ -1048,12 +1118,16 @@ drop policy if exists "buildings_select" on crm.buildings;
 drop policy if exists "buildings_insert" on crm.buildings;
 drop policy if exists "buildings_update" on crm.buildings;
 drop policy if exists "buildings_delete" on crm.buildings;
+drop policy if exists "buildings_select" on crm.buildings;
 create policy "buildings_select" on crm.buildings
   for select to authenticated using (crm.can_view_building(id));
+drop policy if exists "buildings_insert" on crm.buildings;
 create policy "buildings_insert" on crm.buildings
   for insert to authenticated with check (crm.is_admin());
+drop policy if exists "buildings_update" on crm.buildings;
 create policy "buildings_update" on crm.buildings
   for update to authenticated using (crm.is_admin()) with check (crm.is_admin());
+drop policy if exists "buildings_delete" on crm.buildings;
 create policy "buildings_delete" on crm.buildings
   for delete to authenticated using (crm.is_admin());
 
@@ -1062,17 +1136,20 @@ drop policy if exists "objects_select" on crm.objects;
 drop policy if exists "objects_insert" on crm.objects;
 drop policy if exists "objects_update" on crm.objects;
 drop policy if exists "objects_delete" on crm.objects;
+drop policy if exists "objects_select" on crm.objects;
 create policy "objects_select" on crm.objects
   for select to authenticated
   using (building_id is null or crm.can_view_building(building_id));
 -- Objects are admin-only for create/edit (managers/directors can still view
 -- and book them; the reservation RPC and contract triggers set status, not a
 -- direct object write). See migration 032.
+drop policy if exists "objects_insert" on crm.objects;
 create policy "objects_insert" on crm.objects
   for insert to authenticated
   with check (
     crm.is_admin() and (building_id is null or crm.can_view_building(building_id))
   );
+drop policy if exists "objects_update" on crm.objects;
 create policy "objects_update" on crm.objects
   for update to authenticated
   using (
@@ -1080,6 +1157,7 @@ create policy "objects_update" on crm.objects
     and (building_id is null or crm.can_view_building(building_id))
   )
   with check (crm.is_admin());
+drop policy if exists "objects_delete" on crm.objects;
 create policy "objects_delete" on crm.objects
   for delete to authenticated using (crm.is_admin());
 
@@ -1088,6 +1166,7 @@ drop policy if exists "contracts_select" on crm.contracts;
 drop policy if exists "contracts_insert" on crm.contracts;
 drop policy if exists "contracts_update" on crm.contracts;
 drop policy if exists "contracts_delete" on crm.contracts;
+drop policy if exists "contracts_select" on crm.contracts;
 create policy "contracts_select" on crm.contracts
   for select to authenticated
   using (
@@ -1097,6 +1176,7 @@ create policy "contracts_select" on crm.contracts
         and (o.building_id is null or crm.can_view_building(o.building_id))
     )
   );
+drop policy if exists "contracts_insert" on crm.contracts;
 create policy "contracts_insert" on crm.contracts
   for insert to authenticated
   with check (
@@ -1107,8 +1187,10 @@ create policy "contracts_insert" on crm.contracts
         and (o.building_id is null or crm.can_view_building(o.building_id))
     )
   );
+drop policy if exists "contracts_update" on crm.contracts;
 create policy "contracts_update" on crm.contracts
   for update to authenticated using (crm.is_admin()) with check (crm.is_admin());
+drop policy if exists "contracts_delete" on crm.contracts;
 create policy "contracts_delete" on crm.contracts
   for delete to authenticated using (crm.is_admin());
 
@@ -1117,6 +1199,7 @@ drop policy if exists "contract_payments_select" on crm.contract_payments;
 drop policy if exists "contract_payments_insert" on crm.contract_payments;
 drop policy if exists "contract_payments_update" on crm.contract_payments;
 drop policy if exists "contract_payments_delete" on crm.contract_payments;
+drop policy if exists "contract_payments_select" on crm.contract_payments;
 create policy "contract_payments_select" on crm.contract_payments
   for select to authenticated
   using (
@@ -1128,6 +1211,7 @@ create policy "contract_payments_select" on crm.contract_payments
         and (o.building_id is null or crm.can_view_building(o.building_id))
     )
   );
+drop policy if exists "contract_payments_insert" on crm.contract_payments;
 create policy "contract_payments_insert" on crm.contract_payments
   for insert to authenticated
   with check (
@@ -1140,8 +1224,10 @@ create policy "contract_payments_insert" on crm.contract_payments
         and (o.building_id is null or crm.can_view_building(o.building_id))
     )
   );
+drop policy if exists "contract_payments_update" on crm.contract_payments;
 create policy "contract_payments_update" on crm.contract_payments
   for update to authenticated using (crm.is_admin()) with check (crm.is_admin());
+drop policy if exists "contract_payments_delete" on crm.contract_payments;
 create policy "contract_payments_delete" on crm.contract_payments
   for delete to authenticated using (crm.is_admin());
 
@@ -1150,12 +1236,16 @@ drop policy if exists "clients_select" on crm.clients;
 drop policy if exists "clients_insert" on crm.clients;
 drop policy if exists "clients_update" on crm.clients;
 drop policy if exists "clients_delete" on crm.clients;
+drop policy if exists "clients_select" on crm.clients;
 create policy "clients_select" on crm.clients
   for select to authenticated using (true);
+drop policy if exists "clients_insert" on crm.clients;
 create policy "clients_insert" on crm.clients
   for insert to authenticated with check (crm.can_write());
+drop policy if exists "clients_update" on crm.clients;
 create policy "clients_update" on crm.clients
   for update to authenticated using (crm.can_write()) with check (crm.can_write());
+drop policy if exists "clients_delete" on crm.clients;
 create policy "clients_delete" on crm.clients
   for delete to authenticated using (crm.is_admin());
 
@@ -2236,12 +2326,14 @@ grant execute on function crm.sales_by_manager(date, date) to authenticated;
 drop policy if exists "objects_insert" on crm.objects;
 drop policy if exists "objects_update" on crm.objects;
 
+drop policy if exists "objects_insert" on crm.objects;
 create policy "objects_insert" on crm.objects
   for insert to authenticated
   with check (
     crm.is_admin() and (building_id is null or crm.can_view_building(building_id))
   );
 
+drop policy if exists "objects_update" on crm.objects;
 create policy "objects_update" on crm.objects
   for update to authenticated
   using (
@@ -3122,7 +3214,7 @@ where c.paid_amount is distinct from coalesce(
 -- security_invoker: представление читается правами вызывающего, значит RLS
 -- (и ограничение менеджера своими ЖК) работает как обычно.
 drop view if exists crm.overdue_installments cascade;
-create view crm.overdue_installments
+create or replace view crm.overdue_installments
 with (security_invoker = on)
 as
 with plan as (
