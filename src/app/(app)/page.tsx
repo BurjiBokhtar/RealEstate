@@ -10,7 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
 import { HBarChart } from "@/components/charts/HBarChart";
-import { StackedBarChart } from "@/components/charts/StackedBarChart";
+import { HStackedBarChart } from "@/components/charts/HStackedBarChart";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { STATUS_HUES, hueAt } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
@@ -422,10 +422,13 @@ export default function DashboardPage() {
           question about the same buildings ("how is each ЖК doing"), and
           comparing them meant scrolling between them. */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        {/* Occupancy as stacked columns: each building drawn to 100% of its own
-            total, so the chart answers "how much of THIS one is sold" -- which
-            is what occupancy means -- with the absolute count above the column
-            so size isn't lost. */}
+        {/* Occupancy as one horizontal bar per building, each drawn to 100% of
+            its own total, sorted by the share sold. Columns shared the card's
+            width between them, so every building added made all of them
+            narrower -- past a dozen or so the names had nowhere to go and
+            dropped out of the chart entirely. Rows spend width on the bar and
+            height on the list, so the name stays readable at any number of
+            buildings, and the order answers "what is nearly gone" on sight. */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-semibold text-slate-700">
@@ -444,7 +447,11 @@ export default function DashboardPage() {
             </div>
           </div>
           {occupancy.length > 0 ? (
-            <StackedBarChart series={occupancySeries} rows={occupancyRows} />
+            <HStackedBarChart
+              series={occupancySeries}
+              rows={occupancyRows}
+              sortBy="sold"
+            />
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
           )}
