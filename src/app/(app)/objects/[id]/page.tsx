@@ -20,15 +20,17 @@ export default function ObjectDetailPage() {
   const configured = isSupabaseConfigured();
   const { role } = useRole();
 
-  const [object, setObject] = useState<PropertyObject | null | undefined>(undefined);
+  // Seeded from `configured` rather than set from inside the effect: the
+  // flag is a build-time env check, constant for the whole session, so the
+  // not-configured case is a starting value, not something to synchronise.
+  const [object, setObject] = useState<PropertyObject | null | undefined>(
+    configured ? undefined : null
+  );
   const [submitting, setSubmitting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!configured) {
-      setObject(null);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
     supabase
       .schema("crm")

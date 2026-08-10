@@ -23,7 +23,12 @@ export default function EditBuildingPage() {
   const configured = isSupabaseConfigured();
   const { role, loading: roleLoading } = useRole();
 
-  const [building, setBuilding] = useState<Building | null | undefined>(undefined);
+  // Seeded from `configured` rather than set from inside the effect: the
+  // flag is a build-time env check, constant for the whole session, so the
+  // not-configured case is a starting value, not something to synchronise.
+  const [building, setBuilding] = useState<Building | null | undefined>(
+    configured ? undefined : null
+  );
   const [values, setValues] = useState<BuildingInput>(emptyBuildingInput);
   const [units, setUnits] = useState<PropertyObject[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -40,10 +45,7 @@ export default function EditBuildingPage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!configured) {
-      setBuilding(null);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
     supabase
       .schema("crm")

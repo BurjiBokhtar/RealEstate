@@ -17,13 +17,13 @@ export default function BuildingsPage() {
   const configured = isSupabaseConfigured();
 
   const [buildings, setBuildings] = useState<Building[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Seeded from `configured` rather than set from inside the effect: the
+  // flag is a build-time env check, constant for the whole session, so the
+  // not-configured case is a starting value, not something to synchronise.
+  const [loading, setLoading] = useState(configured);
 
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
     supabase
       .schema("crm")

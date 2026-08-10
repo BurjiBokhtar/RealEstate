@@ -38,24 +38,34 @@ export default function ObjectsPage() {
   const [buildingStats, setBuildingStats] = useState<
     Record<string, { available: number; availableArea: number; total: number }>
   >({});
-  const [loading, setLoading] = useState(true);
+  // "Loading" is derived, not stored. It is exactly "the data on screen does
+  // not belong to the parameters currently set", so it is a comparison, not a
+  // flag raised before a fetch and lowered after -- and raising it inside the
+  // effect cost a second render every time a filter moved. Not configured
+  // means nothing will ever load, so it is not loading either.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
   const [typeFilter, setTypeFilter] = useState<ObjectType | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ObjectStatus | "all">("all");
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, typeFilter, statusFilter]);
+  // Every filter change restarts at page 1 -- page 7 of the previous result
+  // set means nothing once the filter moved. Done in the handlers rather
+  // than in an effect watching them: the reset is part of the event.
+  function onFilterChange<T>(set: (v: T) => void) {
+    return (v: T) => {
+      set(v);
+      setPage(1);
+    };
+  }
+
+  const queryKey = [page, search, typeFilter, statusFilter].join("|");
+  const loading = configured && loadedKey !== queryKey;
 
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
-    setLoading(true);
 
     let query = supabase
       .schema("crm")
@@ -74,9 +84,9 @@ export default function ObjectsPage() {
     query.then(({ data, count }) => {
       setObjects((data ?? []) as PropertyObject[]);
       setTotalCount(count ?? 0);
-      setLoading(false);
+      setLoadedKey(queryKey);
     });
-  }, [configured, page, search, typeFilter, statusFilter]);
+  }, [configured, page, search, typeFilter, statusFilter, queryKey]);
 
   useEffect(() => {
     if (!configured) return;
@@ -160,7 +170,7 @@ export default function ObjectsPage() {
       <div className="flex flex-wrap gap-3">
         <input
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={(e) => onFilterChange(setSearchInput)(e.target.value)}
           placeholder={t.objects.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
@@ -169,7 +179,7 @@ export default function ObjectsPage() {
         <ControlGroup>
           <select
             value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as ObjectType | "all")}
+            onChange={(e) => onFilterChange(setTypeFilter)(e.target.value as ObjectType | "all")}
             className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
           >
             <option value="all">{t.objects.filters.allTypes}</option>
@@ -182,7 +192,7 @@ export default function ObjectsPage() {
           <GroupDivider />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as ObjectStatus | "all")}
+            onChange={(e) => onFilterChange(setStatusFilter)(e.target.value as ObjectStatus | "all")}
             className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
           >
             <option value="all">{t.objects.filters.allStatuses}</option>

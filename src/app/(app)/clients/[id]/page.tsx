@@ -83,7 +83,12 @@ export default function ClientDetailPage() {
   const { role } = useRole();
   const confirm = useConfirm();
 
-  const [client, setClient] = useState<Client | null | undefined>(undefined);
+  // Seeded from `configured` rather than set from inside the effect: the
+  // flag is a build-time env check, constant for the whole session, so the
+  // not-configured case is a starting value, not something to synchronise.
+  const [client, setClient] = useState<Client | null | undefined>(
+    configured ? undefined : null
+  );
   const [interestedObject, setInterestedObject] = useState<{
     id: string;
     name: string;
@@ -248,10 +253,7 @@ export default function ClientDetailPage() {
   };
 
   useEffect(() => {
-    if (!configured) {
-      setClient(null);
-      return;
-    }
+    if (!configured) return;
     loadClient();
     loadContracts();
     loadPayments();

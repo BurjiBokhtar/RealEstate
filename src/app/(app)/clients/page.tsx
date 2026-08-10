@@ -39,7 +39,12 @@ export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [debts, setDebts] = useState<Record<string, ClientDebt>>({});
   const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // "Loading" is derived, not stored. It is exactly "the data on screen does
+  // not belong to the filters currently set", so it is a comparison, not a
+  // flag to raise before a fetch and lower after -- and raising it inside
+  // the effect was a second render on every keystroke. Not configured means
+  // nothing will ever load, so it is not loading either.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const search = useDebouncedValue(searchInput);
@@ -52,9 +57,17 @@ export default function ClientsPage() {
   const [buildingId, setBuildingId] = useState("all");
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, sort, dateFrom, dateTo, buildingId]);
+  // Every filter change restarts at page 1 -- page 7 of the previous result
+  // set means nothing once the filter moved, and asking for it can land on an
+  // empty page. Done in the handlers that change a filter rather than in an
+  // effect watching them: the reset is part of the event, not state that
+  // needs synchronising after the fact.
+  function onFilterChange<T>(set: (v: T) => void) {
+    return (v: T) => {
+      set(v);
+      setPage(1);
+    };
+  }
 
   useEffect(() => {
     if (!configured) return;
@@ -66,13 +79,12 @@ export default function ClientsPage() {
       .then(({ data }) => setBuildings((data ?? []) as Array<{ id: string; name: string }>));
   }, [configured]);
 
+  const queryKey = [page, search, sort, dateFrom, dateTo, buildingId].join("|");
+  const loading = configured && loadedKey !== queryKey;
+
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
-    setLoading(true);
 
     // !inner turns the embed into a join filter: only clients WITH a
     // contract on a unit in the chosen building come back, and the row is
@@ -114,7 +126,7 @@ export default function ClientsPage() {
       const rows = (data ?? []) as unknown as Client[];
       setClients(rows);
       setTotalCount(count ?? 0);
-      setLoading(false);
+      setLoadedKey(queryKey);
 
       if (rows.length === 0) {
         setDebts({});
@@ -143,7 +155,7 @@ export default function ClientsPage() {
       }
       setDebts(map);
     });
-  }, [configured, page, search, sort, dateFrom, dateTo, buildingId]);
+  }, [configured, page, search, sort, dateFrom, dateTo, buildingId, queryKey]);
 
   // Build the export rows on demand (every client, per-currency debt), fed
   // to the Excel/PDF menu.
@@ -225,7 +237,7 @@ export default function ClientsPage() {
       <div className="flex flex-wrap items-center gap-3">
         <input
           value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
+          onChange={(e) => onFilterChange(setSearchInput)(e.target.value)}
           placeholder={t.clients.search}
           className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
@@ -241,7 +253,7 @@ export default function ClientsPage() {
             value={dateFrom}
             min={MIN_BUSINESS_DATE}
             max={dateTo || todayISO()}
-            onChange={(e) => setDateFrom(e.target.value)}
+            onChange={(e) => onFilterChange(setDateFrom)(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.from}`}
             className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
           />
@@ -251,7 +263,7 @@ export default function ClientsPage() {
             value={dateTo}
             min={dateFrom || MIN_BUSINESS_DATE}
             max={todayISO()}
-            onChange={(e) => setDateTo(e.target.value)}
+            onChange={(e) => onFilterChange(setDateTo)(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.to}`}
             className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
           />
@@ -262,6 +274,7 @@ export default function ClientsPage() {
               onClick={() => {
                 setDateFrom("");
                 setDateTo("");
+                setPage(1);
               }}
             />
           )}
@@ -275,7 +288,7 @@ export default function ClientsPage() {
               once. */}
           <select
             value={buildingId}
-            onChange={(e) => setBuildingId(e.target.value)}
+            onChange={(e) => onFilterChange(setBuildingId)(e.target.value)}
             aria-label={t.clients.buildingFilter}
             title={t.clients.buildingFilter}
             className="h-10 max-w-[150px] rounded-md border-0 bg-transparent px-1.5 text-xs text-slate-700 focus:outline-none"
@@ -303,7 +316,7 @@ export default function ClientsPage() {
               label={opt.label}
               icon={opt.icon}
               active={sort === opt.id}
-              onClick={() => setSort(opt.id)}
+              onClick={() => onFilterChange(setSort)(opt.id)}
             />
           ))}
         </ControlGroup>

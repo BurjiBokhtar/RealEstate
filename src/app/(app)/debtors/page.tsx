@@ -113,7 +113,12 @@ export default function DebtorsPage() {
   >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  // "Loading" is derived, not stored. It is exactly "the data on screen does
+  // not belong to the parameters currently set", so it is a comparison, not a
+  // flag raised before a fetch and lowered after -- and raising it inside the
+  // effect cost a second render every time a filter moved. Not configured
+  // means nothing will ever load, so it is not loading either.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
 
   // Paged, 25 at a time. Two ceilings had to go here. First: the page used to
@@ -124,13 +129,12 @@ export default function DebtorsPage() {
   // thousand contracts in arrears -- and on THIS page a silently truncated
   // list means somebody who owes money never gets called. Hence real paging,
   // with the row count coming from the server rather than from rows.length.
+  const queryKey = [page, sort, buildingId].join("|");
+  const loading = configured && loadedKey !== queryKey;
+
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     let cancelled = false;
-    setLoading(true);
     const from = (page - 1) * PAGE_SIZE;
     const order = SORTS[sort];
     createClient()
@@ -150,7 +154,7 @@ export default function DebtorsPage() {
           setFailure(error.message);
           setRows([]);
           setTotalCount(0);
-          setLoading(false);
+          setLoadedKey(queryKey);
           return;
         }
         const batch = (data ?? []) as OverdueRow[];
@@ -165,12 +169,12 @@ export default function DebtorsPage() {
         setFailure(null);
         setRows(batch.map((r) => toDebt(r, now)));
         setTotalCount(count ?? 0);
-        setLoading(false);
+        setLoadedKey(queryKey);
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, page, sort, buildingId]);
+  }, [configured, page, sort, buildingId, queryKey]);
 
   // The headline totals cover EVERY debtor, not the 25 on screen, so they come
   // from their own aggregate instead of being summed from `rows`.

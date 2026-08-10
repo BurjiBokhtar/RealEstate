@@ -18,14 +18,16 @@ export default function TaskDetailPage() {
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
 
-  const [task, setTask] = useState<Task | null | undefined>(undefined);
+  // Seeded from `configured` rather than set from inside the effect: the
+  // flag is a build-time env check, constant for the whole session, so the
+  // not-configured case is a starting value, not something to synchronise.
+  const [task, setTask] = useState<Task | null | undefined>(
+    configured ? undefined : null
+  );
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!configured) {
-      setTask(null);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
     supabase
       .schema("crm")

@@ -106,9 +106,13 @@ export default function DashboardPage() {
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
-  const [loading, setLoading] = useState(true);
-  const [failure, setFailure] = useState<string | null>(null);
   const configured = isSupabaseConfigured();
+  // "Loading" is derived, not stored. It is exactly "the figures on screen do
+  // not belong to the building and period currently selected", so it is a
+  // comparison, not a flag raised before the RPC and lowered after. Not
+  // configured means nothing will ever load, so it is not loading either.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -126,6 +130,11 @@ export default function DashboardPage() {
 
   // The building list feeds the filter dropdown only, and doesn't change when
   // the filter does -- so it is fetched once, not on every re-scope.
+  const queryKey = [selectedBuildingId, periodBounds?.start ?? "", periodBounds?.end ?? ""].join(
+    "|"
+  );
+  const loading = configured && loadedKey !== queryKey;
+
   useEffect(() => {
     if (!configured) return;
     let cancelled = false;
@@ -143,12 +152,8 @@ export default function DashboardPage() {
   }, [configured]);
 
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     let cancelled = false;
-    setLoading(true);
     createClient()
       .schema("crm")
       .rpc("dashboard_summary", {
@@ -169,12 +174,12 @@ export default function DashboardPage() {
           setFailure(null);
           setSummary({ ...EMPTY_SUMMARY, ...(data as DashboardSummary | null) });
         }
-        setLoading(false);
+        setLoadedKey(queryKey);
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, selectedBuildingId, periodBounds]);
+  }, [configured, selectedBuildingId, periodBounds, queryKey]);
 
   const counts = summary.counts;
   const area = summary.area;

@@ -20,21 +20,31 @@ export default function TasksPage() {
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  // "Loading" is derived, not stored. It is exactly "the data on screen does
+  // not belong to the parameters currently set", so it is a comparison, not a
+  // flag raised before a fetch and lowered after -- and raising it inside the
+  // effect cost a second render every time a filter moved. Not configured
+  // means nothing will ever load, so it is not loading either.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<TaskStatusValue | "all">("all");
 
-  useEffect(() => {
-    setPage(1);
-  }, [statusFilter]);
+  // Every filter change restarts at page 1 -- page 7 of the previous result
+  // set means nothing once the filter moved. Done in the handlers rather
+  // than in an effect watching them: the reset is part of the event.
+  function onFilterChange<T>(set: (v: T) => void) {
+    return (v: T) => {
+      set(v);
+      setPage(1);
+    };
+  }
+
+  const queryKey = [page, statusFilter].join("|");
+  const loading = configured && loadedKey !== queryKey;
 
   useEffect(() => {
-    if (!configured) {
-      setLoading(false);
-      return;
-    }
+    if (!configured) return;
     const supabase = createClient();
-    setLoading(true);
 
     let query = supabase.schema("crm").from("tasks").select("*", { count: "exact" });
     if (statusFilter !== "all") query = query.eq("status", statusFilter);
@@ -46,9 +56,9 @@ export default function TasksPage() {
     query.then(({ data, count }) => {
       setTasks((data ?? []) as Task[]);
       setTotalCount(count ?? 0);
-      setLoading(false);
+      setLoadedKey(queryKey);
     });
-  }, [configured, page, statusFilter]);
+  }, [configured, page, statusFilter, queryKey]);
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -76,14 +86,14 @@ export default function TasksPage() {
           <PillButton
             label={t.tasks.filters.allStatuses}
             active={statusFilter === "all"}
-            onClick={() => setStatusFilter("all")}
+            onClick={() => onFilterChange(setStatusFilter)("all")}
           />
           {TASK_STATUSES.map((status) => (
             <PillButton
               key={status}
               label={t.tasks.statuses[status]}
               active={statusFilter === status}
-              onClick={() => setStatusFilter(status)}
+              onClick={() => onFilterChange(setStatusFilter)(status)}
             />
           ))}
         </ControlGroup>
