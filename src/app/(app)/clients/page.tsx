@@ -10,8 +10,16 @@ import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
-import { ActionBar, ControlGroup, GroupDivider, IconAction, PillButton } from "@/components/ActionBar";
-import { CalendarIcon, CloseIcon, PlusIcon, SortIcon } from "@/components/icons";
+import { ActionBar, ControlGroup, GroupDivider, IconAction } from "@/components/ActionBar";
+import {
+  CalendarIcon,
+  CloseIcon,
+  PlusIcon,
+  SortDateNewIcon,
+  SortDateOldIcon,
+  SortNameAzIcon,
+  SortNameZaIcon,
+} from "@/components/icons";
 import { MIN_BUSINESS_DATE, todayISO } from "@/lib/dates";
 import type { Client } from "@/lib/clients/types";
 
@@ -40,10 +48,23 @@ export default function ClientsPage() {
   // "everything up to March" work without inventing a second control.
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  // "all" rather than null so the <option> value round-trips as a string.
+  const [buildingId, setBuildingId] = useState("all");
+  const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
 
   useEffect(() => {
     setPage(1);
-  }, [search, sort, dateFrom, dateTo]);
+  }, [search, sort, dateFrom, dateTo, buildingId]);
+
+  useEffect(() => {
+    if (!configured) return;
+    createClient()
+      .schema("crm")
+      .from("buildings")
+      .select("id, name")
+      .order("name")
+      .then(({ data }) => setBuildings((data ?? []) as Array<{ id: string; name: string }>));
+  }, [configured]);
 
   useEffect(() => {
     if (!configured) {
@@ -53,7 +74,22 @@ export default function ClientsPage() {
     const supabase = createClient();
     setLoading(true);
 
-    let query = supabase.schema("crm").from("clients").select("*", { count: "exact" });
+    // !inner turns the embed into a join filter: only clients WITH a
+    // contract on a unit in the chosen building come back, and the row is
+    // still one row per client however many contracts matched. Selecting
+    // the plain "*" when no building is chosen keeps the default listing
+    // from carrying contract rows it has no use for.
+    const selectCols =
+      buildingId === "all"
+        ? "*"
+        : "*, contracts!inner(object:objects!inner(building_id))";
+    let query = supabase
+      .schema("crm")
+      .from("clients")
+      .select(selectCols, { count: "exact" });
+    if (buildingId !== "all") {
+      query = query.eq("contracts.object.building_id", buildingId);
+    }
     if (search.trim()) {
       const q = search.trim();
       query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%,phone2.ilike.%${q}%`);
@@ -73,7 +109,9 @@ export default function ClientsPage() {
       .range(from, from + PAGE_SIZE - 1);
 
     query.then(async ({ data, count }) => {
-      const rows = (data ?? []) as Client[];
+      // Through unknown: the select string is chosen at runtime, so
+      // supabase-js cannot parse it into a row type at compile time.
+      const rows = (data ?? []) as unknown as Client[];
       setClients(rows);
       setTotalCount(count ?? 0);
       setLoading(false);
@@ -105,7 +143,7 @@ export default function ClientsPage() {
       }
       setDebts(map);
     });
-  }, [configured, page, search, sort, dateFrom, dateTo]);
+  }, [configured, page, search, sort, dateFrom, dateTo, buildingId]);
 
   // Build the export rows on demand (every client, per-currency debt), fed
   // to the Excel/PDF menu.
@@ -230,20 +268,40 @@ export default function ClientsPage() {
 
           <GroupDivider />
 
-          <span className="pl-0.5 text-slate-400" aria-hidden="true">
-            <SortIcon className="h-[19px] w-[19px]" />
-          </span>
+          {/* Which building a client bought in. Clients have no building of
+              their own -- the link runs client → contract → unit → building --
+              so this filters through the relationship rather than on a column,
+              and a buyer with two flats in the same building still appears
+              once. */}
+          <select
+            value={buildingId}
+            onChange={(e) => setBuildingId(e.target.value)}
+            aria-label={t.clients.buildingFilter}
+            title={t.clients.buildingFilter}
+            className="h-10 max-w-[150px] rounded-md border-0 bg-transparent px-1.5 text-xs text-slate-700 focus:outline-none"
+          >
+            <option value="all">{t.clients.allObjects}</option>
+            {buildings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+
+          <GroupDivider />
+
           {(
             [
-              { id: "new", label: t.clients.sort.newest },
-              { id: "old", label: t.clients.sort.oldest },
-              { id: "az", label: t.clients.sort.az },
-              { id: "za", label: t.clients.sort.za },
+              { id: "new", label: t.clients.sort.newest, icon: <SortDateNewIcon /> },
+              { id: "old", label: t.clients.sort.oldest, icon: <SortDateOldIcon /> },
+              { id: "az", label: t.clients.sort.az, icon: <SortNameAzIcon /> },
+              { id: "za", label: t.clients.sort.za, icon: <SortNameZaIcon /> },
             ] as const
           ).map((opt) => (
-            <PillButton
+            <IconAction
               key={opt.id}
               label={opt.label}
+              icon={opt.icon}
               active={sort === opt.id}
               onClick={() => setSort(opt.id)}
             />

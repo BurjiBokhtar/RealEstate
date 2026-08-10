@@ -208,3 +208,62 @@ export function BlueprintIcon({ className }: IconProps) {
     </Icon>
   );
 }
+
+// Sort options as icons. The four written-out choices ("Нав", "Кӯҳна",
+// "А–Я", "Я–А") took more width than the date range they sat next to; the
+// pair is distinguished by WHAT is sorted -- a calendar for the date a client
+// was added, a letter for their name -- and the arrow gives the direction.
+// Each button still names itself on hover, so the icon never has to carry the
+// whole meaning on its own.
+function SortArrow({ up }: { up: boolean }) {
+  return up ? (
+    <path d="M18 20V8m0 0-2.6 2.8M18 8l2.6 2.8" />
+  ) : (
+    <path d="M18 8v12m0 0 2.6-2.8M18 20l-2.6-2.8" />
+  );
+}
+
+export function SortDateNewIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="2.5" y="5" width="11" height="10.5" rx="1.5" />
+      <path d="M2.5 8.5h11M5.5 3.5v3M10.5 3.5v3" />
+      <SortArrow up={false} />
+    </Icon>
+  );
+}
+
+export function SortDateOldIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="2.5" y="5" width="11" height="10.5" rx="1.5" />
+      <path d="M2.5 8.5h11M5.5 3.5v3M10.5 3.5v3" />
+      <SortArrow up />
+    </Icon>
+  );
+}
+
+// The "А" is drawn, not typed: a <text> glyph inside a stroke-only icon set
+// picks up the font of whatever page it lands on and stops matching its
+// neighbours.
+function LetterA() {
+  return <path d="M2.5 16.5 7 5l4.5 11.5M4.2 12.6h5.6" />;
+}
+
+export function SortNameAzIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <LetterA />
+      <SortArrow up={false} />
+    </Icon>
+  );
+}
+
+export function SortNameZaIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <LetterA />
+      <SortArrow up />
+    </Icon>
+  );
+}
