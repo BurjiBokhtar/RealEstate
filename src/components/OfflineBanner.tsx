@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 
 // Honest connection indicator. When the internet drops, the app keeps
@@ -9,22 +9,35 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 // says exactly that instead of letting someone think a payment went through.
 // When the connection returns, it offers a one-tap refresh to pull the
 // current data from the server.
+function subscribeToConnection(onChange: () => void) {
+  window.addEventListener("online", onChange);
+  window.addEventListener("offline", onChange);
+  return () => {
+    window.removeEventListener("online", onChange);
+    window.removeEventListener("offline", onChange);
+  };
+}
+
+const isOnline = () => navigator.onLine;
+
 export function OfflineBanner() {
   const { t } = useLocale();
-  // Start "online" for SSR; correct on mount to avoid a hydration flash.
-  const [online, setOnline] = useState(true);
+  // Whether the browser is online is not React state -- it is a fact about
+  // the machine that changes on its own. Subscribing to it is what
+  // useSyncExternalStore is for; the previous version copied it into state
+  // from inside an effect, which meant an extra render on every mount just to
+  // correct a guess. The server has no connection to report, so it says
+  // "online" and the browser corrects it during hydration without a flash.
+  const online = useSyncExternalStore(subscribeToConnection, isOnline, () => true);
+
+  // Not a snapshot but a transition -- "was offline, now back" -- so it stays
+  // ordinary state, set from the event callbacks rather than from the effect
+  // body.
   const [reconnected, setReconnected] = useState(false);
 
   useEffect(() => {
-    setOnline(navigator.onLine);
-    const goOffline = () => {
-      setOnline(false);
-      setReconnected(false);
-    };
-    const goOnline = () => {
-      setOnline(true);
-      setReconnected(true);
-    };
+    const goOffline = () => setReconnected(false);
+    const goOnline = () => setReconnected(true);
     window.addEventListener("offline", goOffline);
     window.addEventListener("online", goOnline);
     return () => {

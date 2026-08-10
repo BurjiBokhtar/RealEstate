@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BackLink } from "@/components/BackLink";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
@@ -22,6 +22,8 @@ import { Toast, type ToastType } from "@/components/Toast";
 import { formatCurrency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
+import { unitLabel } from "@/lib/objects/format";
+import { apartmentNumbersForBuildings } from "@/lib/buildings/apartmentNumbersFor";
 import { useRole } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
 import type { Contract, ContractInput, ContractPayment } from "@/lib/contracts/types";
@@ -39,6 +41,10 @@ type ClientContract = Contract & {
     name: string;
     area: number | null;
     price: number | null;
+    block: string | null;
+    floor: number | null;
+    position_in_floor: number | null;
+    building_id: string | null;
     building: { name: string } | null;
   } | null;
 };
@@ -95,6 +101,7 @@ export default function ClientDetailPage() {
     building_id: string | null;
   } | null>(null);
   const [contracts, setContracts] = useState<ClientContract[]>([]);
+  const [apartmentNumbers, setApartmentNumbers] = useState<Map<string, number>>(new Map());
   // Cascade-delete confirmation: open flag + the name the admin has typed.
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTyped, setDeleteTyped] = useState("");
@@ -106,32 +113,25 @@ export default function ClientDetailPage() {
     message: null,
     type: "success",
   });
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  // Where the back button goes; defaults to the client list.
-  const [backTo, setBackTo] = useState<string | null>(null);
+  // ?contract=<id> is the contract to open, ?from=<path> is where the visitor
+  // came from. Both are read straight from the URL rather than copied into
+  // state by an effect: they are what the page was opened with, not something
+  // that changes underneath it. Read through the Next hook so the server
+  // renders the same thing the browser does -- window.location exists only in
+  // the browser, so the previous version rendered a collapsed card on the
+  // server and expanded it a moment after hydration.
+  const searchParams = useSearchParams();
+  const [expandedId, setExpandedId] = useState<string | null>(searchParams.get("contract"));
+  // Only same-origin relative paths: never let a query parameter turn the
+  // back button into a link to somebody else’s site.
+  const fromParam = searchParams.get("from");
+  const backTo =
+    fromParam && fromParam.startsWith("/") && !fromParam.startsWith("//") ? fromParam : null;
   // Which contract's edit form is open, and which apartment's price dialog --
   // both used to live on the separate /contracts/[id] screen.
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
   const [pricingContract, setPricingContract] = useState<ClientContract | null>(null);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // Read ?contract=<id> once on mount (plain URLSearchParams, not the
-  // Next.js hook -- avoids a Suspense boundary just for a one-off read) so
-  // a redirect from the old cash-desk URL lands pre-expanded.
-  //
-  // ?from=<path> is where the visitor actually came from. Opening a sold flat
-  // in the shakhmatka lands here, and "back to the client list" sent people to
-  // a page they had never been on -- the way out has to point at the
-  // shakhmatka instead.
-  useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const id = q.get("contract");
-    if (id) setExpandedId(id);
-    const from = q.get("from");
-    // Only same-origin relative paths: never let a query parameter turn the
-    // back button into a link to somebody else's site.
-    if (from && from.startsWith("/") && !from.startsWith("//")) setBackTo(from);
-  }, []);
 
   useEffect(() => {
     if (!expandedId) return;
@@ -167,12 +167,22 @@ export default function ClientDetailPage() {
       .schema("crm")
       .from("contracts")
       .select(
-        "id, number, client_id, object_id, amount, paid_amount, currency, amount_words, status, signed_date, notes, payment_type, installment_months, barter_details, created_at, updated_at, object:objects(id, name, area, price, building:buildings(name))"
+        "id, number, client_id, object_id, amount, paid_amount, currency, amount_words, status, signed_date, notes, payment_type, installment_months, barter_details, created_at, updated_at, object:objects(id, name, area, price, block, floor, position_in_floor, building_id, building:buildings(name))"
       )
       .eq("client_id", params.id)
       .order("signed_date", { ascending: false });
     const rows = (data ?? []) as unknown as ClientContract[];
     setContracts(rows);
+    // A flat number is not stored on the unit -- it comes from where the unit
+    // sits in its building grid, so the buildings this client bought in have
+    // to be read to work it out. One request per distinct building, and a
+    // client normally has one.
+    setApartmentNumbers(
+      await apartmentNumbersForBuildings(
+        supabase,
+        rows.map((r) => r.object?.building_id)
+      )
+    );
     // One apartment means there is nothing to choose between -- open it, so
     // the payment history and the cash desk are on screen straight away
     // instead of one click down.
@@ -568,7 +578,13 @@ export default function ClientDetailPage() {
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-slate-900">
-                            {c.object?.name ?? "—"}
+                            {c.object
+                              ? unitLabel(
+                                  c.object,
+                                  apartmentNumbers.get(c.object.id),
+                                  t.buildings
+                                )
+                              : "—"}
                           </p>
                           <p className="truncate text-xs text-slate-400">
                             {[c.object?.building?.name, c.number ? `№${c.number}` : null]
