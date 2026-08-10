@@ -12,6 +12,7 @@ import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaCha
 import { RingChart } from "@/components/charts/RingChart";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
+import { STATUS_RING_COLORS } from "@/lib/objects/format";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -95,6 +96,13 @@ const areaFormat = new Intl.NumberFormat("ru-RU");
 function formatArea(m2: number) {
   return `${areaFormat.format(Math.round(m2))} м²`;
 }
+
+// The shakhmatka legend order, in the shakhmatka colours.
+const RING_LEGEND = [
+  { key: "sold", color: STATUS_RING_COLORS.sold },
+  { key: "reserved", color: STATUS_RING_COLORS.reserved },
+  { key: "available", color: STATUS_RING_COLORS.free },
+] as const;
 
 export default function DashboardPage() {
   const { t } = useLocale();
@@ -241,10 +249,9 @@ export default function DashboardPage() {
           sold: b.counts.sold + b.counts.rented,
           reserved: b.counts.reserved,
           total: b.total,
-          hue: hueById.get(b.id) ?? BUILDING_HUES[0],
         }))
         .sort((a, x) => (x.total ? x.sold / x.total : 0) - (a.total ? a.sold / a.total : 0)),
-    [occupancy, hueById]
+    [occupancy]
   );
 
   // Floor area as a composition. Only non-zero statuses become slices, so a
@@ -421,23 +428,23 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-slate-700">
               {t.dashboard.occupancyByBuilding}
             </p>
-            {/* The colour of a ring says WHICH building, so it cannot also
-                say which status. The two tints do that, and the key shows
-                them in neutral grey rather than claiming a hue. */}
+            {/* The same three swatches the shakhmatka filter row shows, in
+                the same colours, so the two screens read as one system. */}
             <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-600" />
-                {t.objects.statuses.sold}
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
-                {t.objects.statuses.reserved}
-              </span>
+              {RING_LEGEND.map((l) => (
+                <span key={l.key} className="flex items-center gap-1.5">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ background: l.color }}
+                  />
+                  {t.objects.statuses[l.key]}
+                </span>
+              ))}
             </div>
           </div>
           {occupancy.length > 0 ? (
             <div className="flex flex-1 items-center">
-              <RingChart data={occupancyRings} />
+              <RingChart data={occupancyRings} colors={STATUS_RING_COLORS} />
             </div>
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>

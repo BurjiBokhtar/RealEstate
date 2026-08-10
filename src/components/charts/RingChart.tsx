@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { BuildingHue } from "./palette";
+
 
 export type RingDatum = {
   id: string;
@@ -11,20 +11,20 @@ export type RingDatum = {
   /** Units held but not yet sold -- the pale arc that continues it. */
   reserved: number;
   total: number;
-  hue: BuildingHue;
 };
 
 // One ring per building, side by side.
 //
-// The stacked bars this replaces painted the FREE part of a building bright
-// green across the full width, so a building where nothing had sold read as a
-// solid green success. Here "not sold" is simply an unfilled track: an empty
-// ring looks empty, which is the honest picture.
+// The arcs carry the SAME colours a cell carries in the shakhmatka -- sold
+// red, reserved amber, free green -- because that is the mapping everyone
+// using this program already reads all day. A ring in the building’s own
+// colour was prettier and made the two dashboard cards agree with each
+// other, but it agreed with nothing the user actually works in, and a chart
+// nobody can decode without a legend is not worth the tidiness.
 //
-// Sold and reserved are two tints of the building's own colour rather than two
-// different colours, so the ring says one thing at a glance -- how far this
-// building has got -- and the colour is free to say WHICH building, matching
-// its tile in the revenue chart beside it.
+// Free stays the pale shade rather than the full green: it is the part that
+// has NOT happened yet, and at full strength an empty building read as a
+// solid green success.
 
 const R = 26;
 const C = 2 * Math.PI * R;
@@ -48,7 +48,9 @@ function Arc({ from, span, color }: { from: number; span: number; color: string 
   );
 }
 
-export function RingChart({ data }: { data: RingDatum[] }) {
+export type RingColors = { sold: string; reserved: string; free: string };
+
+export function RingChart({ data, colors }: { data: RingDatum[]; colors: RingColors }) {
   const [hover, setHover] = useState<string | null>(null);
 
   return (
@@ -72,9 +74,11 @@ export function RingChart({ data }: { data: RingDatum[] }) {
                 height, so a fixed ring left 90px of slack above and below on
                 a wide screen; letting it scale spends that on legibility. */}
             <svg viewBox="0 0 68 68" className="w-full max-w-[124px]">
-              <circle cx="34" cy="34" r={R} fill="none" stroke="#f1f5f9" strokeWidth="9" />
-              <Arc from={soldFrac} span={reservedFrac} color={d.hue.soft} />
-              <Arc from={0} span={soldFrac} color={d.hue.solid} />
+              {/* The track IS the free part -- it needs no arc of its own,
+                  and drawing one would double-count the rounding. */}
+              <circle cx="34" cy="34" r={R} fill="none" stroke={colors.free} strokeWidth="9" />
+              <Arc from={soldFrac} span={reservedFrac} color={colors.reserved} />
+              <Arc from={0} span={soldFrac} color={colors.sold} />
               <text
                 x="34"
                 y="38"
