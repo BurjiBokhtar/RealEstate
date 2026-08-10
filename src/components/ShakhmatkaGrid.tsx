@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
+import { ControlGroup, GroupDivider, PillButton } from "@/components/ActionBar";
 import type { ObjectStatus, PropertyObject } from "@/lib/objects/types";
 
 export type UnitContractInfo = {
@@ -407,6 +407,8 @@ export function ShakhmatkaGrid({
   canEditSold,
   readOnly = false,
   onViewUnit,
+  statusFilter,
+  roomsFilter,
   editMode = false,
 }: {
   units: PropertyObject[];
@@ -422,38 +424,15 @@ export function ShakhmatkaGrid({
   canEditSold: boolean;
   readOnly?: boolean;
   onViewUnit: (unit: PropertyObject) => void;
+  statusFilter: ObjectStatus | null;
+  roomsFilter: number | null;
   editMode?: boolean;
 }) {
   const { t } = useLocale();
-  const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
-  const [roomsFilter, setRoomsFilter] = useState<number | null>(null);
 
   if (units.length === 0) {
     return <p className="text-slate-400">{t.buildings.noUnits}</p>;
   }
-
-  // The three statuses core to selling units are always in the legend, so
-  // it never looks like "Продано" or "Забронировано" quietly disappeared
-  // just because nothing currently has that status. Only the two rarer,
-  // non-sales statuses ("rented"/"in_progress") are hidden when unused.
-  const CORE_STATUSES: ObjectStatus[] = ["available", "reserved", "sold"];
-  const presentStatuses = (
-    Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>
-  ).filter(
-    (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
-  );
-
-  // Room counts come from the units in THIS building, not from a fixed
-  // 1/2/3 list: a building with only two- and three-room flats gets exactly
-  // two buttons, and one where nobody filled the field in gets none at all
-  // rather than a filter that matches nothing. Counting alongside means the
-  // button can say how many there are, which is usually the actual question.
-  const roomCounts = new Map<number, number>();
-  for (const u of units) {
-    if (u.rooms == null) continue;
-    roomCounts.set(u.rooms, (roomCounts.get(u.rooms) ?? 0) + 1);
-  }
-  const presentRooms = Array.from(roomCounts.keys()).sort((a, b) => a - b);
 
   // Split the main residential grid from everything else. The main grid's
   // blocks, floors and column widths are computed from residential units ONLY,
@@ -527,96 +506,6 @@ export function ShakhmatkaGrid({
 
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        {presentStatuses.map((status) => {
-          const active = statusFilter === status;
-          return (
-            <button
-              key={status}
-              type="button"
-              onClick={() => setStatusFilter((prev) => (prev === status ? null : status))}
-              className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 transition-all ${
-                active
-                  ? "border-slate-900 bg-brand text-white"
-                  : "border-transparent text-slate-600 hover:bg-slate-100"
-              }`}
-            >
-              <span
-                className={`h-2.5 w-2.5 rounded-full ${STATUS_COLORS[status].split(" ")[0]}`}
-              />
-              {t.buildings.legend[status]}
-            </button>
-          );
-        })}
-        {/* Rooms. Glued into one segmented control and divided from the
-            status pills, so the two filters read as two controls rather than
-            one long undifferentiated row. They combine: "available" + "2
-            rooms" answers the question a manager is actually asked. */}
-        {presentRooms.length > 0 && (
-          <span className="flex items-center gap-2 sm:ml-1 sm:border-l sm:border-slate-200 sm:pl-3">
-            <span className="text-slate-400">{t.buildings.roomsFilter}</span>
-            <span className="flex overflow-hidden rounded-lg border border-slate-200">
-              {presentRooms.map((rooms, i) => {
-                const active = roomsFilter === rooms;
-                return (
-                  <button
-                    key={rooms}
-                    type="button"
-                    onClick={() => setRoomsFilter((prev) => (prev === rooms ? null : rooms))}
-                    className={`px-2.5 py-1 transition-colors ${i > 0 ? "border-l border-slate-200" : ""} ${
-                      active
-                        ? "bg-brand text-white"
-                        : "bg-white text-slate-600 hover:bg-slate-100"
-                    }`}
-                  >
-                    {rooms} {t.buildings.roomsFilterShort}{" "}
-                    <span className={active ? "text-white/70" : "text-slate-400"}>
-                      {roomCounts.get(rooms)}
-                    </span>
-                  </button>
-                );
-              })}
-            </span>
-          </span>
-        )}
-
-        {(statusFilter || roomsFilter !== null) && (
-          <button
-            type="button"
-            onClick={() => {
-              setStatusFilter(null);
-              setRoomsFilter(null);
-            }}
-            className="text-slate-400 hover:text-slate-600"
-          >
-            × {t.buildings.clearFilter}
-          </button>
-        )}
-
-        {/* What the fill and the tick on a cell mean. Not buttons: these are a
-            reading key, not another filter. */}
-        {/* The divider only makes sense while this sits on the same line as
-            the status pills; once the row wraps it would start a line. */}
-        <span className="flex flex-wrap items-center gap-3 text-slate-500 sm:ml-1 sm:border-l sm:border-slate-200 sm:pl-3">
-          <span className="flex items-center gap-1.5">
-            {/* Shown in the "продано" hue: that is the status people are
-                actually chasing a balance on, and the bar takes its colour
-                from the cell it sits in. */}
-            <span
-              className={`flex h-2.5 w-6 overflow-hidden rounded-sm ${STATUS_PROGRESS_COLORS.sold.track}`}
-            >
-              <span className={`h-full w-3/5 ${STATUS_PROGRESS_COLORS.sold.fill}`} />
-            </span>
-            {t.buildings.hover.partlyPaid}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <svg viewBox="0 0 24 24" className="h-3 w-3 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 12.5l5.5 5.5L20 6.5" />
-            </svg>
-            {t.buildings.hover.fullyPaid}
-          </span>
-        </span>
-      </div>
 
       {/* Blocks/entrances sit side by side as columns sharing the same floor
           rows, rather than stacked one under another -- lets you compare
@@ -819,6 +708,150 @@ export function ShakhmatkaGrid({
           })}
         </div>
       )}
+
+      {/* What the bar and the tick on a cell mean. This is a reading key, not
+          a control, and it used to sit in the filter row -- which made that
+          row long enough to read as a wall of chips and buried the two actual
+          filters in it. It belongs under the grid: you look it up after
+          seeing a cell you don't recognise, not before. */}
+      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+        <span className="flex items-center gap-1.5">
+          {/* Shown in the "продано" hue: that is the status people are
+              actually chasing a balance on, and the bar takes its colour
+              from the cell it sits in. */}
+          <span
+            className={`flex h-2.5 w-6 overflow-hidden rounded-sm ${STATUS_PROGRESS_COLORS.sold.track}`}
+          >
+            <span className={`h-full w-3/5 ${STATUS_PROGRESS_COLORS.sold.fill}`} />
+          </span>
+          {t.buildings.hover.partlyPaid}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg
+            viewBox="0 0 24 24"
+            className="h-3 w-3 text-emerald-600"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 12.5l5.5 5.5L20 6.5" />
+          </svg>
+          {t.buildings.hover.fullyPaid}
+        </span>
+      </div>
     </div>
+  );
+}
+
+// The filter bar, lifted out of the grid so it can sit on the page header
+// line beside the icon toolbar instead of on a row of its own.
+//
+// Everything here is one bordered group with internal dividers, the same
+// primitive the icon toolbar uses. Before, the statuses were separate loose
+// pills, the rooms were a second bordered box with a text label in front of
+// it, and the payment key was a third cluster after that -- three unrelated
+// shapes strung across the full width. Glued, at the toolbar's own size, it
+// reads as one control and takes roughly half the room.
+export function ShakhmatkaFilters({
+  units,
+  statusFilter,
+  onStatusChange,
+  roomsFilter,
+  onRoomsChange,
+}: {
+  units: PropertyObject[];
+  statusFilter: ObjectStatus | null;
+  onStatusChange: (next: ObjectStatus | null) => void;
+  roomsFilter: number | null;
+  onRoomsChange: (next: number | null) => void;
+}) {
+  const { t } = useLocale();
+
+  // The three statuses core to selling are always offered, so it never looks
+  // like "sold" quietly disappeared just because nothing has that status yet.
+  // The two rarer ones appear only when actually used.
+  const CORE_STATUSES: ObjectStatus[] = ["available", "reserved", "sold"];
+  const presentStatuses = (
+    Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>
+  ).filter(
+    (status) => CORE_STATUSES.includes(status) || units.some((u) => u.status === status)
+  );
+
+  // Room counts come from the units of THIS building, not a fixed 1/2/3 list.
+  const roomCounts = new Map<number, number>();
+  for (const u of units) {
+    if (u.rooms == null) continue;
+    roomCounts.set(u.rooms, (roomCounts.get(u.rooms) ?? 0) + 1);
+  }
+  const presentRooms = Array.from(roomCounts.keys()).sort((a, b) => a - b);
+  const anyActive = statusFilter !== null || roomsFilter !== null;
+
+  return (
+    <ControlGroup size="sm">
+      {presentStatuses.map((status) => {
+        const active = statusFilter === status;
+        return (
+          <PillButton
+            key={status}
+            active={active}
+            onClick={() => onStatusChange(active ? null : status)}
+            label={
+              <span className="flex items-center gap-1.5">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[status].split(" ")[0]} ${
+                    // On the brand fill the green "available" dot all but
+                    // vanishes on the emerald theme; a hairline ring keeps
+                    // every dot legible whatever colour sits behind it.
+                    active ? "ring-1 ring-white/80" : ""
+                  }`}
+                />
+                {t.buildings.legend[status]}
+              </span>
+            }
+          />
+        );
+      })}
+
+      {presentRooms.length > 0 && (
+        <>
+          <GroupDivider />
+          {presentRooms.map((rooms) => {
+            const active = roomsFilter === rooms;
+            return (
+              <PillButton
+                key={rooms}
+                active={active}
+                onClick={() => onRoomsChange(active ? null : rooms)}
+                title={t.buildings.roomsFilter}
+                label={
+                  <span className="flex items-center gap-1">
+                    {rooms} {t.buildings.roomsFilterShort}
+                    <span className={active ? "text-white/70" : "text-slate-400"}>
+                      {roomCounts.get(rooms)}
+                    </span>
+                  </span>
+                }
+              />
+            );
+          })}
+        </>
+      )}
+
+      {anyActive && (
+        <>
+          <GroupDivider />
+          <PillButton
+            label="×"
+            title={t.buildings.clearFilter}
+            onClick={() => {
+              onStatusChange(null);
+              onRoomsChange(null);
+            }}
+          />
+        </>
+      )}
+    </ControlGroup>
   );
 }

@@ -8,7 +8,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
-import { ShakhmatkaGrid, type UnitContractInfo } from "@/components/ShakhmatkaGrid";
+import {
+  ShakhmatkaGrid,
+  ShakhmatkaFilters,
+  type UnitContractInfo,
+} from "@/components/ShakhmatkaGrid";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
 import { UnitEditModal } from "@/components/UnitEditModal";
@@ -26,7 +30,7 @@ import {
 import { IconAction, IconToolbar } from "@/components/ActionBar";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
-import type { PropertyObject } from "@/lib/objects/types";
+import type { ObjectStatus, PropertyObject } from "@/lib/objects/types";
 import { useRole } from "@/lib/auth/useRole";
 
 export default function BuildingDetailPage() {
@@ -51,6 +55,11 @@ export default function BuildingDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [showDuplicate, setShowDuplicate] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  // Filter state lives here, not in the grid: the bar that drives it now sits
+  // in the page header beside the toolbar, while the cells it dims are inside
+  // the grid.
+  const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
+  const [roomsFilter, setRoomsFilter] = useState<number | null>(null);
   // A stack of reversible structural edits (merge / split / delete / add) made
   // this session, so a mis-click can be undone with one button -- the data is
   // captured before each action and re-applied on undo.
@@ -436,11 +445,24 @@ export default function BuildingDetailPage() {
                 sitting with a buyer, and the rest of this toolbar edits the
                 building, which they may not do. It appears only when a plan
                 has actually been uploaded. */}
+            {/* Filters and actions share one right-hand cluster, both at the
+                small size so they line up as a single band instead of a tall
+                icon row above a separate strip of chips. */}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+            {units.length > 0 && (
+              <ShakhmatkaFilters
+                units={units}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                roomsFilter={roomsFilter}
+                onRoomsChange={setRoomsFilter}
+              />
+            )}
             {/* Guarded as a whole: ControlGroup always draws its bordered
                 box, so rendering it for a manager looking at a building with
                 no plan would leave an empty bordered stub in the header. */}
             {(building.plan_url || role === "admin") && (
-            <IconToolbar>
+            <IconToolbar size="sm">
               {building.plan_url && (
                 <IconAction
                   label={t.buildings.planTitle}
@@ -476,6 +498,7 @@ export default function BuildingDetailPage() {
               )}
             </IconToolbar>
             )}
+            </div>
           </div>
 
           {showPlan && building.plan_url && (
@@ -525,6 +548,8 @@ export default function BuildingDetailPage() {
             onDeleteUnit={handleDeleteUnit}
             canEditSold={role === "admin"}
             onViewUnit={setViewingUnit}
+            statusFilter={statusFilter}
+            roomsFilter={roomsFilter}
           />
 
           {addingUnit && (
