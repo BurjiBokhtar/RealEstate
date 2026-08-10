@@ -9,10 +9,10 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
-import { HBarChart } from "@/components/charts/HBarChart";
-import { HStackedBarChart } from "@/components/charts/HStackedBarChart";
+import { RingChart } from "@/components/charts/RingChart";
+import { TreemapChart } from "@/components/charts/TreemapChart";
 import { DonutChart } from "@/components/charts/DonutChart";
-import { STATUS_HUES, hueAt } from "@/components/charts/palette";
+import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -218,35 +218,34 @@ export default function DashboardPage() {
     [summary.occupancy]
   );
 
-  // Occupancy, shaped for the stacked chart. Only the three statuses that
-  // actually occur in a sales pipeline get a band; rented / in-progress are
-  // folded in only when a building really has them, so a normal building isn't
-  // carrying two empty legend entries.
-  const occupancySeries = useMemo(() => {
-    const base: Array<{ key: ObjectStatus; label: string }> = [
-      { key: "sold", label: t.objects.statuses.sold },
-      { key: "reserved", label: t.objects.statuses.reserved },
-      { key: "available", label: t.objects.statuses.available },
-    ];
-    const extra: Array<{ key: ObjectStatus; label: string }> = (
-      ["rented", "in_progress"] as ObjectStatus[]
-    )
-      .filter((k) => summary.occupancy.some((b) => (b[k] ?? 0) > 0))
-      .map((k) => ({ key: k, label: t.objects.statuses[k] }));
-    return [...base, ...extra].map((s) => ({
-      key: s.key,
-      label: s.label,
-      hue: STATUS_HUES[s.key],
-    }));
-  }, [summary.occupancy, t]);
-
-  const occupancyRows = useMemo(
+  // One colour per building, shared by the rings and the revenue tiles, so a
+  // building is the same colour wherever it appears. Built from both lists:
+  // a building can have sold nothing yet still be missing from one of them.
+  const hueById = useMemo(
     () =>
-      occupancy.map((b) => ({
-        label: b.name,
-        values: b.counts as unknown as Record<string, number>,
-      })),
-    [occupancy]
+      buildingHues([
+        ...summary.occupancy.map((b) => b.id),
+        ...summary.revenue_by_building.map((b) => b.id),
+      ]),
+    [summary.occupancy, summary.revenue_by_building]
+  );
+
+  // Ranked most-sold first, so the ring you read first is the one that
+  // matters. "Sold" folds in rented: both mean the flat is no longer for
+  // sale, which is what the ring is measuring.
+  const occupancyRings = useMemo(
+    () =>
+      occupancy
+        .map((b) => ({
+          id: b.id,
+          label: b.name,
+          sold: b.counts.sold + b.counts.rented,
+          reserved: b.counts.reserved,
+          total: b.total,
+          hue: hueById.get(b.id) ?? BUILDING_HUES[0],
+        }))
+        .sort((a, x) => (x.total ? x.sold / x.total : 0) - (a.total ? a.sold / a.total : 0)),
+    [occupancy, hueById]
   );
 
   // Floor area as a composition. Only non-zero statuses become slices, so a
@@ -277,7 +276,7 @@ export default function DashboardPage() {
       .map((currency) => ({
         currency,
         rows: revenueByBuilding
-          .map((b) => ({ name: b.name, value: currency === "USD" ? b.usd : b.tjs }))
+          .map((b) => ({ id: b.id, name: b.name, value: currency === "USD" ? b.usd : b.tjs }))
           .filter((r) => r.value > 0)
           .sort((a, b) => b.value - a.value),
       }))
@@ -434,24 +433,22 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold text-slate-700">
               {t.dashboard.occupancyByBuilding}
             </p>
+            {/* The colour of a ring says WHICH building, so it cannot also
+                say which status. The two tints do that, and the key shows
+                them in neutral grey rather than claiming a hue. */}
             <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
-              {occupancySeries.map((s) => (
-                <span key={s.key} className="flex items-center gap-1.5">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: s.hue.solid }}
-                  />
-                  {s.label}
-                </span>
-              ))}
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-600" />
+                {t.objects.statuses.sold}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
+                {t.objects.statuses.reserved}
+              </span>
             </div>
           </div>
           {occupancy.length > 0 ? (
-            <HStackedBarChart
-              series={occupancySeries}
-              rows={occupancyRows}
-              sortBy="sold"
-            />
+            <RingChart data={occupancyRings} />
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
           )}
@@ -481,11 +478,12 @@ export default function DashboardPage() {
                       )}
                     </span>
                   </div>
-                  <HBarChart
-                    data={rows.map((r, i) => ({
+                  <TreemapChart
+                    data={rows.map((r) => ({
+                      id: r.id,
                       label: r.name,
                       value: r.value,
-                      hue: hueAt(i),
+                      hue: hueById.get(r.id) ?? BUILDING_HUES[0],
                     }))}
                     formatValue={(n) => formatCurrency(n, currency)}
                   />

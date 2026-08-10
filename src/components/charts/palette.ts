@@ -69,3 +69,44 @@ export function axisTicks(max: number, steps = 4): { top: number; ticks: number[
   const top = step * steps;
   return { top, ticks: Array.from({ length: steps + 1 }, (_, i) => step * i) };
 }
+
+// A colour per BUILDING, and the same colour for that building in every chart
+// that mentions it.
+//
+// The revenue ranking used to take its colours from the row's position --
+// first row green, second blue, third amber, fourth red. Colour therefore
+// carried no information at all, and worse, it lied twice over: red is
+// "продано" in the occupancy legend next to it, so the building EARNING THE
+// LEAST looked like a warning, and a building changed colour the moment the
+// ranking reordered. Keyed to the building instead, the same colour means the
+// same place on both cards, and following one building across them is a
+// glance rather than a search.
+export type BuildingHue = ChartHue & { soft: string };
+
+export const BUILDING_HUES: BuildingHue[] = [
+  { from: "#2dd4bf", to: "#0d9488", solid: "#0d9488", soft: "#99f6e4" }, // teal
+  { from: "#818cf8", to: "#4f46e5", solid: "#4f46e5", soft: "#c7d2fe" }, // indigo
+  { from: "#fbbf24", to: "#d97706", solid: "#d97706", soft: "#fde68a" }, // amber
+  { from: "#c084fc", to: "#7c3aed", solid: "#7c3aed", soft: "#ddd6fe" }, // violet
+  { from: "#22d3ee", to: "#0891b2", solid: "#0891b2", soft: "#a5f3fc" }, // cyan
+  { from: "#fb7185", to: "#e11d48", solid: "#e11d48", soft: "#fecdd3" }, // rose
+  { from: "#a3e635", to: "#4d7c0f", solid: "#4d7c0f", soft: "#d9f99d" }, // lime
+  { from: "#fb923c", to: "#ea580c", solid: "#ea580c", soft: "#fed7aa" }, // orange
+];
+
+/**
+ * Stable building id → colour.
+ *
+ * Assigned over the ids SORTED, not over the order they arrive in. The two
+ * charts sort their rows differently (one by occupancy, one by revenue, and
+ * revenue again per currency), so an index-based colour would have given the
+ * same building a different colour in each -- which is exactly the problem
+ * this replaces.
+ */
+export function buildingHues(ids: string[]): Map<string, BuildingHue> {
+  const map = new Map<string, BuildingHue>();
+  [...new Set(ids)]
+    .sort()
+    .forEach((id, i) => map.set(id, BUILDING_HUES[i % BUILDING_HUES.length]));
+  return map;
+}
