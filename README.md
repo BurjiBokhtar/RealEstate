@@ -31,9 +31,15 @@ Next.js (App Router) · Supabase (Postgres, схема `crm`, RLS) · Tailwind �
    первый пользователь автоматически становится админом.
 3. **Закрыть регистрацию**: Authentication → Sign In / Providers →
    Allow new users to sign up → **OFF**.
-4. **Переменные окружения**: см. `.env.local.example`. В Vercel задать
+4. **Схему `crm` открыть наружу**: Project Settings → API → Exposed schemas →
+   добавить `crm`. Без этого шага программа подключится, но не увидит ни одной
+   таблицы — PostgREST отдаёт только перечисленные там схемы.
+5. **Переменные окружения**: см. `.env.local.example`. В Vercel задать
    `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY` (все из одного проекта!) → Redeploy.
+
+Перенос на другой Vercel/Supabase или запуск на своём компьютере как сервере —
+[DEPLOY.md](DEPLOY.md).
 
 ## Разработка
 
