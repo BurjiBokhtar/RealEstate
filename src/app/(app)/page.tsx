@@ -9,10 +9,9 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
-import { RingChart } from "@/components/charts/RingChart";
+import { RingChart, type RingSegment } from "@/components/charts/RingChart";
 import { DonutChart } from "@/components/charts/DonutChart";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
-import { STATUS_RING_COLORS } from "@/lib/objects/format";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
@@ -97,12 +96,21 @@ function formatArea(m2: number) {
   return `${areaFormat.format(Math.round(m2))} м²`;
 }
 
-// The shakhmatka legend order, in the shakhmatka colours.
-const RING_LEGEND = [
-  { key: "sold", color: STATUS_RING_COLORS.sold },
-  { key: "reserved", color: STATUS_RING_COLORS.reserved },
-  { key: "available", color: STATUS_RING_COLORS.free },
-] as const;
+// Both cards in this row read STATUS_HUES, so the ring and the area donut
+// cannot drift apart: the green in one IS the green in the other.
+const RING_COLORS = {
+  sold: STATUS_HUES.sold.solid,
+  reserved: STATUS_HUES.reserved.solid,
+  free: STATUS_HUES.available.solid,
+};
+
+// Legend order matches the shakhmatka's. `segment` is what the ring calls
+// the band; `status` is what the dictionary calls it.
+const RING_LEGEND: Array<{ segment: RingSegment; status: ObjectStatus; color: string }> = [
+  { segment: "sold", status: "sold", color: RING_COLORS.sold },
+  { segment: "reserved", status: "reserved", color: RING_COLORS.reserved },
+  { segment: "free", status: "available", color: RING_COLORS.free },
+];
 
 export default function DashboardPage() {
   const { t } = useLocale();
@@ -112,6 +120,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
+  const [legendSegment, setLegendSegment] = useState<RingSegment | null>(null);
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
   const configured = isSupabaseConfigured();
   // "Loading" is derived, not stored. It is exactly "the figures on screen do
@@ -429,22 +438,36 @@ export default function DashboardPage() {
               {t.dashboard.occupancyByBuilding}
             </p>
             {/* The same three swatches the shakhmatka filter row shows, in
-                the same colours, so the two screens read as one system. */}
-            <div className="flex flex-wrap gap-3 text-[11px] text-slate-500">
+                the same colours, so the two screens read as one system.
+                Hovering one lights that band in every ring at once -- which
+                is how you answer "where is anything still free" without
+                reading five rings one by one. */}
+            <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
               {RING_LEGEND.map((l) => (
-                <span key={l.key} className="flex items-center gap-1.5">
+                <span
+                  key={l.segment}
+                  onMouseEnter={() => setLegendSegment(l.segment)}
+                  onMouseLeave={() => setLegendSegment(null)}
+                  className={`flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors ${
+                    legendSegment === l.segment ? "bg-slate-100 text-slate-700" : ""
+                  }`}
+                >
                   <span
                     className="h-2.5 w-2.5 rounded-full"
                     style={{ background: l.color }}
                   />
-                  {t.objects.statuses[l.key]}
+                  {t.objects.statuses[l.status]}
                 </span>
               ))}
             </div>
           </div>
           {occupancy.length > 0 ? (
             <div className="flex flex-1 items-center">
-              <RingChart data={occupancyRings} colors={STATUS_RING_COLORS} />
+              <RingChart
+                data={occupancyRings}
+                colors={RING_COLORS}
+                activeSegment={legendSegment}
+              />
             </div>
           ) : (
             <p className="text-sm text-slate-400">{t.dashboard.noData}</p>

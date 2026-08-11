@@ -19,23 +19,6 @@ export const STATUS_COLORS: Record<ObjectStatus, string> = {
   in_progress: "bg-violet-100 text-violet-700",
 };
 
-// The same statuses as hex, for the occupancy rings on the dashboard: an SVG
-// stroke cannot take a Tailwind class. Kept here, immediately below
-// STATUS_COLORS, for the reason the rest of this file states -- a colour
-// changed in one place and forgotten in the other is how the shakhmatka and
-// the dashboard end up disagreeing about what red means.
-//
-// "free" is emerald-100, the exact fill of a free CELL, because on the ring
-// it plays the same part: the background the sold and reserved arcs are laid
-// over. Sold and reserved are the mid-tones of the same two hues instead of
-// the cell pastels -- a 9px arc in #ffe4e6 is invisible on white, where a
-// 64px cell in it is perfectly clear.
-export const STATUS_RING_COLORS = {
-  sold: "#ef4444",
-  reserved: "#f59e0b",
-  free: "#d0fae5",
-};
-
 // The payment bar drawn along the bottom of a shakhmatka cell, in that cell's
 // OWN hue -- same colour, just stronger. A single green fill sitting on a rose
 // "продано" cell read as a second, unrelated colour system laid over the
