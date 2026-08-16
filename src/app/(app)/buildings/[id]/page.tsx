@@ -12,6 +12,7 @@ import {
   ShakhmatkaGrid,
   ShakhmatkaFilters,
   type UnitContractInfo,
+  type GapFilter,
 } from "@/components/ShakhmatkaGrid";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
@@ -67,6 +68,9 @@ export default function BuildingDetailPage() {
   // the grid.
   const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
   const [roomsFilter, setRoomsFilter] = useState<number | null>(null);
+  // "Which flats are missing a price / an area" -- the gap the dashboard
+  // reports as a number with nowhere to go and look at it.
+  const [gapFilter, setGapFilter] = useState<GapFilter>(null);
   // A stack of reversible structural edits (merge / split / delete / add) made
   // this session, so a mis-click can be undone with one button -- the data is
   // captured before each action and re-applied on undo.
@@ -476,6 +480,8 @@ export default function BuildingDetailPage() {
                 onStatusChange={setStatusFilter}
                 roomsFilter={roomsFilter}
                 onRoomsChange={setRoomsFilter}
+                gapFilter={gapFilter}
+                onGapChange={setGapFilter}
               />
             )}
             {/* Guarded as a whole: ControlGroup always draws its bordered
@@ -570,6 +576,7 @@ export default function BuildingDetailPage() {
             onViewUnit={setViewingUnit}
             statusFilter={statusFilter}
             roomsFilter={roomsFilter}
+            gapFilter={gapFilter}
           />
 
           {addingUnit && (

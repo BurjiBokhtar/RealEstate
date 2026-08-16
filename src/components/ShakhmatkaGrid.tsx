@@ -47,6 +47,19 @@ const TYPE_META: Record<string, { prefix: string; ring: string }> = {
 };
 
 
+// A flat that cannot be sold as it stands. These are the ones the dashboard
+// reports as "без цены — в сумму не вошли": the potential is a sum of stored
+// prices, so a flat with no price adds nothing to it, and a flat with no area
+// can never be given one -- площадь × ставка has nothing to multiply. Sold
+// flats are excluded: their price is settled and not part of any potential.
+export type GapFilter = "no_price" | "no_area" | null;
+
+export function hasGap(unit: PropertyObject, gap: Exclude<GapFilter, null>): boolean {
+  if (unit.status === "sold") return false;
+  if (gap === "no_area") return !(unit.area != null && unit.area > 0);
+  return !(unit.price != null && unit.price > 0);
+}
+
 function UnitCell({
   unit,
   apartmentNumber,
@@ -64,6 +77,7 @@ function UnitCell({
   onViewUnit,
   statusFilter,
   roomsFilter,
+  gapFilter,
   editMode,
 }: {
   unit: PropertyObject;
@@ -82,6 +96,7 @@ function UnitCell({
   onViewUnit: (unit: PropertyObject) => void;
   statusFilter: ObjectStatus | null;
   roomsFilter: number | null;
+  gapFilter: GapFilter;
   editMode: boolean;
 }) {
   const { t } = useLocale();
@@ -108,7 +123,8 @@ function UnitCell({
   // flat keeps its place whether or not it matches what you asked for.
   const dimmed =
     (statusFilter !== null && unit.status !== statusFilter) ||
-    (roomsFilter !== null && unit.rooms !== roomsFilter);
+    (roomsFilter !== null && unit.rooms !== roomsFilter) ||
+    (gapFilter !== null && !hasGap(unit, gapFilter));
   const typeMeta = TYPE_META[unit.type ?? "apartment"];
 
   // Payment standing of this cell. Only meaningful where there IS a contract:
@@ -409,6 +425,7 @@ export function ShakhmatkaGrid({
   onViewUnit,
   statusFilter,
   roomsFilter,
+  gapFilter = null,
   editMode = false,
 }: {
   units: PropertyObject[];
@@ -426,6 +443,7 @@ export function ShakhmatkaGrid({
   onViewUnit: (unit: PropertyObject) => void;
   statusFilter: ObjectStatus | null;
   roomsFilter: number | null;
+  gapFilter?: GapFilter;
   editMode?: boolean;
 }) {
   const { t } = useLocale();
@@ -581,6 +599,7 @@ export function ShakhmatkaGrid({
                             onViewUnit={onViewUnit}
                             statusFilter={statusFilter}
                             roomsFilter={roomsFilter}
+                            gapFilter={gapFilter}
                             editMode={editMode}
                           />
                         ) : canEditSold ? (
@@ -695,6 +714,7 @@ export function ShakhmatkaGrid({
                               onViewUnit={onViewUnit}
                               statusFilter={statusFilter}
                               roomsFilter={roomsFilter}
+                              gapFilter={gapFilter}
                               editMode={editMode}
                             />
                           </div>
@@ -760,12 +780,16 @@ export function ShakhmatkaFilters({
   onStatusChange,
   roomsFilter,
   onRoomsChange,
+  gapFilter,
+  onGapChange,
 }: {
   units: PropertyObject[];
   statusFilter: ObjectStatus | null;
   onStatusChange: (next: ObjectStatus | null) => void;
   roomsFilter: number | null;
   onRoomsChange: (next: number | null) => void;
+  gapFilter: GapFilter;
+  onGapChange: (next: GapFilter) => void;
 }) {
   const { t } = useLocale();
 
@@ -786,7 +810,16 @@ export function ShakhmatkaFilters({
     roomCounts.set(u.rooms, (roomCounts.get(u.rooms) ?? 0) + 1);
   }
   const presentRooms = Array.from(roomCounts.keys()).sort((a, b) => a - b);
-  const anyActive = statusFilter !== null || roomsFilter !== null;
+
+  // The dashboard says "N без цены — в сумму не вошли" and there was nowhere
+  // to go and look at them. These two pills appear only when such flats exist,
+  // and they separate the two very different reasons: no price is fixable by
+  // re-saving the building's rate, no area is not -- someone has to type the
+  // area first, because the price is computed from it.
+  const noPriceCount = units.filter((u) => hasGap(u, "no_price")).length;
+  const noAreaCount = units.filter((u) => hasGap(u, "no_area")).length;
+
+  const anyActive = statusFilter !== null || roomsFilter !== null || gapFilter !== null;
 
   return (
     <ControlGroup size="sm">
@@ -839,6 +872,42 @@ export function ShakhmatkaFilters({
         </>
       )}
 
+      {(noPriceCount > 0 || noAreaCount > 0) && (
+        <>
+          <GroupDivider />
+          {noPriceCount > 0 && (
+            <PillButton
+              active={gapFilter === "no_price"}
+              onClick={() => onGapChange(gapFilter === "no_price" ? null : "no_price")}
+              title={t.buildings.noPriceFilterHint}
+              label={
+                <span className="flex items-center gap-1">
+                  {t.buildings.noPriceFilter}
+                  <span className={gapFilter === "no_price" ? "text-white/70" : "text-slate-400"}>
+                    {noPriceCount}
+                  </span>
+                </span>
+              }
+            />
+          )}
+          {noAreaCount > 0 && (
+            <PillButton
+              active={gapFilter === "no_area"}
+              onClick={() => onGapChange(gapFilter === "no_area" ? null : "no_area")}
+              title={t.buildings.noAreaFilterHint}
+              label={
+                <span className="flex items-center gap-1">
+                  {t.buildings.noAreaFilter}
+                  <span className={gapFilter === "no_area" ? "text-white/70" : "text-slate-400"}>
+                    {noAreaCount}
+                  </span>
+                </span>
+              }
+            />
+          )}
+        </>
+      )}
+
       {anyActive && (
         <>
           <GroupDivider />
@@ -848,6 +917,7 @@ export function ShakhmatkaFilters({
             onClick={() => {
               onStatusChange(null);
               onRoomsChange(null);
+              onGapChange(null);
             }}
           />
         </>
