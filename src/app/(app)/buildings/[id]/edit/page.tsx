@@ -33,6 +33,8 @@ export default function EditBuildingPage() {
   const [units, setUnits] = useState<PropertyObject[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
+  const [applyResult, setApplyResult] = useState<{ text: string; ok: boolean } | null>(null);
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -199,6 +201,73 @@ export default function EditBuildingPage() {
     router.push(`/buildings/${params.id}${receipt}`);
   };
 
+  // Apply the rate that is already saved, whether or not it just changed.
+  //
+  // Saving only re-prices when the rate itself moved, which is right for a
+  // save but leaves no way to say "apply what is there now". And flats keep
+  // appearing that the last run never saw: ones booked since, ones that had
+  // no area at the time, ones a migration only started counting later. Those
+  // could never be reached again, because re-saving the same number is not a
+  // change. Hence a button that does not care whether anything changed.
+  const handleApplyRate = async () => {
+    const rate = values.price_per_sqm ? Number(values.price_per_sqm) : null;
+    if (rate == null || !(rate > 0)) {
+      setApplyResult({ text: t.buildings.form.applyRateNoRate, ok: false });
+      return;
+    }
+    // What the database is about to be asked to touch, counted from the same
+    // rows this page already loaded -- so the answer can be compared with what
+    // actually moved.
+    const expected = units.filter(
+      (u) => u.status !== "sold" && u.currency === "TJS" && (u.area ?? 0) > 0
+    ).length;
+
+    setApplying(true);
+    setApplyResult(null);
+    const supabase = createClient();
+    const { data, error } = await supabase.schema("crm").rpc("reprice_building_units", {
+      p_building_id: params.id,
+      p_price_per_sqm: rate,
+    });
+    setApplying(false);
+
+    if (error) {
+      const missing =
+        error.code === "PGRST202" || /Could not find the function/i.test(error.message);
+      setApplyResult({
+        text: missing
+          ? t.buildings.form.repriceNoFunction
+          : t.buildings.form.repriceFailed.replace("{err}", error.message),
+        ok: false,
+      });
+      return;
+    }
+
+    const row = (Array.isArray(data) ? data[0] : data) as {
+      repriced?: number;
+      skipped_sold?: number;
+      skipped_no_area?: number;
+      skipped_currency?: number;
+    } | null;
+    const repriced = Number(row?.repriced ?? 0);
+
+    let text = t.buildings.form.applyRateResult
+      .replace("{n}", String(repriced))
+      .replace("{noArea}", String(row?.skipped_no_area ?? 0))
+      .replace("{cur}", String(row?.skipped_currency ?? 0))
+      .replace("{sold}", String(row?.skipped_sold ?? 0));
+
+    // Fewer rows moved than matched the filter. Nothing is wrong with the
+    // arithmetic -- the missing ones were refused by the row-level policy,
+    // which lets a non-admin change only free flats. Saying so beats leaving
+    // a number that quietly does not add up.
+    if (repriced < expected) {
+      text += t.buildings.form.applyRateBlocked.replace("{n}", String(expected - repriced));
+    }
+    setApplyResult({ text, ok: repriced >= expected });
+    await loadUnits();
+  };
+
   const handleDelete = async () => {
     if (!(await confirm(t.buildings.form.confirmDelete, { danger: true }))) return;
     setSaveError(null);
@@ -258,7 +327,40 @@ export default function EditBuildingPage() {
             onDelete={handleDelete}
             hideFloorsCount
             hideUnitsPerFloor
-          />
+          >
+            {/* Saving only re-prices when the rate changed. This applies
+                whatever rate is saved right now, to everything unsold -- the
+                way to reach flats booked or added since the last run. */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-700">
+                    {t.buildings.form.applyRate}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {t.buildings.form.applyRateHint}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleApplyRate}
+                  disabled={applying}
+                  className="h-10 shrink-0 rounded-lg border border-brand px-4 text-sm font-medium text-brand transition-all hover:bg-brand-soft active:scale-[0.98] disabled:opacity-50"
+                >
+                  {applying ? "…" : t.buildings.form.applyRateBtn}
+                </button>
+              </div>
+              {applyResult && (
+                <p
+                  className={`mt-2.5 text-xs ${
+                    applyResult.ok ? "text-emerald-600" : "text-amber-600"
+                  }`}
+                >
+                  {applyResult.text}
+                </p>
+              )}
+            </div>
+          </BuildingForm>
           {saveError && <p className="text-sm text-red-600">{saveError}</p>}
 
           <FloorUnitsBuilder
