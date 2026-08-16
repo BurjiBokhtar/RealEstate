@@ -83,6 +83,26 @@ export default function EditBuildingPage() {
     // an admin who came here to fix the address should not have the whole
     // price list recalculated behind their back. Saying no still saves the
     // new rate -- it then applies to apartments created from now on.
+    // Clearing the field is the other half of the same idea, and it used to do
+    // nothing at all: the rate went to NULL and every flat kept the price
+    // computed from the rate that was there before -- a number with nothing
+    // left behind it, still counted in the dashboard's potential. Offer to
+    // take those prices away too. Sold flats keep theirs, and so do flats
+    // priced in dollars, which never came from this (TJS) rate.
+    const rateCleared = nextRate == null && (building?.price_per_sqm ?? null) != null;
+    let clearPrices = false;
+    if (rateCleared) {
+      const affected = units.filter(
+        (u) => u.status !== "sold" && u.currency === "TJS" && (u.price ?? 0) > 0
+      );
+      if (affected.length > 0) {
+        clearPrices = await confirm(
+          t.buildings.form.clearPricesConfirm.replace("{n}", String(affected.length)),
+          { danger: true, confirmLabel: t.buildings.form.clearPricesBtn }
+        );
+      }
+    }
+
     let reprice = false;
     if (rateChanged) {
       const affected = units.filter((u) => u.status !== "sold" && (u.area ?? 0) > 0);
@@ -146,14 +166,37 @@ export default function EditBuildingPage() {
       repricedCount = Number(row?.repriced ?? 0);
     }
 
+    let clearedCount: number | null = null;
+    if (clearPrices) {
+      // No database function needed here, unlike repricing: this writes the
+      // same literal NULL to every matching row, which REST expresses fine.
+      // The filter travels as a few query parameters, not as a list of ids,
+      // so it does not grow with the building.
+      const { error, count } = await supabase
+        .schema("crm")
+        .from("objects")
+        .update({ price: null }, { count: "exact" })
+        .eq("building_id", params.id)
+        .neq("status", "sold")
+        .eq("currency", "TJS");
+      if (error) {
+        setSubmitting(false);
+        setSaveError(t.buildings.form.repriceFailed.replace("{err}", error.message));
+        return;
+      }
+      clearedCount = count ?? 0;
+    }
+
     setSubmitting(false);
     // The shakhmatka is where the new prices are actually visible, so it also
     // carries the confirmation of how many rows moved.
-    router.push(
-      repricedCount == null
-        ? `/buildings/${params.id}`
-        : `/buildings/${params.id}?repriced=${repricedCount}`
-    );
+    const receipt =
+      repricedCount != null
+        ? `?repriced=${repricedCount}`
+        : clearedCount != null
+          ? `?cleared=${clearedCount}`
+          : "";
+    router.push(`/buildings/${params.id}${receipt}`);
   };
 
   const handleDelete = async () => {

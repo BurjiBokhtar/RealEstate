@@ -188,7 +188,14 @@ export default function BuildingDetailPage() {
   // rather than pushed into state from an effect, which would be a second
   // render for something already known on the first.
   const repricedParam = searchParams.get("repriced");
+  const clearedParam = searchParams.get("cleared");
   const repriceNotice = useMemo(() => {
+    if (clearedParam !== null) {
+      return {
+        message: t.buildings.form.clearPricesDone.replace("{n}", clearedParam),
+        type: "success" as ToastType,
+      };
+    }
     if (repricedParam === null) return null;
     const n = Number(repricedParam);
     return {
@@ -196,7 +203,7 @@ export default function BuildingDetailPage() {
         n > 0 ? t.buildings.form.repriceDone.replace("{n}", String(n)) : t.buildings.form.repriceNone,
       type: (n > 0 ? "success" : "error") as ToastType,
     };
-  }, [repricedParam, t]);
+  }, [repricedParam, clearedParam, t]);
 
   const handleMergeUnits = async (unitA: PropertyObject, unitB: PropertyObject) => {
     const combinedArea = (unitA.area ?? 0) + (unitB.area ?? 0) || null;
@@ -624,7 +631,7 @@ export default function BuildingDetailPage() {
         onDismiss={() => {
           setToast((prev) => ({ ...prev, message: null }));
           // Drop ?repriced= so a refresh does not replay the receipt.
-          if (repricedParam !== null) router.replace(`/buildings/${params.id}`);
+          if (repricedParam !== null || clearedParam !== null) router.replace(`/buildings/${params.id}`);
         }}
       />
     </div>
