@@ -9,8 +9,8 @@ import { useSettings } from "@/lib/settings/SettingsProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
-import { RingChart, type RingSegment } from "@/components/charts/RingChart";
-import { DonutChart } from "@/components/charts/DonutChart";
+import { HBarChart } from "@/components/charts/HBarChart";
+import { StackBar } from "@/components/charts/StackBar";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
@@ -96,22 +96,6 @@ function formatArea(m2: number) {
   return `${areaFormat.format(Math.round(m2))} м²`;
 }
 
-// Both cards in this row read STATUS_HUES, so the ring and the area donut
-// cannot drift apart: the green in one IS the green in the other.
-const RING_COLORS = {
-  sold: STATUS_HUES.sold.solid,
-  reserved: STATUS_HUES.reserved.solid,
-  free: STATUS_HUES.available.solid,
-};
-
-// Legend order matches the shakhmatka's. `segment` is what the ring calls
-// the band; `status` is what the dictionary calls it.
-const RING_LEGEND: Array<{ segment: RingSegment; status: ObjectStatus; color: string }> = [
-  { segment: "sold", status: "sold", color: RING_COLORS.sold },
-  { segment: "reserved", status: "reserved", color: RING_COLORS.reserved },
-  { segment: "free", status: "available", color: RING_COLORS.free },
-];
-
 export default function DashboardPage() {
   const { t } = useLocale();
   const { settings } = useSettings();
@@ -120,7 +104,6 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
-  const [legendSegment, setLegendSegment] = useState<RingSegment | null>(null);
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
   const configured = isSupabaseConfigured();
   // "Loading" is derived, not stored. It is exactly "the figures on screen do
@@ -217,26 +200,11 @@ export default function DashboardPage() {
     [summary.revenue_days, periodFilter]
   );
 
-  const occupancy = useMemo(
-    () =>
-      summary.occupancy.map((b) => ({
-        id: b.id,
-        name: b.name,
-        total: b.total,
-        counts: {
-          available: b.available,
-          reserved: b.reserved,
-          sold: b.sold,
-          rented: b.rented,
-          in_progress: b.in_progress,
-        } as StatusCounts,
-      })),
-    [summary.occupancy]
-  );
-
-  // One colour per building, shared by the rings and the revenue tiles, so a
-  // building is the same colour wherever it appears. Built from both lists:
-  // a building can have sold nothing yet still be missing from one of them.
+  // One colour per building, so a building is the same colour wherever it
+  // appears. Still built from BOTH lists even though only revenue draws
+  // buildings now: buildingHues() assigns over the sorted ids, so dropping the
+  // occupancy ids would shift every colour the moment a building earns its
+  // first payment and joins the revenue list.
   const hueById = useMemo(
     () =>
       buildingHues([
@@ -246,25 +214,8 @@ export default function DashboardPage() {
     [summary.occupancy, summary.revenue_by_building]
   );
 
-  // Ranked most-sold first, so the ring you read first is the one that
-  // matters. "Sold" folds in rented: both mean the flat is no longer for
-  // sale, which is what the ring is measuring.
-  const occupancyRings = useMemo(
-    () =>
-      occupancy
-        .map((b) => ({
-          id: b.id,
-          label: b.name,
-          sold: b.counts.sold + b.counts.rented,
-          reserved: b.counts.reserved,
-          total: b.total,
-        }))
-        .sort((a, x) => (x.total ? x.sold / x.total : 0) - (a.total ? a.sold / a.total : 0)),
-    [occupancy]
-  );
-
-  // Floor area as a composition. Only non-zero statuses become slices, so a
-  // building with no rentals doesn't get a zero-width band in the ring.
+  // Floor area as a composition. Only non-zero statuses become segments, so a
+  // portfolio with no rentals doesn't get a zero-width band in the bar.
   const areaSlices = useMemo(() => {
     const order: Array<{ key: ObjectStatus; value: number }> = [
       { key: "sold", value: summary.area_split.sold },
@@ -391,6 +342,23 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Directly under the figures it explains, and only 14px tall. As a donut
+          this needed a 170px square, which meant a card of its own, which meant
+          a row of its own -- and once the occupancy rings that shared that row
+          were removed, two thirds of it were empty. A composition of three
+          shares does not need a circle. */}
+      {area.total > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
+            <p className="text-sm font-semibold tabular-nums text-slate-900">
+              {formatArea(area.total)}
+            </p>
+          </div>
+          <StackBar segments={areaSlices} formatValue={formatArea} />
+        </div>
+      )}
+
       {(periodFilter === "today" || periodFilter === "month") && (
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="mb-4 text-sm font-semibold text-slate-700">
@@ -415,126 +383,64 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Side by side, not stacked a screen apart: these two answer the same
-          question about the same buildings ("how is each ЖК doing"), and
-          comparing them meant scrolling between them. */}
-      {/* Occupancy and the area split share one row. The area donut used to
-          have a full-width card to itself, which put a 210px ring in the
-          middle of a 1150px card and left the rest of it blank -- the widest
-          stretch of nothing on the page. Both cards stretch to the same
-          height and centre their chart inside it, so the shorter of the two
-          does not end in a void either. */}
-      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-3">
-        {/* Occupancy as one horizontal bar per building, each drawn to 100% of
-            its own total, sorted by the share sold. Columns shared the card's
-            width between them, so every building added made all of them
-            narrower -- past a dozen or so the names had nowhere to go and
-            dropped out of the chart entirely. Rows spend width on the bar and
-            height on the list, so the name stays readable at any number of
-            buildings, and the order answers "what is nearly gone" on sight. */}
-        <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:col-span-2">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">
-              {t.dashboard.occupancyByBuilding}
-            </p>
-            {/* The same three swatches the shakhmatka filter row shows, in
-                the same colours, so the two screens read as one system.
-                Hovering one lights that band in every ring at once -- which
-                is how you answer "where is anything still free" without
-                reading five rings one by one. */}
-            <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
-              {RING_LEGEND.map((l) => (
-                <span
-                  key={l.segment}
-                  onMouseEnter={() => setLegendSegment(l.segment)}
-                  onMouseLeave={() => setLegendSegment(null)}
-                  className={`flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors ${
-                    legendSegment === l.segment ? "bg-slate-100 text-slate-700" : ""
-                  }`}
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: l.color }}
-                  />
-                  {t.objects.statuses[l.status]}
-                </span>
-              ))}
-            </div>
-          </div>
-          {occupancy.length > 0 ? (
-            <div className="flex flex-1 items-center">
-              <RingChart
-                data={occupancyRings}
-                colors={RING_COLORS}
-                activeSegment={legendSegment}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-          )}
-        </div>
+      {/* Revenue by building, ONE CARD PER CURRENCY, as ranked bars.
+          Two currencies never share a scale: adding 10 265 129 TJS to
+          419 395 USD produces a figure that does not exist.
 
-        {/* Floor area as a composition: "total" and "still for sale" were two
-            tiles you had to divide in your head. As a ring the split reads at
-            a glance, and the sold/reserved shares come free. Sized smaller
-            than the revenue ring -- this is the supporting figure. */}
-        <div className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
-          {area.total > 0 ? (
-            <div className="flex flex-1 items-center justify-center">
-              <DonutChart
-                slices={areaSlices}
-                size={170}
-                thickness={26}
-                centerLabel={t.dashboard.totalArea}
-                formatValue={formatArea}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
-          )}
-        </div>
-
-      </div>
-
-      {/* Revenue by building, ONE BLOCK PER CURRENCY.
-          The bar used to be as long as tjs + usd and the headline number was
-          that sum -- 10 265 129 TJS plus 419 395 USD shown as "10,7 млн",
-          which is 10.7 million of nothing. Adding two currencies produces a
-          figure that does not exist, and the real amounts were relegated to
-          grey small print underneath. Each currency now gets its own block,
-          its own scale and its own full-size figures. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">
-          {t.dashboard.revenueByBuilding}
-        </p>
+          These were rings until now, and a ring is the wrong instrument for
+          this question. The top three ЖК hold 39%, 32% and 25% -- three arcs
+          that look alike, so the order could only be recovered by reading the
+          legend, and the two small ones (3% and 1%) were threads against the
+          card's own edge. Bars turn the comparison into length against
+          length, put each name beside its own bar instead of in a list to the
+          side, and keep working as the company adds ЖК: the list grows
+          downwards instead of the slices growing thinner. */}
+      <div className={revenueByCurrency.length > 1 ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
         {revenueByCurrency.length > 0 ? (
-          <div
-            className={`grid gap-6 ${
-              revenueByCurrency.length > 1 ? "lg:grid-cols-2" : "grid-cols-1"
-            }`}
-          >
-            {revenueByCurrency.map(({ currency, rows }) => (
-              <DonutChart
+          revenueByCurrency.map(({ currency, rows }) => {
+            const total = rows.reduce((sum, r) => sum + r.value, 0);
+            return (
+              <div
                 key={currency}
-                size={240}
-                thickness={34}
-                centerLabel={currency}
-                slices={rows.map((r) => ({
-                  key: r.id,
-                  label: r.name,
-                  value: r.value,
-                  hue: hueById.get(r.id) ?? BUILDING_HUES[0],
-                }))}
-                formatValue={(n) => formatCurrency(n, currency)}
-              />
-            ))}
-          </div>
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              >
+                <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-700">
+                    {t.dashboard.revenueByBuilding} · {currency}
+                  </p>
+                  <p className="text-sm font-semibold tabular-nums text-slate-900">
+                    {formatCurrency(total, currency)}
+                  </p>
+                </div>
+                <HBarChart
+                  data={rows.map((r) => ({
+                    label: r.name,
+                    value: r.value,
+                    hue: hueById.get(r.id) ?? BUILDING_HUES[0],
+                    // The share is what the ring used to carry, and it is worth
+                    // keeping -- but as a note under its own bar rather than as
+                    // the thing the reader has to decode the chart to get.
+                    hint: total > 0 ? `${Math.round((r.value / total) * 100)}%` : undefined,
+                  }))}
+                  formatValue={(n) => formatCurrency(n, currency)}
+                />
+              </div>
+            );
+          })
         ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="mb-4 text-sm font-semibold text-slate-700">
+              {t.dashboard.revenueByBuilding}
+            </p>
+            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          </div>
         )}
       </div>
 
+      {/* The page's two tables share a row instead of stacking. Both are short
+          lists of names and money, neither needs the full width, and stacked
+          they pushed the manager table below the fold on a laptop. */}
+      <div className="grid items-start gap-4 xl:grid-cols-2">
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.topDebtors}</p>
         {debtors.length > 0 ? (
@@ -567,7 +473,11 @@ export default function DashboardPage() {
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
-      <ManagerSales periodBounds={periodBounds} />
+      <ManagerSales
+        periodBounds={periodBounds}
+        buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
+      />
+      </div>
     </div>
   );
 }

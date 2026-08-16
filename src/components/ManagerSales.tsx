@@ -22,11 +22,22 @@ export type PeriodBounds = { start: string; end: string } | null;
 // for those roles. Managers/creator attribution comes from contracts.created_by
 // (migration 030), filled automatically at booking.
 //
-// periodBounds comes straight from the dashboard's own day/month/year/all
-// filter (page.tsx) -- passing it through (rather than each panel picking
-// its own range) is what makes this table follow the hero filter the
-// moment it changes, same as every other dated stat on the page.
-export function ManagerSales({ periodBounds }: { periodBounds?: PeriodBounds }) {
+// Both filters come straight from the dashboard's hero row (page.tsx) rather
+// than from controls of this panel's own: one filter row scopes the whole
+// page, and every card re-reads against the same slice the moment it changes.
+//
+// The building half used to stop here. The RPC took dates only, so choosing a
+// ЖК up top re-scoped every figure on the page except this table, which went
+// on counting deals from all of them -- two halves of one screen answering
+// different questions, with totals that could not be reconciled. It now takes
+// p_building_id as well (migration 048).
+export function ManagerSales({
+  periodBounds,
+  buildingId,
+}: {
+  periodBounds?: PeriodBounds;
+  buildingId?: string | null;
+}) {
   const { t } = useLocale();
   const { role } = useRole();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -39,15 +50,16 @@ export function ManagerSales({ periodBounds }: { periodBounds?: PeriodBounds }) 
       .rpc("sales_by_manager", {
         p_from: periodBounds?.start ?? null,
         p_to: periodBounds?.end ?? null,
+        p_building_id: buildingId ?? null,
       })
       .then(({ data }) => setRows((data as Row[]) ?? []));
-  }, [role, periodBounds]);
+  }, [role, periodBounds, buildingId]);
 
   if (role !== "admin" && role !== "director") return null;
   if (rows === null) return null;
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.byManager}</p>
       {rows.length > 0 ? (
         <div className="overflow-x-auto">
