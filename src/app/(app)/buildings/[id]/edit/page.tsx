@@ -32,7 +32,7 @@ export default function EditBuildingPage() {
   const [values, setValues] = useState<BuildingInput>(emptyBuildingInput);
   const [units, setUnits] = useState<PropertyObject[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const loadUnits = useCallback(async () => {
     const supabase = createClient();
@@ -73,6 +73,33 @@ export default function EditBuildingPage() {
   }, [configured, params.id, loadUnits]);
 
   const handleSubmit = async () => {
+    const nextRate = values.price_per_sqm ? Number(values.price_per_sqm) : null;
+    const rateChanged =
+      nextRate != null && nextRate > 0 && nextRate !== (building?.price_per_sqm ?? null);
+
+    // The rate used to reach the apartments only at the moment they were
+    // generated, so changing it later moved one number in one row and the
+    // shakhmatka went on showing the old totals. Ask before rewriting them:
+    // an admin who came here to fix the address should not have the whole
+    // price list recalculated behind their back. Saying no still saves the
+    // new rate -- it then applies to apartments created from now on.
+    let reprice = false;
+    if (rateChanged) {
+      const affected = units.filter((u) => u.status !== "sold" && (u.area ?? 0) > 0);
+      const sold = units.filter((u) => u.status === "sold");
+      const noArea = units.filter((u) => u.status !== "sold" && !((u.area ?? 0) > 0));
+      const message =
+        t.buildings.form.repriceConfirm
+          .replace("{n}", String(affected.length))
+          .replace("{sold}", String(sold.length)) +
+        (noArea.length
+          ? t.buildings.form.repriceSkipped.replace("{skipped}", String(noArea.length))
+          : "");
+      reprice = await confirm(message, {
+        confirmLabel: t.buildings.form.repriceConfirmBtn,
+      });
+    }
+
     setSubmitting(true);
     const supabase = createClient();
     await supabase
@@ -83,23 +110,59 @@ export default function EditBuildingPage() {
         address: values.address || null,
         floors_count: values.floors_count ? Number(values.floors_count) : null,
         units_per_floor: values.units_per_floor ? Number(values.units_per_floor) : null,
-        price_per_sqm: values.price_per_sqm ? Number(values.price_per_sqm) : null,
+        price_per_sqm: nextRate,
         facade_url: values.facade_url || null,
         plan_url: values.plan_url || null,
         construction_status: values.construction_status,
       })
       .eq("id", params.id);
+
+    let repricedCount: number | null = null;
+    if (reprice && nextRate != null) {
+      // One UPDATE inside the database. Each apartment's new total is its own
+      // area times the shared rate, which REST cannot express -- it can only
+      // write one ready-made value to every matching row -- so doing this
+      // from here would mean one request per apartment.
+      const { data, error } = await supabase.schema("crm").rpc("reprice_building_units", {
+        p_building_id: params.id,
+        p_price_per_sqm: nextRate,
+      });
+      if (error) {
+        setSubmitting(false);
+        // PGRST202 = PostgREST could not find the function. That means the
+        // migration has not been run on this database, and it is worth saying
+        // exactly that: the previous attempt at this feature (65fbb56) was
+        // rolled back precisely because it appeared to do nothing and the
+        // reason was never established.
+        const missing = error.code === "PGRST202" || /Could not find the function/i.test(error.message);
+        setSaveError(
+          missing
+            ? t.buildings.form.repriceNoFunction
+            : t.buildings.form.repriceFailed.replace("{err}", error.message)
+        );
+        return;
+      }
+      const row = Array.isArray(data) ? data[0] : data;
+      repricedCount = Number(row?.repriced ?? 0);
+    }
+
     setSubmitting(false);
-    router.push(`/buildings/${params.id}`);
+    // The shakhmatka is where the new prices are actually visible, so it also
+    // carries the confirmation of how many rows moved.
+    router.push(
+      repricedCount == null
+        ? `/buildings/${params.id}`
+        : `/buildings/${params.id}?repriced=${repricedCount}`
+    );
   };
 
   const handleDelete = async () => {
     if (!(await confirm(t.buildings.form.confirmDelete, { danger: true }))) return;
-    setDeleteError(null);
+    setSaveError(null);
     const supabase = createClient();
     const { error } = await supabase.schema("crm").from("buildings").delete().eq("id", params.id);
     if (error) {
-      setDeleteError(t.buildings.form.deleteBlocked);
+      setSaveError(t.buildings.form.deleteBlocked);
       return;
     }
     router.push("/objects");
@@ -153,7 +216,7 @@ export default function EditBuildingPage() {
             hideFloorsCount
             hideUnitsPerFloor
           />
-          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
 
           <FloorUnitsBuilder
             buildingId={building.id}

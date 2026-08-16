@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BackLink } from "@/components/BackLink";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -37,6 +37,8 @@ export default function BuildingDetailPage() {
   const { t } = useLocale();
   const confirm = useConfirm();
   const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const configured = isSupabaseConfigured();
 
   // Seeded from `configured` rather than set from inside the effect: the
@@ -175,6 +177,22 @@ export default function BuildingDetailPage() {
       .then(({ data }) => setBuilding((data as Building) ?? null));
     loadUnits();
   }, [configured, params.id, loadUnits]);
+
+  // Changing the price per m² on the edit screen recalculates the apartments,
+  // and this is the screen where that becomes visible -- so it also carries
+  // the receipt: how many actually moved. Derived from the URL during render
+  // rather than pushed into state from an effect, which would be a second
+  // render for something already known on the first.
+  const repricedParam = searchParams.get("repriced");
+  const repriceNotice = useMemo(() => {
+    if (repricedParam === null) return null;
+    const n = Number(repricedParam);
+    return {
+      message:
+        n > 0 ? t.buildings.form.repriceDone.replace("{n}", String(n)) : t.buildings.form.repriceNone,
+      type: (n > 0 ? "success" : "error") as ToastType,
+    };
+  }, [repricedParam, t]);
 
   const handleMergeUnits = async (unitA: PropertyObject, unitB: PropertyObject) => {
     const combinedArea = (unitA.area ?? 0) + (unitB.area ?? 0) || null;
@@ -594,9 +612,13 @@ export default function BuildingDetailPage() {
         </>
       )}
       <Toast
-        message={toast.message}
-        type={toast.type}
-        onDismiss={() => setToast((prev) => ({ ...prev, message: null }))}
+        message={toast.message ?? repriceNotice?.message ?? null}
+        type={toast.message ? toast.type : (repriceNotice?.type ?? "success")}
+        onDismiss={() => {
+          setToast((prev) => ({ ...prev, message: null }));
+          // Drop ?repriced= so a refresh does not replay the receipt.
+          if (repricedParam !== null) router.replace(`/buildings/${params.id}`);
+        }}
       />
     </div>
   );

@@ -171,6 +171,10 @@ export function UnitEditModal({
             <input
               type="number"
               min="0"
+              // Without a step the browser defaults to whole numbers and marks
+              // a rate like 6500.50 invalid -- the area field beside it has
+              // always allowed decimals.
+              step="0.01"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
               className={FIELD}
@@ -189,6 +193,14 @@ export function UnitEditModal({
               : "—"}
           </span>
         </div>
+
+        {/* An apartment generated without an area silently refuses every rate
+            you type: the total is area × rate, so with no area there is
+            nothing to multiply and the price saves as empty. Say so instead
+            of showing a dash and letting the person guess. */}
+        {!(areaNum != null && areaNum > 0) && (
+          <p className="-mt-2 text-xs text-amber-600">{t.buildings.unitEdit.needsArea}</p>
+        )}
 
         <button
           type="button"
