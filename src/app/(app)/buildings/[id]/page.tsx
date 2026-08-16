@@ -187,7 +187,7 @@ export default function BuildingDetailPage() {
   // the receipt: how many actually moved. Derived from the URL during render
   // rather than pushed into state from an effect, which would be a second
   // render for something already known on the first.
-  const repricedParam = searchParams.get("repriced");
+  const rateParam = searchParams.get("rate");
   const clearedParam = searchParams.get("cleared");
   const repriceNotice = useMemo(() => {
     if (clearedParam !== null) {
@@ -196,14 +196,11 @@ export default function BuildingDetailPage() {
         type: "success" as ToastType,
       };
     }
-    if (repricedParam === null) return null;
-    const n = Number(repricedParam);
-    return {
-      message:
-        n > 0 ? t.buildings.form.repriceDone.replace("{n}", String(n)) : t.buildings.form.repriceNone,
-      type: (n > 0 ? "success" : "error") as ToastType,
-    };
-  }, [repricedParam, clearedParam, t]);
+    if (rateParam === "applied") {
+      return { message: t.buildings.form.rateApplied, type: "success" as ToastType };
+    }
+    return null;
+  }, [rateParam, clearedParam, t]);
 
   const handleMergeUnits = async (unitA: PropertyObject, unitB: PropertyObject) => {
     const combinedArea = (unitA.area ?? 0) + (unitB.area ?? 0) || null;
@@ -631,7 +628,7 @@ export default function BuildingDetailPage() {
         onDismiss={() => {
           setToast((prev) => ({ ...prev, message: null }));
           // Drop ?repriced= so a refresh does not replay the receipt.
-          if (repricedParam !== null || clearedParam !== null) router.replace(`/buildings/${params.id}`);
+          if (rateParam !== null || clearedParam !== null) router.replace(`/buildings/${params.id}`);
         }}
       />
     </div>

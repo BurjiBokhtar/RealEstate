@@ -105,23 +105,6 @@ export default function EditBuildingPage() {
       }
     }
 
-    let reprice = false;
-    if (rateChanged) {
-      const affected = units.filter((u) => u.status !== "sold" && (u.area ?? 0) > 0);
-      const sold = units.filter((u) => u.status === "sold");
-      const noArea = units.filter((u) => u.status !== "sold" && !((u.area ?? 0) > 0));
-      const message =
-        t.buildings.form.repriceConfirm
-          .replace("{n}", String(affected.length))
-          .replace("{sold}", String(sold.length)) +
-        (noArea.length
-          ? t.buildings.form.repriceSkipped.replace("{skipped}", String(noArea.length))
-          : "");
-      reprice = await confirm(message, {
-        confirmLabel: t.buildings.form.repriceConfirmBtn,
-      });
-    }
-
     setSubmitting(true);
     const supabase = createClient();
     await supabase
@@ -139,35 +122,10 @@ export default function EditBuildingPage() {
       })
       .eq("id", params.id);
 
-    let repricedCount: number | null = null;
-    if (reprice && nextRate != null) {
-      // One UPDATE inside the database. Each apartment's new total is its own
-      // area times the shared rate, which REST cannot express -- it can only
-      // write one ready-made value to every matching row -- so doing this
-      // from here would mean one request per apartment.
-      const { data, error } = await supabase.schema("crm").rpc("reprice_building_units", {
-        p_building_id: params.id,
-        p_price_per_sqm: nextRate,
-      });
-      if (error) {
-        setSubmitting(false);
-        // PGRST202 = PostgREST could not find the function. That means the
-        // migration has not been run on this database, and it is worth saying
-        // exactly that: the previous attempt at this feature (65fbb56) was
-        // rolled back precisely because it appeared to do nothing and the
-        // reason was never established.
-        const missing = error.code === "PGRST202" || /Could not find the function/i.test(error.message);
-        setSaveError(
-          missing
-            ? t.buildings.form.repriceNoFunction
-            : t.buildings.form.repriceFailed.replace("{err}", error.message)
-        );
-        return;
-      }
-      const row = Array.isArray(data) ? data[0] : data;
-      repricedCount = Number(row?.repriced ?? 0);
-    }
-
+    // Nothing to call here for a changed rate: a database trigger (050) does
+    // it as part of the same write. This screen used to ask first and then
+    // send an RPC, which is now both redundant and a lie -- declining the
+    // dialog would not have stopped anything.
     let clearedCount: number | null = null;
     if (clearPrices) {
       // No database function needed here, unlike repricing: this writes the
@@ -193,10 +151,10 @@ export default function EditBuildingPage() {
     // The shakhmatka is where the new prices are actually visible, so it also
     // carries the confirmation of how many rows moved.
     const receipt =
-      repricedCount != null
-        ? `?repriced=${repricedCount}`
-        : clearedCount != null
-          ? `?cleared=${clearedCount}`
+      clearedCount != null
+        ? `?cleared=${clearedCount}`
+        : rateChanged
+          ? "?rate=applied"
           : "";
     router.push(`/buildings/${params.id}${receipt}`);
   };
