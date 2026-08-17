@@ -1,5 +1,9 @@
 export type Settings = {
   id: boolean;
+  // A label for the admin's own reference, not a switch: the code only
+  // speaks Payom.tj's request format (see sendPaymentReminders.ts). Renaming
+  // this does not change which gateway receives the message.
+  sms_provider: string;
   sms_api_key: string | null;
   sms_sender_name: string | null;
   sms_reminder_days: number;
@@ -23,6 +27,7 @@ export type Settings = {
 };
 
 export type SettingsInput = {
+  sms_provider: string;
   sms_api_key: string;
   sms_sender_name: string;
   sms_reminder_days: string;

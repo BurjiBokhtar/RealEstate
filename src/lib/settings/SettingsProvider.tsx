@@ -7,6 +7,9 @@ import type { Settings } from "./types";
 
 const DEFAULT_SETTINGS: Settings = {
   id: true,
+  // Not fetched by this provider (see below) -- only the Settings page reads
+  // the real value, so the app-wide default is enough here.
+  sms_provider: "Payom.tj",
   sms_api_key: null,
   sms_sender_name: null,
   sms_reminder_days: 3,

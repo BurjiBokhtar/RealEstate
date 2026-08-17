@@ -37,6 +37,7 @@ export default function SettingsPage() {
   const { role, loading: roleLoading } = useRole();
 
   const [values, setValues] = useState<SettingsInput>({
+    sms_provider: "",
     sms_api_key: "",
     sms_sender_name: "",
     sms_reminder_days: "",
@@ -88,6 +89,7 @@ export default function SettingsPage() {
       .then(({ data }) => {
         if (!data) return;
         setValues({
+          sms_provider: data.sms_provider ?? "Payom.tj",
           sms_api_key: data.sms_api_key ?? "",
           sms_sender_name: data.sms_sender_name ?? "",
           sms_reminder_days: data.sms_reminder_days.toString(),
@@ -118,6 +120,7 @@ export default function SettingsPage() {
       .schema("crm")
       .from("settings")
       .update({
+        sms_provider: values.sms_provider || "Payom.tj",
         sms_api_key: values.sms_api_key || null,
         sms_sender_name: values.sms_sender_name || null,
         sms_reminder_days: values.sms_reminder_days ? Number(values.sms_reminder_days) : 3,
@@ -291,10 +294,16 @@ export default function SettingsPage() {
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700">{t.settings.sms.provider}</span>
             <input
-              readOnly
-              value="Payom.tj"
-              className={`${FIELD_CLASS} border-slate-200 bg-slate-50 text-slate-500`}
+              value={values.sms_provider}
+              onChange={(e) => update("sms_provider", e.target.value)}
+              placeholder="Payom.tj"
+              className={FIELD_CLASS}
             />
+            {/* Честно, а не мелким шрифтом: переименование не переключает
+                шлюз. Запрос всегда уходит на gateway.payom.tj в его формате
+                (sendPaymentReminders.ts) -- это поле только для памяти
+                администратора, если ключ выдал именно этот провайдер. */}
+            <span className="text-xs text-slate-400">{t.settings.sms.providerHint}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-slate-700">{t.settings.sms.apiKey}</span>
