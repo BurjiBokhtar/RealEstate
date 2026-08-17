@@ -10,6 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
 import { HBarChart } from "@/components/charts/HBarChart";
+import { OccupancyBars } from "@/components/charts/OccupancyBars";
 import { StackBar } from "@/components/charts/StackBar";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
@@ -214,6 +215,35 @@ export default function DashboardPage() {
     [summary.occupancy, summary.revenue_by_building]
   );
 
+  // Заполненность по ЖК. Дома без квартир выпадают: пустая полоса ничего не
+  // сообщает, а место в списке занимает.
+  const occupancyRows = useMemo(
+    () =>
+      summary.occupancy
+        .filter((b) => b.total > 0)
+        .map((b) => ({
+          id: b.id,
+          name: b.name,
+          total: b.total,
+          sold: b.sold,
+          reserved: b.reserved,
+          available: b.available,
+        })),
+    [summary.occupancy]
+  );
+
+  const occupancyTotal = useMemo(
+    () =>
+      occupancyRows.reduce(
+        (acc, r) => ({
+          filled: acc.filled + r.sold + r.reserved,
+          total: acc.total + r.total,
+        }),
+        { filled: 0, total: 0 }
+      ),
+    [occupancyRows]
+  );
+
   // Floor area as a composition. Only non-zero statuses become segments, so a
   // portfolio with no rentals doesn't get a zero-width band in the bar.
   const areaSlices = useMemo(() => {
@@ -347,15 +377,41 @@ export default function DashboardPage() {
           a row of its own -- and once the occupancy rings that shared that row
           were removed, two thirds of it were empty. A composition of three
           shares does not need a circle. */}
-      {area.total > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
-            <p className="text-sm font-semibold tabular-nums text-slate-900">
-              {formatArea(area.total)}
-            </p>
-          </div>
-          <StackBar segments={areaSlices} formatValue={formatArea} />
+      {/* Площадь по статусам и заполненность по ЖК — один вопрос в двух
+          разрезах: сколько уже разобрано. Поэтому они стоят в одном ряду и
+          закрывают его целиком. Раньше полоса площади занимала весь ряд одна,
+          а заполненность была отдельным рядом из пяти колец над ней. */}
+      {(area.total > 0 || occupancyRows.length > 0) && (
+        <div className="grid items-start gap-4 lg:grid-cols-2">
+          {area.total > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
+                <p className="text-sm font-semibold tabular-nums text-slate-900">
+                  {formatArea(area.total)}
+                </p>
+              </div>
+              <StackBar segments={areaSlices} formatValue={formatArea} />
+            </div>
+          )}
+          {occupancyRows.length > 0 && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-700">{t.dashboard.occupancyByBuilding}</p>
+                <p className="text-sm font-semibold tabular-nums text-slate-900">
+                  {occupancyTotal.filled}/{occupancyTotal.total}
+                </p>
+              </div>
+              <OccupancyBars
+                rows={occupancyRows}
+                labels={{
+                  sold: t.objects.statuses.sold,
+                  reserved: t.objects.statuses.reserved,
+                  available: t.objects.statuses.available,
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
