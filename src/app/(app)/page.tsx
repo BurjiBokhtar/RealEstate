@@ -10,7 +10,7 @@ import { SetupNotice } from "@/components/SetupNotice";
 import { DashboardHero } from "@/components/DashboardHero";
 import { RevenueAreaChart, type RevenueMonth } from "@/components/RevenueAreaChart";
 import { HBarChart } from "@/components/charts/HBarChart";
-import { OccupancyBars } from "@/components/charts/OccupancyBars";
+import { RingChart, type RingSegment } from "@/components/charts/RingChart";
 import { StackBar } from "@/components/charts/StackBar";
 import { STATUS_HUES, BUILDING_HUES, buildingHues } from "@/components/charts/palette";
 import { ManagerSales } from "@/components/ManagerSales";
@@ -97,6 +97,23 @@ function formatArea(m2: number) {
   return `${areaFormat.format(Math.round(m2))} м²`;
 }
 
+// Те же цвета, что в шахматке: продано красное, забронировано жёлтое,
+// свободно зелёное. Кольцо в цвете самого дома выглядело бы наряднее, но
+// совпадало бы с чем угодно, кроме экрана, где эти цвета уже что-то значат.
+const RING_COLORS = {
+  sold: STATUS_HUES.sold.solid,
+  reserved: STATUS_HUES.reserved.solid,
+  free: STATUS_HUES.available.solid,
+};
+
+// Порядок легенды — как в фильтре шахматки. `segment` — как называет полосу
+// кольцо, `status` — как называет её словарь.
+const RING_LEGEND: Array<{ segment: RingSegment; status: ObjectStatus; color: string }> = [
+  { segment: "sold", status: "sold", color: RING_COLORS.sold },
+  { segment: "reserved", status: "reserved", color: RING_COLORS.reserved },
+  { segment: "free", status: "available", color: RING_COLORS.free },
+];
+
 export default function DashboardPage() {
   const { t } = useLocale();
   const { settings } = useSettings();
@@ -105,6 +122,9 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState<string>("all");
+  // Наведение на пункт легенды подсвечивает эту полосу сразу во всех кольцах
+  // -- так отвечаешь на "где ещё что-то свободно", не читая кольца по одному.
+  const [legendSegment, setLegendSegment] = useState<RingSegment | null>(null);
   const [periodFilter, setPeriodFilter] = useState<"all" | "today" | "month" | "year">("all");
   const configured = isSupabaseConfigured();
   // "Loading" is derived, not stored. It is exactly "the figures on screen do
@@ -215,33 +235,24 @@ export default function DashboardPage() {
     [summary.occupancy, summary.revenue_by_building]
   );
 
-  // Заполненность по ЖК. Дома без квартир выпадают: пустая полоса ничего не
-  // сообщает, а место в списке занимает.
+  // Заполненность по ЖК. Дом без квартир выпадает: пустое кольцо ничего не
+  // сообщает, а место в ряду занимает. "Продано" включает и сданные в
+  // аренду -- обе квартиры одинаково сняты с продажи, это то, что кольцо
+  // измеряет. Ранжировано по доле продано: кольцо, которое важнее всего
+  // прочитать первым, стоит первым.
   const occupancyRows = useMemo(
     () =>
       summary.occupancy
         .filter((b) => b.total > 0)
         .map((b) => ({
           id: b.id,
-          name: b.name,
-          total: b.total,
-          sold: b.sold,
+          label: b.name,
+          sold: b.sold + b.rented,
           reserved: b.reserved,
-          available: b.available,
-        })),
+          total: b.total,
+        }))
+        .sort((a, b) => (b.total ? b.sold / b.total : 0) - (a.total ? a.sold / a.total : 0)),
     [summary.occupancy]
-  );
-
-  const occupancyTotal = useMemo(
-    () =>
-      occupancyRows.reduce(
-        (acc, r) => ({
-          filled: acc.filled + r.sold + r.reserved,
-          total: acc.total + r.total,
-        }),
-        { filled: 0, total: 0 }
-      ),
-    [occupancyRows]
   );
 
   // Floor area as a composition. Only non-zero statuses become segments, so a
@@ -372,46 +383,48 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Directly under the figures it explains, and only 14px tall. As a donut
-          this needed a 170px square, which meant a card of its own, which meant
-          a row of its own -- and once the occupancy rings that shared that row
-          were removed, two thirds of it were empty. A composition of three
-          shares does not need a circle. */}
-      {/* Площадь по статусам и заполненность по ЖК — один вопрос в двух
-          разрезах: сколько уже разобрано. Поэтому они стоят в одном ряду и
-          закрывают его целиком. Раньше полоса площади занимала весь ряд одна,
-          а заполненность была отдельным рядом из пяти колец над ней. */}
-      {(area.total > 0 || occupancyRows.length > 0) && (
-        <div className="grid items-start gap-4 lg:grid-cols-2">
-          {area.total > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
-                <p className="text-sm font-semibold tabular-nums text-slate-900">
-                  {formatArea(area.total)}
-                </p>
-              </div>
-              <StackBar segments={areaSlices} formatValue={formatArea} />
+      {/* Площадь по статусам, во всю ширину: только 14px высотой, поэтому ей
+          не нужна отдельная колонка. */}
+      {area.total > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
+            <p className="text-sm font-semibold tabular-nums text-slate-900">
+              {formatArea(area.total)}
+            </p>
+          </div>
+          <StackBar segments={areaSlices} formatValue={formatArea} />
+        </div>
+      )}
+
+      {/* Заполненность по ЖК, под площадью: тот же вопрос ("сколько уже
+          разобрано"), но в разрезе по дому, а не по статусу. Легенда
+          подсвечивает одну и ту же полосу сразу во всех кольцах при
+          наведении; наведение на само кольцо переключает подпись в его
+          центре на ту полосу, что под курсором, и её число. */}
+      {occupancyRows.length > 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-700">
+              {t.dashboard.occupancyByBuilding}
+            </p>
+            <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
+              {RING_LEGEND.map((l) => (
+                <span
+                  key={l.segment}
+                  onMouseEnter={() => setLegendSegment(l.segment)}
+                  onMouseLeave={() => setLegendSegment(null)}
+                  className={`flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors ${
+                    legendSegment === l.segment ? "bg-slate-100 text-slate-700" : ""
+                  }`}
+                >
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: l.color }} />
+                  {t.objects.statuses[l.status]}
+                </span>
+              ))}
             </div>
-          )}
-          {occupancyRows.length > 0 && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-700">{t.dashboard.occupancyByBuilding}</p>
-                <p className="text-sm font-semibold tabular-nums text-slate-900">
-                  {occupancyTotal.filled}/{occupancyTotal.total}
-                </p>
-              </div>
-              <OccupancyBars
-                rows={occupancyRows}
-                labels={{
-                  sold: t.objects.statuses.sold,
-                  reserved: t.objects.statuses.reserved,
-                  available: t.objects.statuses.available,
-                }}
-              />
-            </div>
-          )}
+          </div>
+          <RingChart data={occupancyRows} colors={RING_COLORS} activeSegment={legendSegment} />
         </div>
       )}
 
