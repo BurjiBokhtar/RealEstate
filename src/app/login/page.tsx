@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
+import { SetupNotice } from "@/components/SetupNotice";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LoginScene } from "@/components/LoginScene";
 import { LoginAside } from "@/components/LoginAside";
@@ -15,6 +17,12 @@ const FIELD_CLASS =
 export default function LoginPage() {
   const { t, locale, setLocale } = useLocale();
   const router = useRouter();
+  // A build-time env check, constant for the whole session. Without the keys
+  // the browser Supabase client throws the instant it is constructed, so this
+  // screen used to render React's blank "This page couldn't load" -- with no
+  // hint that the deployment is simply missing its environment variables,
+  // which is exactly the state a freshly created project is in.
+  const configured = isSupabaseConfigured();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,6 +41,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
+    if (!configured) return;
     const supabase = createClient();
     supabase
       .schema("crm")
@@ -49,10 +58,11 @@ export default function LoginPage() {
           applyHeroTheme(row.hero_theme ?? null, row.hero_pattern ?? null);
         }
       });
-  }, []);
+  }, [configured]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!configured) return;
     setSubmitting(true);
     setError("");
     const supabase = createClient();
@@ -137,6 +147,13 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
+        {/* A deployment whose environment variables were never set: say so
+            here, where the person is already looking, instead of letting the
+            Supabase client throw and replace the whole screen with a blank
+            error. Signing in is impossible either way, but this way the
+            reason is on screen. */}
+        {!configured && <SetupNotice />}
+
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.login.email}</span>
           <input
@@ -161,17 +178,18 @@ export default function LoginPage() {
         {notice && <p className="text-sm text-emerald-600">{notice}</p>}
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !configured}
           className="btn-brand mt-1 h-11 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
           {submitting ? t.common.loading : t.login.submit}
         </button>
         <button
           type="button"
-          disabled={resetting}
+          disabled={resetting || !configured}
           onClick={async () => {
             setError("");
             setNotice("");
+            if (!configured) return;
             if (!email.trim()) {
               setError(t.login.resetEnterEmail);
               return;

@@ -7,6 +7,7 @@ import { ConfirmProvider } from "@/components/ConfirmDialog";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { RecoveryRedirect } from "@/components/RecoveryRedirect";
 import { getBranding } from "@/lib/branding";
+import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,6 +52,40 @@ export default async function RootLayout({
   // the login page still call applyHeroTheme() client-side, but only once
   // settings have actually loaded, so they confirm this value rather than
   // momentarily resetting it.
+  // No Supabase keys: stop here with instructions instead of letting the app
+  // mount. The pieces that run on the server already return empty in this
+  // case, but createBrowserClient() throws outright, and it throws during the
+  // first render of a provider -- so React unmounts the whole tree and the
+  // visitor gets a bare "This page couldn't load" with the real reason only
+  // in the browser console. There IS a SetupNotice component for exactly this
+  // situation and it never got the chance to render.
+  //
+  // Deliberately plain markup: no providers are mounted at this point, so the
+  // usual translated components are unavailable, hence both languages inline.
+  if (!isSupabaseConfigured()) {
+    return (
+      <html lang="ru" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+        <body className="flex min-h-full items-center justify-center bg-slate-50 p-6 text-slate-900">
+          <main className="max-w-lg rounded-2xl border border-amber-300 bg-amber-50 p-6 text-sm leading-relaxed text-amber-900 shadow-sm">
+            <h1 className="text-base font-semibold">Supabase не настроен</h1>
+            <p className="mt-2">
+              Не заданы переменные <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code> и{" "}
+              <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>. Добавьте их в
+              настройках проекта (Vercel → Settings → Environment Variables) и{" "}
+              <strong>обязательно пересоберите проект</strong> — Redeploy. Эти переменные
+              вшиваются в сборку, поэтому без пересборки ничего не изменится.
+            </p>
+            <p className="mt-3 text-amber-800">
+              Supabase танзим нашудааст: <code className="font-mono">NEXT_PUBLIC_SUPABASE_URL</code>{" "}
+              ва <code className="font-mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> холӣ мебошанд.
+              Онҳоро илова кунед ва лоиҳаро аз нав созед (Redeploy).
+            </p>
+          </main>
+        </body>
+      </html>
+    );
+  }
+
   const { heroTheme, heroPattern } = await getBranding();
   const htmlDataAttrs: Record<string, string> = {};
   if (heroTheme && heroTheme !== "atlas") htmlDataAttrs["data-hero-theme"] = heroTheme;
