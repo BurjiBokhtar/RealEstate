@@ -655,11 +655,20 @@ export function ContractDocument({
           </div>
         </div>
 
-        {/* ЗАМИМА -- its own page, as in the original. print:block for the
-            same reason as the body above: this can run past one page too
-            (14-item list + two signature blocks), and a flex container
-            doesn't paginate the overflow onto the next page cleanly. */}
-        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
+        {/* ЗАМИМА used to force its own fresh page here (print:break-before-
+            page), matching the original Word document. That collided with
+            break-inside-avoid on the signature cards right above: whenever
+            those cards didn't fit the remaining room on their page and got
+            pushed down whole, this forced break then pushed ЗАМИМА past
+            THAT page too -- one blank tail at the bottom of the cards' page,
+            a second blank stretch below the cards' own (much shorter) page,
+            and a contract that printed a page longer than its actual
+            content needed. It now starts wherever there is room. print:block
+            stays regardless of where it starts: this can run past one page
+            on its own (14-item list + two signature blocks), and a flex
+            container doesn't paginate that overflow onto the next page
+            cleanly. */}
+        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:block">
           <div className="flex items-center gap-3">
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
             <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
@@ -730,13 +739,16 @@ export function ContractDocument({
 
         {/* Payment schedule -- only when the deal actually has one, and now
             the LAST thing in the document, after ЗАМИМА, rather than a table
-            wedged into the body between clause 8.3 and the signatures. On its
-            own page for the same reason ЗАМИМА is: it can run to more rows
-            than fit under whatever text happens to be above it, and a table
-            that starts mid-page gets split by the print engine wherever it
-            runs out of room, not at a row boundary. */}
+            wedged into the body between clause 8.3 and the signatures. No
+            forced page break here either, for the same reason ЗАМИМА no
+            longer forces one: whatever landed above it may already have used
+            a whole page's worth of forced breaks, and stacking another would
+            only add more blank tail. globals.css already keeps the <table>
+            itself from splitting mid-row (page-break-inside: avoid); this
+            wrapper only needs print:block so a long table can still spill
+            onto a following page cleanly if it has to. */}
         {contract.payment_type === "installment" && payments.length > 0 && (
-          <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
+          <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:block">
             <div className="flex items-center gap-3">
               <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
               <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
