@@ -613,12 +613,22 @@ export function ContractDocument({
                   {settings.company_bank_details}
                 </p>
               )}
-              <div className="mt-auto pt-4">
-                <SignatureSlot />
-                <p className="mt-2">
-                  Санаи <Var>{shortDate(contract.signed_date)}</Var>
-                </p>
-                <div className="mt-1.5 flex h-10 w-28 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300">
+              {/* М. П. beside the signature slot, not stacked under it --
+                  stacked, it added a whole extra box's worth of height to
+                  the seller's card alone. Since the two cards stretch to
+                  equal height (grid's own align-items: stretch) and the
+                  buyer has no stamp, that extra height became empty space
+                  in the BUYER's card, pushed there by its own mt-auto. Side
+                  by side, the seller's bottom block is barely taller than
+                  the buyer's, so there is far less gap to inherit. */}
+              <div className="mt-auto flex items-start gap-3 pt-4">
+                <div className="flex-1">
+                  <SignatureSlot />
+                  <p className="mt-2">
+                    Санаи <Var>{shortDate(contract.signed_date)}</Var>
+                  </p>
+                </div>
+                <div className="flex h-10 w-20 shrink-0 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300">
                   М. П.
                 </div>
               </div>
