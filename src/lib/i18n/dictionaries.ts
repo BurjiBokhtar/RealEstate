@@ -716,6 +716,7 @@ export const dictionaries = {
         started: "Рассылка запущена",
         stopped: "Рассылка остановлена",
         lastRun: "Последний запуск",
+        diagUnavailable: "Доп. проверка недоступна",
         blockersTitle: "Пока рассылка не сможет отправить ни одного SMS:",
         blockerCreds: "Не заполнены API-ключ или имя отправителя",
         blockerCronSecret:
@@ -1603,6 +1604,7 @@ export const dictionaries = {
         started: "Фиристодан оғоз шуд",
         stopped: "Фиристодан манъ шуд",
         lastRun: "Охирин иҷро",
+        diagUnavailable: "Санҷиши иловагӣ дастрас нест",
         blockersTitle: "Ҳоло фиристодан ягон SMS фиристода наметавонад:",
         blockerCreds: "Калиди API ё номи фиристанда холӣ аст",
         blockerCronSecret:

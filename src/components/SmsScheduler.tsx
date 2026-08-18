@@ -17,14 +17,26 @@ type Status = {
 // The Start/Stop control for the automatic SMS mailout, plus an honest report
 // of whether it can actually run.
 //
-// The old feature had no on/off switch and no status of any kind, so when it
-// silently did nothing there was nowhere to look. The usual cause was a
-// missing CRON_SECRET on Vercel -- invisible from the browser -- which made
-// every nightly run get rejected. This panel names that instead of hiding it.
+// Two different things used to be fetched by ONE call (/api/sms/status,
+// which needs SUPABASE_SERVICE_ROLE_KEY to work at all): "is the switch
+// currently on" and "why can't the nightly run go out". The first is a plain
+// column read the ordinary signed-in session can already do -- RLS has
+// always allowed it -- and never needed the service key in the first place.
+// Bundling them meant that whenever the service key broke (a stale/wrong
+// value on Vercel, or -- the actual cause found once -- crm never having
+// been GRANTed to service_role at all), the ENTIRE panel disappeared behind
+// one error paragraph, including the Start/Stop button itself, which would
+// have worked fine on its own the whole time.
+//
+// So they're two independent reads now. enabled loads first, straight from
+// the table, and the button appears as soon as it does -- diagnostics
+// (why a scheduled run might still fail even with the switch on) load
+// separately and degrade to a small note instead of hiding the button.
 export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: boolean) => void }) {
   const { t } = useLocale();
+  const [enabled, setEnabled] = useState<boolean | null>(null);
   const [status, setStatus] = useState<Status | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [diagError, setDiagError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const authHeaders = async (): Promise<Record<string, string>> => {
@@ -34,26 +46,39 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
     return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
   };
 
-  const refresh = useCallback(async () => {
+  // The one thing the button needs: is the switch on. A plain table read
+  // under the signed-in admin's own session -- no service key involved.
+  const loadEnabled = useCallback(async () => {
+    const { data, error } = await createClient()
+      .schema("crm")
+      .from("settings")
+      .select("sms_enabled")
+      .maybeSingle();
+    if (!error) setEnabled(!!data?.sms_enabled);
+  }, []);
+
+  // Everything else: has an API key been saved, is CRON_SECRET set on
+  // Vercel, does the service key match this project, when did it last run.
+  // Nice to have, not required to show the button.
+  const loadDiagnostics = useCallback(async () => {
     try {
       const res = await fetch("/api/sms/status", { headers: await authHeaders() });
       const json = await res.json().catch(() => ({}));
       if (res.ok) {
         setStatus(json as Status);
-        setLoadError(null);
+        setDiagError(null);
       } else {
-        // Show it. Hiding the panel when the status call fails would recreate
-        // the exact silence this whole panel is here to end.
-        setLoadError((json as { error?: string }).error ?? `HTTP ${res.status}`);
+        setDiagError((json as { error?: string }).error ?? `HTTP ${res.status}`);
       }
     } catch (err) {
-      setLoadError(err instanceof Error ? err.message : "network error");
+      setDiagError(err instanceof Error ? err.message : "network error");
     }
   }, []);
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void loadEnabled();
+    void loadDiagnostics();
+  }, [loadEnabled, loadDiagnostics]);
 
   const toggle = async (next: boolean) => {
     setBusy(true);
@@ -67,8 +92,9 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
       onMessage(error.message, false);
       return;
     }
+    setEnabled(next);
     onMessage(next ? t.settings.sms.started : t.settings.sms.stopped, true);
-    void refresh();
+    void loadDiagnostics();
   };
 
   const runNow = async () => {
@@ -81,39 +107,31 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
       onMessage(t.common.error, false);
     }
     setBusy(false);
-    void refresh();
+    void loadDiagnostics();
   };
 
-  if (loadError) {
-    return (
-      <div className="border-t border-slate-100 pt-4">
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5">
-          <p className="text-xs font-semibold text-rose-800">{t.settings.sms.blockersTitle}</p>
-          <p className="mt-1 whitespace-pre-line text-xs leading-relaxed text-rose-800">{loadError}</p>
-        </div>
-      </div>
-    );
+  // Still waiting on the one read the button actually depends on.
+  if (enabled === null) {
+    return <div className="border-t border-slate-100 pt-4 text-sm text-slate-400">{t.common.loading}</div>;
   }
-  if (!status) return null;
 
-  // Everything that has to be true before a single message can go out.
+  // Everything that has to be true before a single message can go out --
+  // only shown once diagnostics actually loaded.
   const blockers: string[] = [];
-  if (!status.hasApiKey || !status.hasSenderName) blockers.push(t.settings.sms.blockerCreds);
-  if (!status.hasCronSecret) blockers.push(t.settings.sms.blockerCronSecret);
-  if (status.projectRefMismatch) blockers.push(t.settings.sms.blockerProjectMismatch);
+  if (status && (!status.hasApiKey || !status.hasSenderName)) blockers.push(t.settings.sms.blockerCreds);
+  if (status && !status.hasCronSecret) blockers.push(t.settings.sms.blockerCronSecret);
+  if (status?.projectRefMismatch) blockers.push(t.settings.sms.blockerProjectMismatch);
 
   return (
     <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-              status.enabled ? "bg-emerald-500" : "bg-slate-300"
-            }`}
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${enabled ? "bg-emerald-500" : "bg-slate-300"}`}
           />
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-slate-800">
-              {status.enabled ? t.settings.sms.stateOn : t.settings.sms.stateOff}
+              {enabled ? t.settings.sms.stateOn : t.settings.sms.stateOff}
             </span>
             <span className="text-xs text-slate-400">{t.settings.sms.schedule}</span>
           </div>
@@ -123,12 +141,12 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
           <button
             type="button"
             onClick={runNow}
-            disabled={busy || !status.enabled}
+            disabled={busy || !enabled}
             className="h-9 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-40"
           >
             {t.settings.sms.runNow}
           </button>
-          {status.enabled ? (
+          {enabled ? (
             <button
               type="button"
               onClick={() => toggle(false)}
@@ -161,7 +179,17 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
         </div>
       )}
 
-      {status.lastRunAt && (
+      {/* Diagnostics genuinely couldn't be read (the service key itself is
+          still broken somehow) -- a one-line note, not a wall of red that
+          used to replace the button above instead of sitting quietly under
+          it. */}
+      {diagError && !status && (
+        <p className="text-xs text-slate-400">
+          {t.settings.sms.diagUnavailable}: {diagError}
+        </p>
+      )}
+
+      {status?.lastRunAt && (
         <p className="text-xs text-slate-500">
           {t.settings.sms.lastRun}: {new Date(status.lastRunAt).toLocaleString("ru-RU")}
           {status.lastResult ? ` · ${status.lastResult}` : ""}
