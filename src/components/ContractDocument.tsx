@@ -216,11 +216,16 @@ export function ContractDocument({
       : contract.payment_type === "barter"
         ? "Бартер"
         : "Якбора";
-  // Order matters here: block/entrance first (which entrance the buyer walks
-  // into), then floor, then area, then room count -- matches how the company
-  // reads out a unit verbally and how the paper contract should read too.
-  const railSub = [
-    contract.object?.block ?? null,
+  // Block/entrance is its own line, not joined into the same string as
+  // floor/area/rooms: a block name like "Блоки А / Даромадгоҳи 1" is long
+  // enough on its own to wrap, and wrapping it next to unrelated short items
+  // used to break the line mid-phrase ("...Даромадгоҳи" / "1 · ошёнаи 7...").
+  // Kept apart, each line only ever wraps within itself.
+  const railBlock = contract.object?.block ?? null;
+  // Order matters here: floor first (which floor the buyer walks onto), then
+  // area, then room count -- matches how the company reads out a unit
+  // verbally and how the paper contract should read too.
+  const railSpecs = [
     contract.object?.floor != null ? `ошёнаи ${contract.object.floor}` : null,
     dealArea != null ? `${docArea(dealArea)} м²` : null,
     contract.object?.rooms != null ? `${contract.object.rooms} ҳуҷра` : null,
@@ -370,7 +375,13 @@ export function ContractDocument({
             <div className="flex">
             <div
               style={{ borderColor: PLUM }}
-              className="flex w-36 shrink-0 flex-col gap-2.5 border-r bg-slate-50 p-3 print:bg-white"
+              // Widened from w-36: at that width "Блоки А / Даромадгоҳи 1"
+              // alone wrapped across two lines and pushed the whole rail
+              // taller than the five rows beside it needed to be -- which is
+              // what stretched those rows apart with justify-between below.
+              // A wider column lets the block name sit on one line, the rail
+              // shrinks to match its neighbour, and the gap goes with it.
+              className="flex w-44 shrink-0 flex-col gap-2.5 border-r bg-slate-50 p-3 print:bg-white"
             >
               <div>
                 <p className="text-[8px] font-semibold uppercase tracking-[0.14em] text-slate-400">
@@ -380,7 +391,12 @@ export function ContractDocument({
                   №{aptNo}
                 </p>
               </div>
-              {railSub && <p className="text-[10.5px] text-slate-600">{railSub}</p>}
+              {(railBlock || railSpecs) && (
+                <div className="flex flex-col gap-0.5">
+                  {railBlock && <p className="text-[10.5px] text-slate-600">{railBlock}</p>}
+                  {railSpecs && <p className="text-[10.5px] text-slate-600">{railSpecs}</p>}
+                </div>
+              )}
               <div className="mt-auto flex flex-col gap-2 pt-1">
                 <RailStat
                   label="Масоҳат"
@@ -535,59 +551,6 @@ export function ContractDocument({
             якхела дорад.
           </p>
 
-          {/* Payment schedule -- only when the deal actually has one. Not in
-              the paper original (which is always full payment), so it goes
-              after the body as its own annex. */}
-          {contract.payment_type === "installment" && payments.length > 0 && (
-            <>
-              <p className="mt-4 text-center text-[14px] font-bold">
-                ҶАДВАЛИ ПАРДОХТҲО
-              </p>
-              <p className="text-justify">
-                Пардохтшуда: <b>{docAmount(paidSoFar, contract.currency)}</b>; боқимонда:{" "}
-                <b>{docAmount(remainingSchedule, contract.currency)}</b>
-                {unpaidRows.length > 0 && typicalMonthly != null && (
-                  <>
-                    {" "}
-                    дар <b>{unpaidRows.length}</b> қисм, ҳар моҳ тақрибан{" "}
-                    <b>{docAmount(typicalMonthly, contract.currency)}</b>
-                  </>
-                )}
-                .
-              </p>
-              <table className="mt-1 w-full border-collapse text-[12px]">
-                <thead>
-                  <tr className="border-b border-slate-400 text-left">
-                    <th className="px-2 py-1 font-semibold">№</th>
-                    <th className="px-2 py-1 font-semibold">Сана</th>
-                    <th className="px-2 py-1 text-right font-semibold">Маблағ</th>
-                    <th className="px-2 py-1 text-center font-semibold">Пардохт шуд</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p, i) => (
-                    <tr key={p.id} className="border-b border-slate-200">
-                      <td className="px-2 py-1">{i + 1}</td>
-                      <td className="px-2 py-1">{shortDate(p.due_date)}</td>
-                      <td className="px-2 py-1 text-right">
-                        {docAmount(p.amount, contract.currency)}
-                      </td>
-                      <td className="px-2 py-1 text-center">{p.paid ? "✓" : "—"}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t-2 border-slate-900 font-bold">
-                    <td className="px-2 py-1" />
-                    <td className="px-2 py-1">Ҷамъ</td>
-                    <td className="px-2 py-1 text-right">
-                      {docAmount(scheduleTotal, contract.currency)}
-                    </td>
-                    <td className="px-2 py-1" />
-                  </tr>
-                </tbody>
-              </table>
-            </>
-          )}
-
           <Section num={9} title="Суроғаи ҳуқуқӣ ва имзои тарафҳо" />
 
           {/* Two party cards. The seller's block is the company's fixed
@@ -722,6 +685,67 @@ export function ContractDocument({
             </div>
           </div>
         </div>
+
+        {/* Payment schedule -- only when the deal actually has one, and now
+            the LAST thing in the document, after ЗАМИМА, rather than a table
+            wedged into the body between clause 8.3 and the signatures. On its
+            own page for the same reason ЗАМИМА is: it can run to more rows
+            than fit under whatever text happens to be above it, and a table
+            that starts mid-page gets split by the print engine wherever it
+            runs out of room, not at a row boundary. */}
+        {contract.payment_type === "installment" && payments.length > 0 && (
+          <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
+            <div className="flex items-center gap-3">
+              <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+              <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
+                ҶАДВАЛИ ПАРДОХТҲО
+              </p>
+              <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
+            </div>
+            <p className="text-justify">
+              Пардохтшуда: <b>{docAmount(paidSoFar, contract.currency)}</b>; боқимонда:{" "}
+              <b>{docAmount(remainingSchedule, contract.currency)}</b>
+              {unpaidRows.length > 0 && typicalMonthly != null && (
+                <>
+                  {" "}
+                  дар <b>{unpaidRows.length}</b> қисм, ҳар моҳ тақрибан{" "}
+                  <b>{docAmount(typicalMonthly, contract.currency)}</b>
+                </>
+              )}
+              .
+            </p>
+            <table className="mt-1 w-full border-collapse text-[12px]">
+              <thead>
+                <tr className="border-b border-slate-400 text-left">
+                  <th className="px-2 py-1 font-semibold">№</th>
+                  <th className="px-2 py-1 font-semibold">Сана</th>
+                  <th className="px-2 py-1 text-right font-semibold">Маблағ</th>
+                  <th className="px-2 py-1 text-center font-semibold">Пардохт шуд</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p, i) => (
+                  <tr key={p.id} className="border-b border-slate-200">
+                    <td className="px-2 py-1">{i + 1}</td>
+                    <td className="px-2 py-1">{shortDate(p.due_date)}</td>
+                    <td className="px-2 py-1 text-right">
+                      {docAmount(p.amount, contract.currency)}
+                    </td>
+                    <td className="px-2 py-1 text-center">{p.paid ? "✓" : "—"}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 border-slate-900 font-bold">
+                  <td className="px-2 py-1" />
+                  <td className="px-2 py-1">Ҷамъ</td>
+                  <td className="px-2 py-1 text-right">
+                    {docAmount(scheduleTotal, contract.currency)}
+                  </td>
+                  <td className="px-2 py-1" />
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
