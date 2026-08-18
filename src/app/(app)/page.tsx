@@ -17,6 +17,7 @@ import { ManagerSales } from "@/components/ManagerSales";
 import { StatCard, StatIcons } from "@/components/StatCard";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
+import { useRole } from "@/lib/auth/useRole";
 import type { ObjectStatus } from "@/lib/objects/types";
 import type { Building } from "@/lib/buildings/types";
 
@@ -118,6 +119,11 @@ export default function DashboardPage() {
   const { t } = useLocale();
   const { settings } = useSettings();
   const brandName = settings.company_name || t.appName;
+  // ManagerSales gates itself to admin/director; the layout has to know the
+  // same thing so a manager's debtors card doesn't sit alone in a two-column
+  // row with a blank half beside it.
+  const { role } = useRole();
+  const canSeeManagerSales = role === "admin" || role === "director";
 
   const [summary, setSummary] = useState<DashboardSummary>(EMPTY_SUMMARY);
   const [buildings, setBuildings] = useState<Building[]>([]);
@@ -506,46 +512,55 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* The page's two tables share a row instead of stacking. Both are short
-          lists of names and money, neither needs the full width, and stacked
-          they pushed the manager table below the fold on a laptop. */}
-      <div className="grid items-start gap-4 xl:grid-cols-2">
+      {/* The page's two tables share a row instead of stacking -- but only
+          when there IS a second table. ManagerSales renders nothing for a
+          manager account (admin/director only), and xl:grid-cols-2 doesn't
+          know that: a manager used to get the debtors card alone in a
+          two-column row, half the width, with the other half simply blank. */}
+      <div className={`grid items-start gap-4 ${canSeeManagerSales ? "xl:grid-cols-2" : ""}`}>
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">{t.dashboard.topDebtors}</p>
+        <p className="mb-3 text-sm font-semibold text-slate-700">{t.dashboard.topDebtors}</p>
         {debtors.length > 0 ? (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
-              <tr>
-                <th className="pb-2 font-medium">{t.clients.table.name}</th>
-                <th className="pb-2 font-medium">{t.dashboard.remaining}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {debtors.map((d) => (
-                <tr
-                  key={`${d.clientId}-${d.currency}`}
-                  className="border-b border-slate-100 last:border-0"
+          // A ranked list, not a bare two-column table: the rank badge says
+          // "these are ordered", and the whole row is the click target and
+          // hover target instead of just the name text -- both missing
+          // before, and both why it read as a leftover HTML table rather
+          // than a part of this dashboard.
+          <ul className="flex flex-col gap-0.5">
+            {debtors.map((d, i) => (
+              <li key={`${d.clientId}-${d.currency}`}>
+                <Link
+                  href={`/clients/${d.clientId}`}
+                  className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-rose-50"
                 >
-                  <td className="py-2">
-                    <Link href={`/clients/${d.clientId}`} className="hover:underline">
-                      {d.clientName}
-                    </Link>
-                  </td>
-                  <td className="py-2 text-rose-600">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-[11px] font-bold text-rose-600 transition-colors group-hover:bg-rose-100">
+                    {i + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 group-hover:underline">
+                    {d.clientName}
+                  </span>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-rose-600">
                     {formatCurrency(d.remaining, d.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
         )}
       </div>
-      <ManagerSales
-        periodBounds={periodBounds}
-        buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
-      />
+      {canSeeManagerSales && (
+        <ManagerSales
+          periodBounds={periodBounds}
+          buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
+          periodFilter={periodFilter}
+          onPeriodChange={setPeriodFilter}
+          buildings={buildings}
+          selectedBuildingId={selectedBuildingId}
+          onBuildingChange={setSelectedBuildingId}
+        />
+      )}
       </div>
     </div>
   );

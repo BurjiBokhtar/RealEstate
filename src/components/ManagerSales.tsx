@@ -6,6 +6,39 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ControlGroup, PillButton } from "@/components/ActionBar";
+import { CalendarIcon, HomeIcon } from "@/components/icons";
+import type { Building } from "@/lib/buildings/types";
+
+type PeriodFilter = "all" | "today" | "month" | "year";
+
+// One icon, one native <select> beside it -- the minimum that still reads as
+// "this is a filter" rather than a label. Matches the hero row's own glass
+// selects in behaviour, just styled for a white card instead of the hero's
+// dark gradient.
+function IconSelect({
+  icon,
+  value,
+  onChange,
+  children,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  onChange: (value: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white pl-1.5 pr-1 text-slate-400 transition-colors hover:border-slate-300">
+      {icon}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-full min-w-0 max-w-[9rem] truncate border-0 bg-transparent py-0 pl-0.5 pr-4 text-xs font-medium text-slate-600 focus:outline-none focus:ring-0"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
 
 type Row = {
   manager: string;
@@ -32,12 +65,30 @@ export type PeriodBounds = { start: string; end: string } | null;
 // on counting deals from all of them -- two halves of one screen answering
 // different questions, with totals that could not be reconciled. It now takes
 // p_building_id as well (migration 048).
+//
+// periodFilter/onPeriodChange/buildings/selectedBuildingId/onBuildingChange
+// are the SAME state the hero row's own selects read and write -- this panel
+// gets its own compact controls rather than a second, independent scope,
+// because two filters on one screen disagreeing about which ЖК is selected
+// would be far more confusing than this panel having none of its own. Change
+// either one here and the hero row (and every other card on the page) moves
+// with it.
 export function ManagerSales({
   periodBounds,
   buildingId,
+  periodFilter,
+  onPeriodChange,
+  buildings,
+  selectedBuildingId,
+  onBuildingChange,
 }: {
   periodBounds?: PeriodBounds;
   buildingId?: string | null;
+  periodFilter: PeriodFilter;
+  onPeriodChange: (period: PeriodFilter) => void;
+  buildings: Building[];
+  selectedBuildingId: string;
+  onBuildingChange: (id: string) => void;
 }) {
   const { t } = useLocale();
   const { role } = useRole();
@@ -79,23 +130,47 @@ export function ManagerSales({
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-semibold text-slate-700">{t.dashboard.byManager}</p>
-        {currencies.length > 1 && (
-          <ControlGroup size="sm">
-            <PillButton
-              label={t.dashboard.allCurrencies}
-              active={activeCurrency === null}
-              onClick={() => setCurrencyFilter(null)}
-            />
-            {currencies.map((c) => (
-              <PillButton
-                key={c}
-                label={c}
-                active={activeCurrency === c}
-                onClick={() => setCurrencyFilter(c)}
-              />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <IconSelect
+            icon={<CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
+            value={periodFilter}
+            onChange={(v) => onPeriodChange(v as PeriodFilter)}
+          >
+            <option value="all">{t.dashboard.periodAll}</option>
+            <option value="today">{t.dashboard.periodToday}</option>
+            <option value="month">{t.dashboard.periodMonth}</option>
+            <option value="year">{t.dashboard.periodYear}</option>
+          </IconSelect>
+          <IconSelect
+            icon={<HomeIcon className="h-3.5 w-3.5 shrink-0" />}
+            value={selectedBuildingId}
+            onChange={onBuildingChange}
+          >
+            <option value="all">{t.dashboard.allBuildings}</option>
+            {buildings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
             ))}
-          </ControlGroup>
-        )}
+          </IconSelect>
+          {currencies.length > 1 && (
+            <ControlGroup size="sm">
+              <PillButton
+                label={t.dashboard.allCurrencies}
+                active={activeCurrency === null}
+                onClick={() => setCurrencyFilter(null)}
+              />
+              {currencies.map((c) => (
+                <PillButton
+                  key={c}
+                  label={c}
+                  active={activeCurrency === c}
+                  onClick={() => setCurrencyFilter(c)}
+                />
+              ))}
+            </ControlGroup>
+          )}
+        </div>
       </div>
       {visibleRows.length > 0 ? (
         <div className="overflow-x-auto">
