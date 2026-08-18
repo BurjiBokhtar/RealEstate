@@ -754,18 +754,20 @@ export function ContractDocument({
           </div>
         </div>
 
-        {/* Payment schedule -- only when the deal actually has one, and now
-            the LAST thing in the document, after ЗАМИМА, rather than a table
-            wedged into the body between clause 8.3 and the signatures. No
-            forced page break here either, for the same reason ЗАМИМА no
-            longer forces one: whatever landed above it may already have used
-            a whole page's worth of forced breaks, and stacking another would
-            only add more blank tail. globals.css already keeps the <table>
-            itself from splitting mid-row (page-break-inside: avoid); this
-            wrapper only needs print:block so a long table can still spill
-            onto a following page cleanly if it has to. */}
+        {/* Payment schedule -- only when the deal actually has one, and the
+            LAST thing in the document, after ЗАМИМА, rather than a table
+            wedged into the body between clause 8.3 and the signatures.
+            print:break-before-page for the same reason ЗАМИМА carries one:
+            ЗАМИМА's own content doesn't reliably fill its page, so without
+            a forced break here the table just continues wherever ЗАМИМА
+            happened to end -- an annex sharing a page with an unrelated
+            table, which reads as one page belonging to two different
+            things. globals.css also keeps the <table> itself from
+            splitting mid-row (page-break-inside: avoid); print:block is
+            what lets it spill onto a FOLLOWING page cleanly if it runs
+            past one on its own. */}
         {contract.payment_type === "installment" && payments.length > 0 && (
-          <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:block">
+          <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
             <div className="flex items-center gap-3">
               <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
               <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
