@@ -170,6 +170,22 @@ function RailStat({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
+// A place to sign, drawn as a slot rather than a ruled line: the same dashed
+// outline the seal ("М. П.") box beside it already uses, just wide instead of
+// square and labelled "имзо" instead of "М. П.". Two matched fill-in boxes
+// read as one modern idea -- "the empty ones are for you to fill in" -- where
+// a bare horizontal rule above a caption is the older convention this
+// replaces.
+function SignatureSlot({ className = "" }: { className?: string }) {
+  return (
+    <div
+      className={`flex h-14 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300 ${className}`}
+    >
+      имзо
+    </div>
+  );
+}
+
 // The company's official cooperation contract (ШАРТНОМАИ ҲАМКОРӢ), wording
 // taken verbatim from Намунаи шартномаи Бурҷи Бохтар.docx -- only the
 // party/apartment/amount specifics are substituted from the deal. Section
@@ -408,15 +424,16 @@ export function ContractDocument({
               </div>
             </div>
 
-            {/* Spread over the full height rather than stacked at the top.
-                The rail beside this is the taller of the two columns -- the
-                big flat number, the spec line and two stats add up to more
-                than five data rows -- so the rows used to end partway down
-                and leave a blank block of panel under them. Distributing
-                them costs nothing and invents no figures: the alternative
-                was padding the panel with numbers that are already printed
-                under the payment table. */}
-            <div className="flex flex-1 flex-col justify-between px-3.5 py-1.5">
+            {/* Centred as a tight block, not stretched with justify-between.
+                The rail beside this is the taller column -- a big flat
+                number, the spec lines and two stats add up to more height
+                than five short rows need -- and spreading five rows across
+                that extra height put visible gaps between every one of them.
+                The rows stay their own natural, close height; centring just
+                places that block in the middle of whatever space the rail
+                sets, so the panel reads as compact regardless of which
+                column happens to be taller. */}
+            <div className="flex flex-1 flex-col justify-center px-3.5 py-1.5">
               <SummaryRow label="Фурӯшанда" value={`ҶДММ «${companyName}»`} />
               <SummaryRow label="Харидор" value={contract.client?.name ?? "____________"} />
               <SummaryRow label="Шиноснома" value={contract.client?.passport ?? "—"} />
@@ -578,12 +595,7 @@ export function ContractDocument({
                 </p>
               )}
               <div className="mt-auto pt-6">
-                {/* A plum hairline at low opacity, not a plain grey rule --
-                    the same divider the section headings and ЗАМИМА's own
-                    heading use, so the signature line reads as part of the
-                    same document instead of a leftover Word-template line. */}
-                <div style={{ backgroundColor: PLUM }} className="h-px opacity-25" />
-                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+                <SignatureSlot />
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
                 </p>
@@ -621,12 +633,7 @@ export function ContractDocument({
                 <p className="text-slate-600">Тел: {contract.client.phone}</p>
               )}
               <div className="mt-auto pt-6">
-                {/* A plum hairline at low opacity, not a plain grey rule --
-                    the same divider the section headings and ЗАМИМА's own
-                    heading use, so the signature line reads as part of the
-                    same document instead of a leftover Word-template line. */}
-                <div style={{ backgroundColor: PLUM }} className="h-px opacity-25" />
-                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+                <SignatureSlot />
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
                 </p>
@@ -688,11 +695,7 @@ export function ContractDocument({
               <p className="mt-1">Роҳбари ҶДММ «{companyName}»</p>
               <p className="font-bold">{director}</p>
               <div className="mt-auto pt-7">
-                {/* Same plum hairline as the main signature cards above,
-                    instead of a plain grey rule left over from the Word
-                    template. */}
-                <div style={{ backgroundColor: PLUM }} className="mx-auto h-px w-4/5 opacity-25" />
-                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+                <SignatureSlot className="mx-auto w-4/5" />
               </div>
             </div>
             <div className="flex flex-col">
@@ -703,8 +706,7 @@ export function ContractDocument({
                 <Var>{contract.client?.name ?? "____________"}</Var>
               </p>
               <div className="mt-auto pt-7">
-                <div style={{ backgroundColor: PLUM }} className="mx-auto h-px w-4/5 opacity-25" />
-                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+                <SignatureSlot className="mx-auto w-4/5" />
               </div>
             </div>
           </div>
