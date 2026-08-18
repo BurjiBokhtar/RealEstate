@@ -572,11 +572,24 @@ export function ContractDocument({
 
           {/* Two party cards. The seller's block is the company's fixed
               identity (settings); the buyer's is the part that differs on
-              every contract, so it gets the filled-field treatment. */}
-          <div className="mt-1 grid grid-cols-2 gap-5 text-[11.5px] leading-[1.55]">
+              every contract, so it gets the filled-field treatment.
+
+              break-inside-avoid on the row AND on each card: nothing here
+              told the print engine to keep a card whole, so when the pair
+              landed too low on a page to fit, Chrome split a card's own
+              border box mid-height -- the bottom half (a signature slot,
+              "М. П.", the date) re-opened as if it were a fresh, unrelated
+              box at the top of the next page, with no border tying it back
+              to the header above. #contract-print-area's own print rules
+              (globals.css) only cover <section> and <table>, and this is
+              neither. Guarding the row keeps the seller/buyer pair moving
+              together as one unit; guarding each card too is what actually
+              stops ITS OWN border from splitting once that unit lands on a
+              page. */}
+          <div className="mt-1 grid grid-cols-2 gap-5 break-inside-avoid text-[11.5px] leading-[1.55]">
             <div
               style={{ borderColor: PLUM }}
-              className="flex flex-col rounded-lg border p-3.5"
+              className="flex flex-col break-inside-avoid rounded-lg border p-3.5"
             >
               <p
                 style={{ borderColor: PLUM, color: PLUM }}
@@ -607,7 +620,7 @@ export function ContractDocument({
 
             <div
               style={{ borderColor: PLUM }}
-              className="flex flex-col rounded-lg border p-3.5"
+              className="flex flex-col break-inside-avoid rounded-lg border p-3.5"
             >
               <p
                 style={{ borderColor: PLUM, color: PLUM }}
@@ -686,8 +699,11 @@ export function ContractDocument({
               labels at different heights, which is exactly what showed up as
               the lines looking misaligned side by side. Grid's own
               align-items: stretch already gives both cells equal height, so
-              mt-auto has a full-height column to push against on each side. */}
-          <div className="mt-8 grid grid-cols-2 gap-8 text-center text-[12px]">
+              mt-auto has a full-height column to push against on each side.
+              break-inside-avoid for the same reason the main signature cards
+              above carry it: without it, nothing stops a name from landing
+              on one page and its own signature slot on the next. */}
+          <div className="mt-8 grid grid-cols-2 gap-8 break-inside-avoid text-center text-[12px]">
             <div className="flex flex-col">
               <p style={{ color: PLUM }} className="text-[12.5px] font-bold">
                 «Фурӯшанда»
