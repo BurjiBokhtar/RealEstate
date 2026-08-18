@@ -578,8 +578,12 @@ export function ContractDocument({
                 </p>
               )}
               <div className="mt-auto pt-6">
-                <div className="border-b border-slate-400" />
-                <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+                {/* A plum hairline at low opacity, not a plain grey rule --
+                    the same divider the section headings and ЗАМИМА's own
+                    heading use, so the signature line reads as part of the
+                    same document instead of a leftover Word-template line. */}
+                <div style={{ backgroundColor: PLUM }} className="h-px opacity-25" />
+                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
                 </p>
@@ -617,8 +621,12 @@ export function ContractDocument({
                 <p className="text-slate-600">Тел: {contract.client.phone}</p>
               )}
               <div className="mt-auto pt-6">
-                <div className="border-b border-slate-400" />
-                <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+                {/* A plum hairline at low opacity, not a plain grey rule --
+                    the same divider the section headings and ЗАМИМА's own
+                    heading use, so the signature line reads as part of the
+                    same document instead of a leftover Word-template line. */}
+                <div style={{ backgroundColor: PLUM }} className="h-px opacity-25" />
+                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
                 </p>
@@ -663,25 +671,41 @@ export function ContractDocument({
             ))}
           </div>
 
+          {/* Both cells are flex-col with the signature group pushed to the
+              bottom via mt-auto, not stacked flush under whatever text
+              happens to be above it. The seller's cell carries two lines
+              (role + name), the buyer's carries one -- with a fixed mt-7
+              instead, that one extra line was enough to put the two "имзо"
+              labels at different heights, which is exactly what showed up as
+              the lines looking misaligned side by side. Grid's own
+              align-items: stretch already gives both cells equal height, so
+              mt-auto has a full-height column to push against on each side. */}
           <div className="mt-8 grid grid-cols-2 gap-8 text-center text-[12px]">
-            <div>
+            <div className="flex flex-col">
               <p style={{ color: PLUM }} className="text-[12.5px] font-bold">
                 «Фурӯшанда»
               </p>
               <p className="mt-1">Роҳбари ҶДММ «{companyName}»</p>
               <p className="font-bold">{director}</p>
-              <div className="mx-auto mt-7 w-4/5 border-b border-slate-400" />
-              <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+              <div className="mt-auto pt-7">
+                {/* Same plum hairline as the main signature cards above,
+                    instead of a plain grey rule left over from the Word
+                    template. */}
+                <div style={{ backgroundColor: PLUM }} className="mx-auto h-px w-4/5 opacity-25" />
+                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+              </div>
             </div>
-            <div>
+            <div className="flex flex-col">
               <p style={{ color: PLUM }} className="text-[12.5px] font-bold">
                 «Харидор»
               </p>
               <p className="mt-1">
                 <Var>{contract.client?.name ?? "____________"}</Var>
               </p>
-              <div className="mx-auto mt-7 w-4/5 border-b border-slate-400" />
-              <p className="mt-0.5 text-[9.5px] text-slate-400">имзо</p>
+              <div className="mt-auto pt-7">
+                <div style={{ backgroundColor: PLUM }} className="mx-auto h-px w-4/5 opacity-25" />
+                <p className="mt-1.5 text-[9.5px] text-slate-400">имзо</p>
+              </div>
             </div>
           </div>
         </div>
