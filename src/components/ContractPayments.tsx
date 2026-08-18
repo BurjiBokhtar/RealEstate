@@ -72,6 +72,7 @@ export function ContractPayments({
   const [recordError, setRecordError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const load = useCallback(async () => {
     const supabase = createClient();
@@ -172,6 +173,44 @@ export function ContractPayments({
     onPaymentAdded?.();
   };
 
+  // crm.regenerate_schedule exists in the database precisely for this --
+  // recompute the unpaid rows from the CURRENT remaining balance, leaving
+  // receipts untouched -- but nothing in the app ever called it. Editing a
+  // contract's amount (a discount, a correction) writes only to
+  // crm.contracts; the schedule rows it should also move are a separate
+  // table, never revisited. A printed schedule this drifted from was the
+  // symptom that surfaced it: paid correctly matched real receipts, but the
+  // unpaid rows still summed to the OLD total, so "boqimonda" on the paper
+  // read far higher than amount - paid_amount actually is.
+  const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+  const mismatch = payments.length > 0 && Math.abs(scheduleTotal - contract.amount) > 0.5;
+
+  const handleRegenerate = async () => {
+    if (!contract.installment_months) return;
+    const remaining = contract.amount - contract.paid_amount;
+    const ok = await confirm(
+      t.contracts.payments.regenerateConfirm
+        .replace("{remaining}", formatCurrency(remaining, contract.currency))
+        .replace("{months}", String(contract.installment_months)),
+      { danger: true, confirmLabel: t.contracts.payments.regenerateBtn }
+    );
+    if (!ok) return;
+    setRegenerating(true);
+    setRecordError(null);
+    const supabase = createClient();
+    const { error } = await supabase.schema("crm").rpc("regenerate_schedule", {
+      p_contract_id: contract.id,
+      p_months: contract.installment_months,
+    });
+    setRegenerating(false);
+    if (error) {
+      setRecordError(error.message);
+      return;
+    }
+    await load();
+    onPaymentAdded?.();
+  };
+
   const payBounds = DATE_BOUNDS.past();
   const payDateInvalid = !isDateInRange(newDate, payBounds.min, payBounds.max);
 
@@ -209,6 +248,33 @@ export function ContractPayments({
           </span>
         )}
       </div>
+
+      {/* Surfaced above everything else, including the collapsed schedule --
+          a drifted plan quietly overstates what's still owed on every
+          printed copy of this contract until someone happens to expand the
+          schedule and add it up by hand. */}
+      {mismatch && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-3">
+          <p className="text-xs font-semibold text-amber-800">
+            {t.contracts.payments.mismatchTitle}
+          </p>
+          <p className="mt-1 text-xs text-amber-800">
+            {t.contracts.payments.mismatchHint
+              .replace("{schedule}", formatCurrency(scheduleTotal, contract.currency))
+              .replace("{contract}", formatCurrency(contract.amount, contract.currency))}
+          </p>
+          {role === "admin" && contract.installment_months && (
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={regenerating}
+              className="mt-2 h-8 rounded-lg bg-amber-600 px-3 text-xs font-semibold text-white shadow-sm transition-all hover:bg-amber-700 active:scale-[0.98] disabled:opacity-50"
+            >
+              {regenerating ? t.common.loading : t.contracts.payments.regenerateBtn}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Recording a payment is the thing staff do here most often --
           it gets the prominent spot at the top, not buried under a table.
