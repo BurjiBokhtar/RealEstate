@@ -179,7 +179,13 @@ function RailStat({ label, value }: { label: string; value: React.ReactNode }) {
 function SignatureSlot({ className = "" }: { className?: string }) {
   return (
     <div
-      className={`flex h-14 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300 ${className}`}
+      // h-10, not h-14: this box and the two lines under it are what push
+      // Section 9's cards tall enough that the pair sometimes doesn't fit
+      // the room left after clause 8.3, and break-inside-avoid then moves
+      // the whole pair to a fresh page -- leaving clause 8's page with a
+      // blank tail. A shorter slot is still plainly a place to sign; it
+      // just costs the layout less.
+      className={`flex h-10 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300 ${className}`}
     >
       имзо
     </div>
@@ -607,12 +613,12 @@ export function ContractDocument({
                   {settings.company_bank_details}
                 </p>
               )}
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-4">
                 <SignatureSlot />
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
                 </p>
-                <div className="mt-2.5 flex h-14 w-32 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300">
+                <div className="mt-1.5 flex h-10 w-28 items-center justify-center rounded-lg border-[1.5px] border-dashed border-slate-300 text-[10px] tracking-[0.2em] text-slate-300">
                   М. П.
                 </div>
               </div>
@@ -645,7 +651,7 @@ export function ContractDocument({
               {contract.client?.phone && (
                 <p className="text-slate-600">Тел: {contract.client.phone}</p>
               )}
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-4">
                 <SignatureSlot />
                 <p className="mt-2">
                   Санаи <Var>{shortDate(contract.signed_date)}</Var>
@@ -655,20 +661,21 @@ export function ContractDocument({
           </div>
         </div>
 
-        {/* ЗАМИМА used to force its own fresh page here (print:break-before-
-            page), matching the original Word document. That collided with
-            break-inside-avoid on the signature cards right above: whenever
-            those cards didn't fit the remaining room on their page and got
-            pushed down whole, this forced break then pushed ЗАМИМА past
-            THAT page too -- one blank tail at the bottom of the cards' page,
-            a second blank stretch below the cards' own (much shorter) page,
-            and a contract that printed a page longer than its actual
-            content needed. It now starts wherever there is room. print:block
-            stays regardless of where it starts: this can run past one page
-            on its own (14-item list + two signature blocks), and a flex
+        {/* ЗАМИМА forces its own fresh page again (print:break-before-page),
+            matching the original Word document -- reinstated on purpose.
+            Dropping it once (to stop it compounding whitespace with
+            break-inside-avoid above) traded one real defect for another: a
+            page that carries Section 9's signature+seal AND ЗАМИМА's own
+            signature pair together looks like two separate signing points
+            crammed onto one sheet. Section 9's cards were shrunk instead
+            (SignatureSlot h-10, tighter padding) so the pair fits after
+            clause 8.3 more often, which is the other half of the same fix --
+            leaving less room for the case this break-before-page still has
+            to cover. print:block stays regardless: this can run past one
+            page on its own (14-item list + two signature blocks), and a flex
             container doesn't paginate that overflow onto the next page
             cleanly. */}
-        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:block">
+        <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
           <div className="flex items-center gap-3">
             <span style={{ backgroundColor: PLUM }} className="h-px flex-1 opacity-25" />
             <p className="shrink-0 text-center text-[16px] font-bold tracking-[0.18em]">
