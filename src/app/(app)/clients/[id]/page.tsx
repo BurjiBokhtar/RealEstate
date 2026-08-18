@@ -687,7 +687,19 @@ export default function ClientDetailPage() {
                           {/* Contract particulars -- these used to be the whole
                               point of the separate /contracts/[id] screen. */}
                           {editingContractId !== c.id && (
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:grid-cols-4">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-slate-200 bg-white px-4 py-3 sm:grid-cols-3">
+                              {/* "Цена квартиры" (crm.objects.price) used to sit
+                                  here as a fourth field, right beside the
+                                  contract's own particulars -- but it is the
+                                  apartment's CATALOG price, a different number
+                                  from "Сумма договора" in the hero row above
+                                  (crm.contracts.amount) whenever a discount was
+                                  agreed. Placed among number/payment
+                                  type/signed date it read as part of the deal
+                                  and looked like the two figures disagreeing by
+                                  mistake. It is still one click away -- the
+                                  tag icon above opens the same number for
+                                  editing. */}
                               {[
                                 { label: t.contracts.form.number, value: c.number || "—" },
                                 {
@@ -699,13 +711,6 @@ export default function ClientDetailPage() {
                                       : ""),
                                 },
                                 { label: t.contracts.form.signedDate, value: c.signed_date ?? "—" },
-                                {
-                                  label: t.buildings.unitPrice.title,
-                                  value:
-                                    c.object?.price != null
-                                      ? formatCurrency(c.object.price, c.currency)
-                                      : "—",
-                                },
                               ].map((f) => (
                                 <div key={f.label} className="flex flex-col gap-0.5">
                                   <span className="text-[11px] uppercase tracking-wide text-slate-400">
