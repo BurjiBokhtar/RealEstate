@@ -5,6 +5,8 @@ import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useRole } from "@/lib/auth/useRole";
+import { formatCurrency, type Currency } from "@/lib/currency";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 type AuditEntry = {
   id: string;
@@ -18,23 +20,105 @@ type AuditEntry = {
 
 type StaffUser = { id: string; email: string | null };
 
-// A short human label for the affected row, pulled from whatever field the
-// snapshot happens to have (name for clients, number for contracts, ...) --
-// so the log reads as "клиент Иванов" instead of a bare UUID. For updates,
-// the trigger also stores the map of changed fields; listing their names
-// answers "what exactly was edited" without opening anything.
-function summarize(entry: AuditEntry): string | null {
-  const d = entry.details;
-  if (!d) return null;
-  const parts: string[] = [];
-  if (typeof d.name === "string" && d.name) parts.push(d.name);
-  else if (typeof d.number === "string" && d.number) parts.push(`№${d.number}`);
-  else if (typeof d.amount === "number") parts.push(String(d.amount));
-  if (d.changed && typeof d.changed === "object") {
-    const keys = Object.keys(d.changed as Record<string, unknown>);
-    if (keys.length > 0) parts.push(`(${keys.join(", ")})`);
+// Written by crm.audit_context() (migration 053) into every entry under
+// details._context -- which client, which contract, which apartment/building
+// this row belongs to. A payment or a contract has no readable name of its
+// own, only foreign-key ids, so without this a row read as "Пардохт ·
+// 16516.66" with no way to tell whose payment it was.
+type AuditContext = {
+  client_name?: string;
+  contract_number?: string;
+  object_name?: string;
+  building_name?: string;
+  currency?: Currency;
+};
+
+function isAuditContext(v: unknown): v is AuditContext {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+// "Каюмов Муродчон · №15 · Кайҳонавадон 36 Б, №101" -- the answer to "in
+// which object/apartment, which contract" that a bare entity_id can't give.
+function contextLine(details: Record<string, unknown> | null): string | null {
+  const ctx = details?._context;
+  if (!isAuditContext(ctx)) return null;
+  const place = [ctx.building_name, ctx.object_name].filter(Boolean).join(", ");
+  const parts = [ctx.client_name, ctx.contract_number ? `№${ctx.contract_number}` : null, place || null].filter(
+    Boolean
+  );
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
+// Fields that are foreign keys or internal bookkeeping, not something an
+// admin reading "what changed" needs to see as a raw UUID or file path --
+// the readable side of a relationship (client/contract/apartment name) is
+// already carried by _context above.
+const HIDDEN_FIELDS = new Set([
+  "id",
+  "client_id",
+  "object_id",
+  "contract_id",
+  "building_id",
+  "interested_object_id",
+  "created_by",
+  "created_at",
+  "updated_at",
+  "plan_url",
+  "amount_words",
+  "_context",
+]);
+
+function isDiffPair(v: unknown): v is { old: unknown; new: unknown } {
+  return !!v && typeof v === "object" && !Array.isArray(v) && "old" in v && "new" in v;
+}
+
+function formatFieldValue(
+  key: string,
+  value: unknown,
+  currency: Currency | undefined,
+  t: Dictionary
+): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? t.auditLog.yes : t.auditLog.no;
+  if (/(_date|_at)$/.test(key)) {
+    const d = new Date(String(value));
+    if (!Number.isNaN(d.getTime())) return d.toLocaleDateString("ru-RU");
   }
-  return parts.length > 0 ? parts.join(" ") : null;
+  if ((key === "amount" || key === "paid_amount" || key === "price") && typeof value === "number") {
+    return currency ? formatCurrency(value, currency) : String(value);
+  }
+  return String(value);
+}
+
+// The changed-fields line. For an update, details is {field: {old, new}} and
+// each row becomes "Сумма: 340 000 TJS → 349 999,78 TJS". For a create or a
+// delete, details is the row itself (to_jsonb of the whole thing), and each
+// populated field becomes "Сумма: 349 999,78 TJS" -- the same renderer
+// either way, since a {old, new} pair and a plain value are told apart by
+// shape, not by which action produced them.
+function fieldLines(
+  details: Record<string, unknown> | null,
+  t: Dictionary
+): Array<{ label: string; text: string }> {
+  if (!details) return [];
+  const currency = isAuditContext(details._context) ? details._context.currency : undefined;
+  const lines: Array<{ label: string; text: string }> = [];
+  for (const [key, value] of Object.entries(details)) {
+    if (HIDDEN_FIELDS.has(key)) continue;
+    const label = t.auditLog.fields[key as keyof typeof t.auditLog.fields] ?? key;
+    if (isDiffPair(value)) {
+      const oldText = formatFieldValue(key, value.old, currency, t);
+      const newText = formatFieldValue(key, value.new, currency, t);
+      lines.push({ label, text: `${oldText} → ${newText}` });
+    } else {
+      // A freshly created row's untouched optional fields (passport, notes,
+      // ...) are empty on purpose -- listing every blank one would bury the
+      // fields actually worth reading under a wall of dashes.
+      if (value === null || value === "" || value === false) continue;
+      lines.push({ label, text: formatFieldValue(key, value, currency, t) });
+    }
+  }
+  return lines;
 }
 
 // The DB trigger writes 'insert'; keep 'create' too so older rows (or a
@@ -136,9 +220,15 @@ export default function AuditLogPage() {
                   t.auditLog.entityTypes[
                     entry.entity_type as keyof typeof t.auditLog.entityTypes
                   ] ?? entry.entity_type;
-                const summary = summarize(entry);
+                // Where it happened (client/contract/apartment/building) and
+                // what actually changed are two different questions -- the
+                // first answers "чей это платёж", the second "что именно
+                // поменяли" -- so they render as two lines instead of being
+                // squeezed into one.
+                const where = contextLine(entry.details);
+                const lines = fieldLines(entry.details, t);
                 return (
-                  <tr key={entry.id} className="border-b border-slate-100 last:border-0">
+                  <tr key={entry.id} className="border-b border-slate-100 last:border-0 align-top">
                     <td className="px-4 py-3 whitespace-nowrap text-slate-600">
                       {new Date(entry.created_at).toLocaleString("ru-RU")}
                     </td>
@@ -159,7 +249,24 @@ export default function AuditLogPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-slate-700">{entityLabel}</td>
-                    <td className="px-4 py-3 text-slate-600">{summary ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      {where || lines.length > 0 ? (
+                        <div className="flex flex-col gap-1">
+                          {where && <p className="font-medium text-slate-800">{where}</p>}
+                          {lines.length > 0 && (
+                            <ul className="flex flex-col gap-0.5">
+                              {lines.map((l) => (
+                                <li key={l.label} className="text-xs text-slate-500">
+                                  <span className="text-slate-400">{l.label}:</span> {l.text}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-600">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
