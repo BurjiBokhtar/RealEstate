@@ -82,6 +82,40 @@ export function getUserScopedClient(request: Request) {
   });
 }
 
+// What SUPABASE_SERVICE_ROLE_KEY on the server actually looks like, so the
+// "bad-token" message below can name the real problem instead of always
+// guessing "wrong project".
+//
+// Supabase has TWO key systems, and pasting the wrong one produces the exact
+// same GoTrue error ("Invalid API key") as a key from a different project
+// entirely -- there is nothing in that error text to tell them apart:
+//   - legacy: anon/service_role are JWTs, starting "eyJ".
+//   - current: publishable/secret keys, starting "sb_publishable_"/"sb_secret_".
+// A project already issuing sb_publishable_... anon keys (visible from the
+// browser, so this app can check it) is on the current system, and its
+// service key must be sb_secret_..., not a legacy JWT -- Supabase can
+// disable legacy keys project-wide once a project has moved over, at which
+// point an old JWT stops working even though it "looks right" and was
+// copied from the correct project.
+function serviceKeyFormatHint(): string | null {
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+  const projectIsOnNewKeys = anonKey.startsWith("sb_publishable_");
+  if (serviceKey.startsWith("sb_publishable_")) {
+    // The single most specific mistake to catch: the two keys sit side by
+    // side on the same Supabase page, and only one letter (a "publishable"
+    // vs "secret") tells them apart.
+    return "SUPABASE_SERVICE_ROLE_KEY на Vercel начинается с sb_publishable_ -- это ПУБЛИЧНЫЙ (anon) ключ, вставленный не в то поле. Нужен ключ, начинающийся с sb_secret_, из той же страницы Project Settings → API Keys.";
+  }
+  if (serviceKey.startsWith("sb_secret_")) {
+    return null; // Right shape -- if it still fails, it really is the wrong project or a stale value.
+  }
+  if (projectIsOnNewKeys && (serviceKey.startsWith("eyJ") || serviceKey.includes("."))) {
+    return "Этот проект уже выдаёт ключи нового формата (sb_publishable_.../sb_secret_...), а SUPABASE_SERVICE_ROLE_KEY на Vercel — старый JWT-ключ. Supabase мог отключить старые ключи после перехода на новые, и тогда даже правильный старый ключ перестаёт работать. Возьмите ключ, начинающийся с sb_secret_, из Project Settings → API Keys.";
+  }
+  return null;
+}
+
 // Turns a failed admin check into a sentence that names the actual next step.
 // Shared, so every admin-gated route explains itself the same way instead of
 // answering a bare "Unauthorized" -- which is indistinguishable between "your
@@ -92,8 +126,11 @@ export function adminErrorMessage(check: Awaited<ReturnType<typeof checkAdmin>>)
   switch (check.reason) {
     case "no-token":
       return "Сессия не передана. Выйдите из программы и войдите заново.";
-    case "bad-token":
-      return `Сервер не смог проверить вашу сессию (${check.detail ?? "нет деталей"}). Чаще всего это значит, что SUPABASE_SERVICE_ROLE_KEY на Vercel взят из ДРУГОГО проекта Supabase — он должен быть из того же проекта, что и NEXT_PUBLIC_SUPABASE_URL. Скопируйте service_role именно из этого проекта (Project Settings → API) и сделайте Redeploy.`;
+    case "bad-token": {
+      const formatHint = serviceKeyFormatHint();
+      const generic = `SUPABASE_SERVICE_ROLE_KEY на Vercel взят из ДРУГОГО проекта Supabase — он должен быть из того же проекта, что и NEXT_PUBLIC_SUPABASE_URL. Скопируйте правильный ключ именно из этого проекта (Project Settings → API Keys) и сделайте Redeploy.`;
+      return `Сервер не смог проверить вашу сессию (${check.detail ?? "нет деталей"}). ${formatHint ?? `Чаще всего это значит, что ${generic}`}`;
+    }
     case "no-profile":
       return "У вашей учётной записи нет роли. Выполните в Supabase → SQL Editor: insert into crm.profiles (id, role) select id, 'admin' from auth.users where email = 'ВАШ_EMAIL' on conflict (id) do update set role = 'admin'; — затем выйдите и войдите заново.";
     case "not-admin":
