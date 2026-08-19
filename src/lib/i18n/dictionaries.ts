@@ -236,6 +236,7 @@ export const dictionaries = {
       },
       paymentHistory: {
         title: "История платежей",
+        hide: "Скрыть историю",
         empty: "Платежей пока нет.",
         date: "Дата",
         receiptNo: "№ чека",
@@ -1128,6 +1129,7 @@ export const dictionaries = {
       },
       paymentHistory: {
         title: "Таърихи пардохтҳо",
+        hide: "Пинҳон кардани таърих",
         empty: "Ҳоло пардохт нест.",
         date: "Сана",
         receiptNo: "№ расид",

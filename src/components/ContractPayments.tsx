@@ -72,6 +72,7 @@ export function ContractPayments({
   const [recordError, setRecordError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   const load = useCallback(async () => {
@@ -363,8 +364,12 @@ export function ContractPayments({
         </>
       )}
 
-      {/* Compact by default: overall progress + the next thing due. The
-          full plan opens on demand. */}
+      {/* Compact by default: overall progress + the next thing due. Just
+          the glance-level summary now -- the schedule toggle used to live
+          here too, which meant clicking it revealed content sitting a full
+          history list further down the card, disconnected from the button
+          that opened it. Each list below now carries its own toggle
+          directly above its own content instead. */}
       {payments.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
@@ -382,140 +387,157 @@ export function ContractPayments({
               </span>
             </p>
           )}
-          {planRows.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
-            >
-              {expanded
-                ? t.contracts.payments.hideSchedule
-                : `${t.contracts.payments.showSchedule} (${planRows.length})`}
-            </button>
-          )}
         </div>
       )}
 
-      {/* Money actually received -- always visible, newest first. Every row
-          is a real receipt with its print/send/delete actions. */}
+      {/* Money actually received, newest first -- collapsed by default and
+          behind its own toggle, same shape as the schedule below. A
+          contract with dozens of installments already paid used to print
+          every one of them here unconditionally, which was most of this
+          card's height on a long-running deal that anyone opening it
+          mainly wants the CURRENT state of, not the full paper trail. */}
       {paidPayments.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {t.clients.paymentHistory.title}
-          </p>
-          {paidPayments.map((p) => (
-            <div
-              key={p.id}
-              className="flex flex-col gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2.5 transition-colors hover:border-emerald-200"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-slate-900">
-                    {formatCurrency(p.amount, contract.currency)}
-                  </span>
-                  <span className="text-xs text-slate-400">
-                    №{receiptNumberFor(payments, p.id)} · {formatShortDate(p.paid_date ?? p.due_date)}
-                  </span>
-                </div>
-                <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                  ✓ {t.clients.paymentHistory.paid}
-                </span>
-              </div>
-              {/* Same rule as everywhere else: every action of this row in one
-                  cluster on the right, not split to opposite edges. */}
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-emerald-100/60 pt-1.5">
-                <SendActions
-                  contractId={contract.id}
-                  kind="receipt"
-                  paymentId={p.id}
-                  printAction={{
-                    href: `/contracts/${contract.id}/payments/${p.id}/receipt`,
-                    label: t.contracts.receipt.print,
-                  }}
-                />
-                {role === "admin" && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeletePayment(p)}
-                    disabled={deletingId === p.id}
-                    title={t.contracts.payments.deletePayment}
-                    className="flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* The plan, with each installment's coverage DERIVED from received
-          money (oldest first) -- nothing here is ever hand-marked, so a
-          client paying 5 000 against a 10 000 installment shows exactly
-          that: 5 000 / 10 000, not a wrongly "paid" row. */}
-      {expanded && planRows.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-            {t.contracts.payments.scheduleTitle}
-          </p>
-          {planRows.map((p) => {
-            const a = allocation.get(p.id) ?? { covered: 0, state: "upcoming" as const };
-            return (
-              <div
-                key={p.id}
-                className={`flex flex-col gap-1.5 rounded-lg border px-3 py-2 transition-colors ${
-                  a.state === "covered"
-                    ? "border-emerald-100 bg-emerald-50/30"
-                    : a.state === "partial"
-                      ? "border-amber-200 bg-amber-50/40"
-                      : "border-slate-100 hover:border-slate-200"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-slate-700">
-                      {a.state === "partial"
-                        ? `${formatCurrency(a.covered, contract.currency)} / ${formatCurrency(p.amount, contract.currency)}`
-                        : formatCurrency(p.amount, contract.currency)}
+          <button
+            type="button"
+            onClick={() => setHistoryExpanded((v) => !v)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+          >
+            {historyExpanded
+              ? t.clients.paymentHistory.hide
+              : `${t.clients.paymentHistory.title} (${paidPayments.length})`}
+          </button>
+          {historyExpanded && (
+            <div className="flex flex-col gap-2">
+              {paidPayments.map((p) => (
+                <div
+                  key={p.id}
+                  className="flex flex-col gap-2 rounded-lg border border-emerald-100 bg-emerald-50/40 px-3 py-2.5 transition-colors hover:border-emerald-200"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-900">
+                        {formatCurrency(p.amount, contract.currency)}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        №{receiptNumberFor(payments, p.id)} · {formatShortDate(p.paid_date ?? p.due_date)}
+                      </span>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                      ✓ {t.clients.paymentHistory.paid}
                     </span>
-                    <span className="text-xs text-slate-400">{formatShortDate(p.due_date)}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    {a.state === "covered" && (
-                      <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                        ✓ {t.contracts.payments.covered}
-                      </span>
-                    )}
-                    {a.state === "partial" && (
-                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
-                        {Math.round((a.covered / p.amount) * 100)}%
-                      </span>
-                    )}
+                  {/* Same rule as everywhere else: every action of this row in
+                      one cluster on the right, not split to opposite edges. */}
+                  <div className="flex flex-wrap items-center justify-end gap-2 border-t border-emerald-100/60 pt-1.5">
+                    <SendActions
+                      contractId={contract.id}
+                      kind="receipt"
+                      paymentId={p.id}
+                      printAction={{
+                        href: `/contracts/${contract.id}/payments/${p.id}/receipt`,
+                        label: t.contracts.receipt.print,
+                      }}
+                    />
                     {role === "admin" && (
                       <button
                         type="button"
                         onClick={() => handleDeletePayment(p)}
                         disabled={deletingId === p.id}
                         title={t.contracts.payments.deletePayment}
-                        className="flex items-center rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
+                        className="flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
                       >
                         ✕
                       </button>
                     )}
                   </div>
                 </div>
-                {a.state === "partial" && (
-                  <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-amber-100">
-                    <div
-                      className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
-                      style={{ width: `${(a.covered / p.amount) * 100}%` }}
-                    />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* The plan, with each installment's coverage DERIVED from received
+          money (oldest first) -- nothing here is ever hand-marked, so a
+          client paying 5 000 against a 10 000 installment shows exactly
+          that: 5 000 / 10 000, not a wrongly "paid" row. Own toggle right
+          above its own content, mirroring the history accordion above --
+          this button used to sit all the way up by the progress bar,
+          revealing content on the far side of the (always-open) history
+          list instead of right next to it. */}
+      {planRows.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+          >
+            {expanded
+              ? t.contracts.payments.hideSchedule
+              : `${t.contracts.payments.showSchedule} (${planRows.length})`}
+          </button>
+          {expanded && (
+            <div className="flex flex-col gap-2">
+              {planRows.map((p) => {
+                const a = allocation.get(p.id) ?? { covered: 0, state: "upcoming" as const };
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex flex-col gap-1.5 rounded-lg border px-3 py-2 transition-colors ${
+                      a.state === "covered"
+                        ? "border-emerald-100 bg-emerald-50/30"
+                        : a.state === "partial"
+                          ? "border-amber-200 bg-amber-50/40"
+                          : "border-slate-100 hover:border-slate-200"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-700">
+                          {a.state === "partial"
+                            ? `${formatCurrency(a.covered, contract.currency)} / ${formatCurrency(p.amount, contract.currency)}`
+                            : formatCurrency(p.amount, contract.currency)}
+                        </span>
+                        <span className="text-xs text-slate-400">{formatShortDate(p.due_date)}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {a.state === "covered" && (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                            ✓ {t.contracts.payments.covered}
+                          </span>
+                        )}
+                        {a.state === "partial" && (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700">
+                            {Math.round((a.covered / p.amount) * 100)}%
+                          </span>
+                        )}
+                        {role === "admin" && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(p)}
+                            disabled={deletingId === p.id}
+                            title={t.contracts.payments.deletePayment}
+                            className="flex items-center rounded-lg border border-red-200 px-2 py-1 text-[11px] font-semibold text-red-600 transition-all hover:bg-red-50 active:scale-95 disabled:opacity-50"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    {a.state === "partial" && (
+                      <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-amber-100">
+                        <div
+                          className="h-full rounded-full bg-amber-500 transition-[width] duration-500"
+                          style={{ width: `${(a.covered / p.amount) * 100}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
