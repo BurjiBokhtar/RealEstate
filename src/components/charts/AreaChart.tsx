@@ -95,18 +95,37 @@ export function AreaChart({
                 strokeLinejoin="round"
                 strokeLinecap="round"
               />
-              {s.values.map((v, i) => (
-                <circle
-                  key={i}
-                  cx={x(i)}
-                  cy={y(v)}
-                  r={hover === i ? 5.5 : 4}
-                  fill="#fff"
-                  stroke={s.color}
-                  strokeWidth="2.5"
-                  className="transition-all"
-                />
-              ))}
+              {s.values.map((v, i) => {
+                const active = hover === i;
+                // The halo is a second, larger ring around the same centre --
+                // not a drop-shadow, so it never needs extra filter canvas --
+                // that fades in and grows with the point, and the point
+                // itself lifts a couple of pixels on top of it. Together they
+                // read as the point rising off the line, not just resizing.
+                return (
+                  <g key={i} style={{ transform: active ? "translateY(-3px)" : undefined, transition: "transform 0.2s cubic-bezier(0.34,1.56,0.64,1)" }}>
+                    <circle
+                      cx={x(i)}
+                      cy={y(v)}
+                      r={active ? 10 : 4}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth="1.5"
+                      className="pointer-events-none transition-all"
+                      style={{ opacity: active ? 0.35 : 0 }}
+                    />
+                    <circle
+                      cx={x(i)}
+                      cy={y(v)}
+                      r={active ? 6.5 : 4}
+                      fill="#fff"
+                      stroke={s.color}
+                      strokeWidth="2.5"
+                      className="transition-all"
+                    />
+                  </g>
+                );
+              })}
             </g>
           );
         })}

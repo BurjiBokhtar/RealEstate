@@ -39,11 +39,17 @@ export function StackBar({
             onMouseEnter={() => setHover(s.key)}
             onMouseLeave={() => setHover(null)}
             title={`${s.label}: ${formatValue(s.value)}`}
-            className="animate-chart-grow-x h-full first:rounded-l-full last:rounded-r-full transition-opacity"
+            // Grows upward from the strip's own baseline, the same lift a
+            // hovered horizontal bar gets -- nothing above the strip clips
+            // it, so the segment just rises a little rather than resizing
+            // in place.
+            className="animate-chart-grow-x h-full first:rounded-l-full last:rounded-r-full transition-[opacity,transform]"
             style={{
               width: `${share(s.value)}%`,
               background: `linear-gradient(90deg, ${s.hue.from}, ${s.hue.to})`,
               opacity: hover && hover !== s.key ? 0.4 : 1,
+              transform: hover === s.key ? "scaleY(1.4)" : undefined,
+              transformOrigin: "bottom",
             }}
           />
         ))}

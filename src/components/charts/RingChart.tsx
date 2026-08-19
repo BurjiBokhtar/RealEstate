@@ -38,6 +38,12 @@ export type RingColors = Record<RingSegment, string>;
 // softens the very colour it was meant to emphasise instead of keeping it
 // crisp. brightness/saturate never need extra canvas, so neither artifact
 // can appear.
+//
+// The lit band also thickens (9px -> 12px stroke). Unlike the radius, stroke
+// width doesn't feed the dasharray math, so thickening never shifts where an
+// arc starts or how much of the ring it covers -- it only makes the band
+// itself read as "this is the one you're pointing at", the same lift the
+// hovered bar gets in HBarChart.
 
 const R = 26;
 const C = 2 * Math.PI * R;
@@ -70,11 +76,11 @@ function Arc({
       r={R}
       fill="none"
       stroke={color}
-      strokeWidth="9"
+      strokeWidth={lit ? 12 : 9}
       strokeDasharray={`${C * span} ${C * (1 - span)}`}
       transform={`rotate(${-90 + from * 360} 34 34)`}
       opacity={dim ? 0.28 : 1}
-      className="cursor-pointer transition-[opacity,filter] duration-200"
+      className="cursor-pointer transition-[opacity,filter,stroke-width] duration-200"
       style={{ filter: lit ? "brightness(1.15) saturate(1.5)" : undefined }}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}

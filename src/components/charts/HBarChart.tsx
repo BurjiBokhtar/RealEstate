@@ -46,15 +46,22 @@ export function HBarChart({
                 {formatValue(d.value)}
               </span>
             </div>
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+            {/* Scaling the track itself (not the fill inside it) means the
+                lift never fights the track's overflow-hidden -- a taller
+                fill would just get clipped back to the old height. */}
+            <div
+              className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 transition-transform duration-200"
+              style={{ transform: hover === i ? "scaleY(1.4)" : undefined }}
+            >
               <div
-                className="animate-chart-grow-x h-full rounded-full"
+                className="animate-chart-grow-x h-full rounded-full transition-[filter]"
                 style={{
                   width: `${frac * 100}%`,
                   minWidth: d.value > 0 ? 6 : 0,
                   animationDelay: `${i * 60}ms`,
                   background: `linear-gradient(90deg, ${hue.from}, ${hue.to})`,
                   boxShadow: hover === i ? `0 2px 10px ${hue.solid}66` : undefined,
+                  filter: hover === i ? "brightness(1.08)" : undefined,
                 }}
               />
             </div>
