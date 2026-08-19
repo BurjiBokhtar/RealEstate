@@ -176,6 +176,7 @@ export const dictionaries = {
       table: {
         name: "Имя",
         phone: "Телефон",
+        unit: "Объект / квартира",
         status: "Статус",
         source: "Источник",
         interestedObject: "Интересует",
@@ -1070,6 +1071,7 @@ export const dictionaries = {
       table: {
         name: "Ном",
         phone: "Телефон",
+        unit: "Объект / хона",
         status: "Ҳолат",
         source: "Манбаъ",
         interestedObject: "Таваҷҷуҳ дорад",

@@ -10,7 +10,7 @@ import { Pagination } from "@/components/Pagination";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ExportMenu } from "@/components/ExportMenu";
-import { ActionBar, ControlGroup, GroupDivider, IconAction } from "@/components/ActionBar";
+import { ControlGroup, GroupDivider, IconAction } from "@/components/ActionBar";
 import {
   CalendarIcon,
   CloseIcon,
@@ -30,6 +30,12 @@ type ClientDebt = {
   byCurrency: Record<string, { total: number; paid: number }>;
 };
 
+// Which unit(s) a client bought -- a client has no building/unit of their
+// own, it's reached through their contracts, and the list used to make you
+// open the client just to find out what they'd actually bought. Almost
+// always one entry; kept as a list because nothing stops someone owning two.
+type ClientUnit = { buildingName: string | null; unitName: string };
+
 const PAGE_SIZE = 25;
 
 export default function ClientsPage() {
@@ -38,6 +44,7 @@ export default function ClientsPage() {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [debts, setDebts] = useState<Record<string, ClientDebt>>({});
+  const [units, setUnits] = useState<Record<string, ClientUnit[]>>({});
   const [totalCount, setTotalCount] = useState(0);
   // "Loading" is derived, not stored. It is exactly "the data on screen does
   // not belong to the filters currently set", so it is a comparison, not a
@@ -130,54 +137,95 @@ export default function ClientsPage() {
 
       if (rows.length === 0) {
         setDebts({});
+        setUnits({});
         return;
       }
+      // One query covers both the debt bar and the object/unit column --
+      // both read off the same contract rows, so there is no reason to ask
+      // twice.
       const { data: contractRows } = await supabase
         .schema("crm")
         .from("contracts")
-        .select("client_id, amount, paid_amount, currency, status")
+        .select(
+          "client_id, amount, paid_amount, currency, status, object:objects(name, building:buildings(name))"
+        )
         .in(
           "client_id",
           rows.map((c) => c.id)
         )
         .neq("status", "cancelled");
-      const map: Record<string, ClientDebt> = {};
-      for (const c of (contractRows ?? []) as Array<{
+
+      const debtMap: Record<string, ClientDebt> = {};
+      const unitMap: Record<string, ClientUnit[]> = {};
+      const seen: Record<string, Set<string>> = {};
+      for (const c of (contractRows ?? []) as unknown as Array<{
         client_id: string;
         amount: number;
         paid_amount: number;
         currency: Currency;
+        object: { name: string; building: { name: string } | null } | null;
       }>) {
-        const entry = (map[c.client_id] ??= { byCurrency: {} });
-        const cur = (entry.byCurrency[c.currency] ??= { total: 0, paid: 0 });
+        const debtEntry = (debtMap[c.client_id] ??= { byCurrency: {} });
+        const cur = (debtEntry.byCurrency[c.currency] ??= { total: 0, paid: 0 });
         cur.total += c.amount;
         cur.paid += Math.min(c.paid_amount, c.amount);
+
+        if (c.object) {
+          const key = `${c.object.building?.name ?? ""}|${c.object.name}`;
+          const dedupe = (seen[c.client_id] ??= new Set());
+          if (!dedupe.has(key)) {
+            dedupe.add(key);
+            (unitMap[c.client_id] ??= []).push({
+              buildingName: c.object.building?.name ?? null,
+              unitName: c.object.name,
+            });
+          }
+        }
       }
-      setDebts(map);
+      setDebts(debtMap);
+      setUnits(unitMap);
     });
   }, [configured, page, search, sort, dateFrom, dateTo, buildingId, queryKey]);
 
-  // Build the export rows on demand (every client, per-currency debt), fed
-  // to the Excel/PDF menu.
+  // Build the export rows on demand (every client MATCHING THE CURRENT
+  // FILTERS, per-currency debt), fed to the Excel/PDF menu.
+  //
+  // This used to ignore every filter on the page and export the entire
+  // client base regardless of what was actually on screen -- pick one ЖК
+  // and a date range, and the download still had every client the company
+  // has ever had. Same search/date/building conditions as the list query
+  // below, just without the page slice: every MATCHING row, not page N's 25.
   const getExportRows = async () => {
     const supabase = createClient();
+    const selectCols =
+      buildingId === "all" ? "id, name, phone, email" : "id, name, phone, email, contracts!inner(object:objects!inner(building_id))";
     const all: Client[] = [];
     const stepSize = 1000;
     for (let from = 0; ; from += stepSize) {
-      const { data } = await supabase
-        .schema("crm")
-        .from("clients")
-        .select("id, name, phone, email")
-        .order("name")
-        .range(from, from + stepSize - 1);
-      const chunk = (data ?? []) as Client[];
+      let query = supabase.schema("crm").from("clients").select(selectCols);
+      if (buildingId !== "all") {
+        query = query.eq("contracts.object.building_id", buildingId);
+      }
+      if (search.trim()) {
+        const q = search.trim();
+        query = query.or(`name.ilike.%${q}%,phone.ilike.%${q}%,phone2.ilike.%${q}%`);
+      }
+      if (dateFrom) query = query.gte("created_at", dateFrom);
+      if (dateTo) query = query.lt("created_at", `${dateTo}T23:59:59.999`);
+      const { data } = await query.order("name").range(from, from + stepSize - 1);
+      const chunk = (data ?? []) as unknown as Client[];
       all.push(...chunk);
       if (chunk.length < stepSize) break;
     }
+    if (all.length === 0) return [];
     const { data: contractRows } = await supabase
       .schema("crm")
       .from("contracts")
       .select("client_id, amount, paid_amount, currency, status")
+      .in(
+        "client_id",
+        all.map((c) => c.id)
+      )
       .neq("status", "cancelled");
     const byClient: Record<string, { count: number; tjsPaid: number; tjsDebt: number; usdPaid: number; usdDebt: number }> = {};
     for (const c of (contractRows ?? []) as Array<{ client_id: string; amount: number; paid_amount: number; currency: Currency }>) {
@@ -199,47 +247,20 @@ export default function ClientsPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
-        {/* Export and "add client" live in ONE group -- they were two loose
-            controls with a gap between them. Page header, so full size. */}
-        <ActionBar>
-          <ControlGroup>
-            <ExportMenu
-              bare
-              getData={getExportRows}
-              headers={[
-                t.clients.table.name,
-                t.clients.table.phone,
-                t.clients.form.email,
-                t.clients.stats.bought,
-                "Оплачено TJS",
-                "Долг TJS",
-                "Оплачено USD",
-                "Долг USD",
-              ]}
-              filenameBase="clients"
-              title={t.clients.title}
-            />
-            <GroupDivider />
-            <IconAction
-              label={t.clients.newClient}
-              icon={<PlusIcon />}
-              tone="brand"
-              href="/clients/new"
-            />
-          </ControlGroup>
-        </ActionBar>
-      </div>
+      <h1 className="text-2xl font-semibold">{t.clients.title}</h1>
 
       {!configured && <SetupNotice />}
 
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Search, date/building/sort and export/add used to be three separate
+          rows (title+actions, then search alone, then the filter group) --
+          one flex-wrap row now, everything a click apart from everything
+          else instead of scattered top to bottom. */}
+      <div className="flex flex-wrap items-center gap-2">
         <input
           value={searchInput}
           onChange={(e) => onFilterChange(setSearchInput)(e.target.value)}
           placeholder={t.clients.search}
-          className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="h-10 min-w-[160px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
         />
         {/* Dates and sort are ONE glued control, not two floating pills.
             List page, so full size; a divider keeps the two jobs legible. */}
@@ -320,6 +341,35 @@ export default function ClientsPage() {
             />
           ))}
         </ControlGroup>
+
+        {/* Export and "add client" -- used to sit up in the title row, its
+            own group with a gap of empty header between it and everything
+            else that filters the same list. Same row as the rest now. */}
+        <ControlGroup>
+          <ExportMenu
+            bare
+            getData={getExportRows}
+            headers={[
+              t.clients.table.name,
+              t.clients.table.phone,
+              t.clients.form.email,
+              t.clients.stats.bought,
+              "Оплачено TJS",
+              "Долг TJS",
+              "Оплачено USD",
+              "Долг USD",
+            ]}
+            filenameBase="clients"
+            title={t.clients.title}
+          />
+          <GroupDivider />
+          <IconAction
+            label={t.clients.newClient}
+            icon={<PlusIcon />}
+            tone="brand"
+            href="/clients/new"
+          />
+        </ControlGroup>
       </div>
 
       <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -328,7 +378,7 @@ export default function ClientsPage() {
             <tr>
               <th className="px-4 py-3 font-medium">{t.clients.table.name}</th>
               <th className="px-4 py-3 font-medium">{t.clients.table.phone}</th>
-              <th className="px-4 py-3 font-medium">{t.clients.form.email}</th>
+              <th className="px-4 py-3 font-medium">{t.clients.table.unit}</th>
               <th className="w-56 px-4 py-3 font-medium">{t.clients.stats.debt}</th>
             </tr>
           </thead>
@@ -358,7 +408,11 @@ export default function ClientsPage() {
                   </Link>
                 </td>
                 <td className="px-4 py-3 text-slate-600">{client.phone || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{client.email || "—"}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  <Link href={`/clients/${client.id}`} className="block">
+                    <UnitCell units={units[client.id]} />
+                  </Link>
+                </td>
                 <td className="px-4 py-3">
                   <Link href={`/clients/${client.id}`} className="block">
                     <DebtBar debt={debts[client.id]} />
@@ -371,6 +425,25 @@ export default function ClientsPage() {
       </div>
 
       <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+    </div>
+  );
+}
+
+// Which unit(s) the client bought -- building name above, unit number below,
+// same two-line shape wherever the app already shows an apartment (the
+// shakhmatka's own cells). Stacked, not comma-joined, for the rare client
+// with more than one: a comma-run of "ЖК А №5, ЖК Б №12" is one long string
+// to parse, two short lines are two facts to read.
+function UnitCell({ units }: { units: ClientUnit[] | undefined }) {
+  if (!units || units.length === 0) return <span className="text-slate-300">—</span>;
+  return (
+    <div className="flex flex-col gap-1">
+      {units.map((u, i) => (
+        <div key={i} className="leading-tight">
+          {u.buildingName && <p className="text-xs text-slate-400">{u.buildingName}</p>}
+          <p className="font-medium text-slate-700">№{u.unitName}</p>
+        </div>
+      ))}
     </div>
   );
 }
