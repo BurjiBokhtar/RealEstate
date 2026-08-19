@@ -9,6 +9,15 @@ import { smsGatewayPhone } from "@/lib/phone";
 const DEFAULT_PAYMENT_TEMPLATE =
   "{{client_name}}, напоминаем: оплата {{amount}} {{currency}} по договору №{{contract_number}} до {{due_date}}.";
 
+// The day-of message used to reuse the advance template verbatim -- the
+// only thing that differed was {{due_date}} resolving to today's own date,
+// so "напоминаем: оплата ... до 21.08.2026" is what went out ON 21.08.2026,
+// technically correct but never actually saying "today". Its own template
+// (migration 058), so an admin can word it as "сегодня срок оплаты..."
+// instead of a repeated date the client can already see on their phone.
+const DEFAULT_DUE_TODAY_TEMPLATE =
+  "{{client_name}}, напоминаем: сегодня срок оплаты {{amount}} {{currency}} по договору №{{contract_number}}.";
+
 const GATEWAY_URL = "https://gateway.payom.tj/api/message";
 
 type DuePayment = {
@@ -108,6 +117,8 @@ export async function sendPaymentReminders(
   const apiKey = settings.sms_api_key as string;
   const senderName = settings.sms_sender_name as string;
   const template = (settings.sms_payment_template as string) || DEFAULT_PAYMENT_TEMPLATE;
+  const dueTodayTemplate =
+    (settings.sms_due_today_template as string) || DEFAULT_DUE_TODAY_TEMPLATE;
   const days = (settings.sms_reminder_days as number) ?? 3;
   const todayStr = today();
 
@@ -151,9 +162,23 @@ export async function sendPaymentReminders(
   // First gateway refusal, kept verbatim for the summary.
   let firstError: string | undefined;
 
-  const stages: Array<{ rows: DuePayment[]; marker: "reminder_sent_at" | "due_reminder_sent_at" }> = [
-    { rows: (advanceRes.data ?? []) as unknown as DuePayment[], marker: "reminder_sent_at" },
-    { rows: (dueRes.data ?? []) as unknown as DuePayment[], marker: "due_reminder_sent_at" },
+  const stages: Array<{
+    rows: DuePayment[];
+    marker: "reminder_sent_at" | "due_reminder_sent_at";
+    template: string;
+  }> = [
+    {
+      rows: (advanceRes.data ?? []) as unknown as DuePayment[],
+      marker: "reminder_sent_at",
+      template,
+    },
+    {
+      rows: (dueRes.data ?? []) as unknown as DuePayment[],
+      marker: "due_reminder_sent_at",
+      // Own wording, not the advance template with today's own date
+      // substituted into {{due_date}} -- see DEFAULT_DUE_TODAY_TEMPLATE.
+      template: dueTodayTemplate,
+    },
   ];
 
   for (const stage of stages) {
@@ -174,7 +199,7 @@ export async function sendPaymentReminders(
         continue;
       }
 
-      const text = renderContractTemplate(template, {
+      const text = renderContractTemplate(stage.template, {
         client_name: payment.contract.client?.name ?? "",
         amount: new Intl.NumberFormat("ru-RU").format(payment.amount),
         currency: payment.contract.currency ?? "TJS",

@@ -42,6 +42,7 @@ export default function SettingsPage() {
     sms_sender_name: "",
     sms_reminder_days: "",
     sms_payment_template: "",
+    sms_due_today_template: "",
     sms_task_template: "",
     company_name: "",
     company_director: "",
@@ -94,6 +95,7 @@ export default function SettingsPage() {
           sms_sender_name: data.sms_sender_name ?? "",
           sms_reminder_days: data.sms_reminder_days.toString(),
           sms_payment_template: data.sms_payment_template ?? "",
+          sms_due_today_template: data.sms_due_today_template ?? "",
           sms_task_template: data.sms_task_template ?? "",
           company_name: data.company_name ?? "",
           company_director: data.company_director ?? "",
@@ -125,6 +127,7 @@ export default function SettingsPage() {
         sms_sender_name: values.sms_sender_name || null,
         sms_reminder_days: values.sms_reminder_days ? Number(values.sms_reminder_days) : 3,
         sms_payment_template: values.sms_payment_template || null,
+        sms_due_today_template: values.sms_due_today_template || null,
         sms_task_template: values.sms_task_template || null,
         company_name: values.company_name || null,
         company_director: values.company_director || null,
@@ -341,6 +344,32 @@ export default function SettingsPage() {
             <textarea
               value={values.sms_payment_template}
               onChange={(e) => update("sms_payment_template", e.target.value)}
+              rows={3}
+              className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            />
+            <div className="flex flex-wrap gap-1.5">
+              {PAYMENT_SMS_PLACEHOLDERS.map((p) => (
+                <code
+                  key={p}
+                  className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
+                >
+                  {`{{${p}}}`}
+                </code>
+              ))}
+            </div>
+          </label>
+
+          {/* A separate message for the due date itself -- the rassylka
+              used to reuse the template above verbatim for both stages, so
+              the day-of SMS read "оплата ... до {{сегодняшняя дата}}"
+              instead of actually saying "сегодня". */}
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-slate-700">
+              {t.settings.sms.dueTodayTemplate}
+            </span>
+            <textarea
+              value={values.sms_due_today_template}
+              onChange={(e) => update("sms_due_today_template", e.target.value)}
               rows={3}
               className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
             />

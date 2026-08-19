@@ -8,6 +8,10 @@ export type Settings = {
   sms_sender_name: string | null;
   sms_reminder_days: number;
   sms_payment_template: string | null;
+  // Sent on the due date itself -- kept separate from sms_payment_template
+  // (the "N days before" wording) so a day-of message can say "сегодня",
+  // not the advance wording with today's own date filled into {{due_date}}.
+  sms_due_today_template: string | null;
   sms_task_template: string | null;
   // The Start/Stop switch for the automatic mailout, plus the last run, so
   // Settings can show that the schedule is alive.
@@ -32,6 +36,7 @@ export type SettingsInput = {
   sms_sender_name: string;
   sms_reminder_days: string;
   sms_payment_template: string;
+  sms_due_today_template: string;
   sms_task_template: string;
   company_name: string;
   company_director: string;
