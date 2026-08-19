@@ -184,7 +184,18 @@ export function ContractPayments({
   // unpaid rows still summed to the OLD total, so "boqimonda" on the paper
   // read far higher than amount - paid_amount actually is.
   const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
-  const mismatch = payments.length > 0 && Math.abs(scheduleTotal - contract.amount) > 0.5;
+  // A closed deal (paid in full, or overpaid) has nothing left to
+  // redistribute -- crm.regenerate_schedule computes remaining as
+  // amount - paid_amount and refuses to run at zero ("Nothing left to
+  // schedule"), so the button below would just error if it were offered
+  // here. The stale row total on an already-settled contract is history,
+  // not something to reconcile: what a client actually owes (remaining)
+  // already reads correctly regardless of it, which is the number that
+  // matters once the deal is done.
+  const mismatch =
+    payments.length > 0 &&
+    contract.amount > contract.paid_amount &&
+    Math.abs(scheduleTotal - contract.amount) > 0.5;
 
   const handleRegenerate = async () => {
     if (!contract.installment_months) return;
