@@ -29,6 +29,15 @@ export type RingColors = Record<RingSegment, string>;
 // much is sold" to whatever is being pointed at. Hovering the legend does the
 // same to that status across every building at once, which is the view that
 // answers "where is there anything left".
+//
+// The highlight is brightness()/saturate() only, deliberately not
+// drop-shadow(). A drop-shadow needs extra canvas around the shape to paint
+// its blur into, so the browser expands the element's filter region past its
+// own edges -- on a stroke this thin that expanded region can rasterize as a
+// faint rectangular backing behind the ring, and the coloured blur itself
+// softens the very colour it was meant to emphasise instead of keeping it
+// crisp. brightness/saturate never need extra canvas, so neither artifact
+// can appear.
 
 const R = 26;
 const C = 2 * Math.PI * R;
@@ -66,7 +75,7 @@ function Arc({
       transform={`rotate(${-90 + from * 360} 34 34)`}
       opacity={dim ? 0.28 : 1}
       className="cursor-pointer transition-[opacity,filter] duration-200"
-      style={{ filter: lit ? `brightness(1.12) drop-shadow(0 0 5px ${color}88)` : undefined }}
+      style={{ filter: lit ? "brightness(1.15) saturate(1.5)" : undefined }}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
     />
@@ -139,12 +148,7 @@ export function RingChart({
                 strokeWidth="9"
                 opacity={segment !== null && segment !== "free" ? 0.28 : 1}
                 className="cursor-pointer transition-[opacity,filter] duration-200"
-                style={{
-                  filter:
-                    segment === "free"
-                      ? `brightness(1.12) drop-shadow(0 0 5px ${colors.free}88)`
-                      : undefined,
-                }}
+                style={{ filter: segment === "free" ? "brightness(1.15) saturate(1.5)" : undefined }}
                 onMouseEnter={() => setHover({ id: d.id, segment: "free" })}
                 onMouseLeave={() => setHover(null)}
               />
