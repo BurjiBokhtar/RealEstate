@@ -136,29 +136,28 @@ export function RingChart({
                 height, so a fixed ring left 90px of slack above and below on
                 a wide screen; letting it scale spends that on legibility. */}
             <svg viewBox="0 0 68 68" className="w-full max-w-[124px]">
-              {/* Free is drawn as the full circle underneath rather than as
-                  its own arc: the two arcs above cover their share of it, and
-                  a third arc would fight them for the same rounded pixels. */}
-              <circle
-                cx="34"
-                cy="34"
-                r={R}
-                fill="none"
-                stroke={colors.free}
-                strokeWidth="9"
-                opacity={segment !== null && segment !== "free" ? 0.28 : 1}
-                className="cursor-pointer transition-[opacity,filter] duration-200"
-                style={{ filter: segment === "free" ? "brightness(1.15) saturate(1.5)" : undefined }}
-                onMouseEnter={() => setHover({ id: d.id, segment: "free" })}
-                onMouseLeave={() => setHover(null)}
-              />
+              {/* Three arcs sharing the ring, none of them overlapping.
+                  Free used to be a full circle drawn underneath, with sold/
+                  reserved painted over their own share of it -- which meant
+                  a dimmed (low-opacity) red or amber arc let the green
+                  circle sitting behind it show through, so "dimmed red"
+                  actually rendered as a muddy green-red blend instead of a
+                  faded red. As its own arc covering only its own share,
+                  dimming fades it toward the white card behind the whole
+                  ring instead of toward a different colour underneath. */}
+              <Arc from={0} span={soldFrac} color={colors.sold} {...band("sold")} />
               <Arc
                 from={soldFrac}
                 span={reservedFrac}
                 color={colors.reserved}
                 {...band("reserved")}
               />
-              <Arc from={0} span={soldFrac} color={colors.sold} {...band("sold")} />
+              <Arc
+                from={soldFrac + reservedFrac}
+                span={frac(free)}
+                color={colors.free}
+                {...band("free")}
+              />
               <text
                 x="34"
                 y="38"
