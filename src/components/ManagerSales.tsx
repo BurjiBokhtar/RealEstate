@@ -174,24 +174,44 @@ export function ManagerSales({
       </div>
       {visibleRows.length > 0 ? (
         <div className="overflow-x-auto">
+          {/* px-3 on every cell -- there was none before, only vertical
+              padding, so with the browser sizing each column tight to its
+              own content two right-aligned numbers in neighbouring columns
+              sat flush against each other with nothing between them: 85
+              deals right up against 27 817 053,04 read as one number,
+              8527 817 053,04. */}
           <table className="w-full text-left text-sm">
             <thead className="border-b border-slate-200 text-slate-500">
               <tr>
-                <th className="pb-2 font-medium">{t.dashboard.manager}</th>
-                <th className="pb-2 text-right font-medium">{t.dashboard.dealsCount}</th>
-                <th className="pb-2 text-right font-medium">{t.dashboard.dealsSum}</th>
-                <th className="pb-2 text-right font-medium">{t.dashboard.paidRevenue}</th>
+                <th className="px-3 py-2 font-medium">{t.dashboard.manager}</th>
+                <th className="px-3 py-2 text-right font-medium">{t.dashboard.dealsCount}</th>
+                <th className="px-3 py-2 text-right font-medium">{t.dashboard.dealsSum}</th>
+                <th className="px-3 py-2 text-right font-medium">{t.dashboard.paidRevenue}</th>
               </tr>
             </thead>
             <tbody>
               {visibleRows.map((r, i) => (
                 <tr key={`${r.manager}-${r.currency}-${i}`} className="border-b border-slate-100 last:border-0">
-                  <td className="py-2 font-medium text-slate-800">{r.manager}</td>
-                  <td className="py-2 text-right tabular-nums">{r.contracts}</td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="px-3 py-2 font-medium text-slate-800">
+                    {r.manager}
+                    {/* The same manager gets one row PER CURRENCY -- summing
+                        TJS and USD into one figure would be meaningless, the
+                        same reason revenue-by-building splits by currency
+                        elsewhere on this dashboard. Only shown once there is
+                        more than one currency to explain, so a name never
+                        carries an unexplained badge in a single-currency
+                        company. */}
+                    {currencies.length > 1 && (
+                      <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                        {r.currency}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right tabular-nums">{r.contracts}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(r.total, r.currency)}
                   </td>
-                  <td className="py-2 text-right tabular-nums text-emerald-600">
+                  <td className="px-3 py-2 text-right tabular-nums text-emerald-600">
                     {formatCurrency(r.paid, r.currency)}
                   </td>
                 </tr>
