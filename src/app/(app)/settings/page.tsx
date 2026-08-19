@@ -14,7 +14,7 @@ import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { ChangePasswordCard } from "@/components/ChangePasswordCard";
-import { DocumentIcon } from "@/components/icons";
+import { CalendarIcon, DocumentIcon, TaskIcon, WarningIcon } from "@/components/icons";
 import type { SettingsInput } from "@/lib/settings/types";
 
 const FIELD_CLASS =
@@ -29,6 +29,78 @@ const PAYMENT_SMS_PLACEHOLDERS = [
 ];
 
 const TASK_SMS_PLACEHOLDERS = ["assignee", "title", "due_date"];
+
+// A small caption above a group of fields, matching the "ТЕМА"/"НАҚШ"
+// labels the Appearance card already uses further down this same page --
+// one visual language for "here starts a new group" everywhere on Settings.
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mb-1 mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+      {children}
+    </p>
+  );
+}
+
+// The three SMS templates used to be three identical grey boxes told apart
+// only by the label text above them -- easy to edit the wrong one at a
+// glance. Each now gets its own icon and tone (calendar/sky for the advance
+// reminder, warning/amber for the day it's actually due, task/violet for
+// staff reminders), so which message this is is visible before reading a
+// word of it.
+const TEMPLATE_TONES = {
+  sky: { chip: "bg-sky-50 text-sky-600", ring: "focus:border-sky-300 focus:ring-sky-900/10" },
+  amber: {
+    chip: "bg-amber-50 text-amber-600",
+    ring: "focus:border-amber-300 focus:ring-amber-900/10",
+  },
+  violet: {
+    chip: "bg-violet-50 text-violet-600",
+    ring: "focus:border-violet-300 focus:ring-violet-900/10",
+  },
+} as const;
+
+function TemplateField({
+  icon,
+  tone,
+  label,
+  value,
+  onChange,
+  placeholders,
+  rows = 3,
+}: {
+  icon: React.ReactNode;
+  tone: keyof typeof TEMPLATE_TONES;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholders: string[];
+  rows?: number;
+}) {
+  const c = TEMPLATE_TONES[tone];
+  return (
+    <div className="rounded-xl border border-slate-200 p-3">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${c.chip}`}>
+          {icon}
+        </span>
+        <span className="text-sm font-medium text-slate-700">{label}</span>
+      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={rows}
+        className={`mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs transition-colors focus:outline-none focus:ring-2 ${c.ring}`}
+      />
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {placeholders.map((p) => (
+          <code key={p} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+            {`{{${p}}}`}
+          </code>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { t } = useLocale();
@@ -294,116 +366,86 @@ export default function SettingsPage() {
 
         <Accordion title={t.settings.sms.title}>
           <span className="-mt-2 text-xs text-slate-400">{t.settings.sms.hint}</span>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.sms.provider}</span>
-            <input
-              value={values.sms_provider}
-              onChange={(e) => update("sms_provider", e.target.value)}
-              placeholder="Payom.tj"
-              className={FIELD_CLASS}
-            />
-            {/* Честно, а не мелким шрифтом: переименование не переключает
-                шлюз. Запрос всегда уходит на gateway.payom.tj в его формате
-                (sendPaymentReminders.ts) -- это поле только для памяти
-                администратора, если ключ выдал именно этот провайдер. */}
-            <span className="text-xs text-slate-400">{t.settings.sms.providerHint}</span>
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.sms.apiKey}</span>
-            <input
-              type="password"
-              value={values.sms_api_key}
-              onChange={(e) => update("sms_api_key", e.target.value)}
-              className={`${FIELD_CLASS} font-mono`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.sms.senderName}</span>
-            <input
-              value={values.sms_sender_name}
-              onChange={(e) => update("sms_sender_name", e.target.value)}
-              placeholder={t.settings.sms.senderNamePlaceholder}
-              className={FIELD_CLASS}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.sms.reminderDays}</span>
-            <input
-              type="number"
-              min="0"
-              value={values.sms_reminder_days}
-              onChange={(e) => update("sms_reminder_days", e.target.value)}
-              className={FIELD_CLASS}
-            />
-          </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">
-              {t.settings.sms.paymentTemplate}
-            </span>
-            <textarea
+          <SectionLabel>{t.settings.sms.connectionSection}</SectionLabel>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">{t.settings.sms.provider}</span>
+              <input
+                value={values.sms_provider}
+                onChange={(e) => update("sms_provider", e.target.value)}
+                placeholder="Payom.tj"
+                className={FIELD_CLASS}
+              />
+              {/* Честно, а не мелким шрифтом: переименование не переключает
+                  шлюз. Запрос всегда уходит на gateway.payom.tj в его формате
+                  (sendPaymentReminders.ts) -- это поле только для памяти
+                  администратора, если ключ выдал именно этот провайдер. */}
+              <span className="text-xs text-slate-400">{t.settings.sms.providerHint}</span>
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">{t.settings.sms.apiKey}</span>
+              <input
+                type="password"
+                value={values.sms_api_key}
+                onChange={(e) => update("sms_api_key", e.target.value)}
+                className={`${FIELD_CLASS} font-mono`}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">{t.settings.sms.senderName}</span>
+              <input
+                value={values.sms_sender_name}
+                onChange={(e) => update("sms_sender_name", e.target.value)}
+                placeholder={t.settings.sms.senderNamePlaceholder}
+                className={FIELD_CLASS}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-sm">
+              <span className="font-medium text-slate-700">{t.settings.sms.reminderDays}</span>
+              <input
+                type="number"
+                min="0"
+                value={values.sms_reminder_days}
+                onChange={(e) => update("sms_reminder_days", e.target.value)}
+                className={FIELD_CLASS}
+              />
+            </label>
+          </div>
+
+          <SectionLabel>{t.settings.sms.templatesSection}</SectionLabel>
+          <div className="flex flex-col gap-3">
+            <TemplateField
+              icon={<CalendarIcon className="h-4 w-4" />}
+              tone="sky"
+              label={t.settings.sms.paymentTemplateShort}
               value={values.sms_payment_template}
-              onChange={(e) => update("sms_payment_template", e.target.value)}
-              rows={3}
-              className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              onChange={(v) => update("sms_payment_template", v)}
+              placeholders={PAYMENT_SMS_PLACEHOLDERS}
             />
-            <div className="flex flex-wrap gap-1.5">
-              {PAYMENT_SMS_PLACEHOLDERS.map((p) => (
-                <code
-                  key={p}
-                  className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
-                >
-                  {`{{${p}}}`}
-                </code>
-              ))}
-            </div>
-          </label>
-
-          {/* A separate message for the due date itself -- the rassylka
-              used to reuse the template above verbatim for both stages, so
-              the day-of SMS read "оплата ... до {{сегодняшняя дата}}"
-              instead of actually saying "сегодня". */}
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">
-              {t.settings.sms.dueTodayTemplate}
-            </span>
-            <textarea
+            {/* A separate message for the due date itself -- the rassylka
+                used to reuse the template above verbatim for both stages, so
+                the day-of SMS read "оплата ... до {{сегодняшняя дата}}"
+                instead of actually saying "сегодня". Amber, not sky: this
+                one goes out ON the due date, the more pressing of the two. */}
+            <TemplateField
+              icon={<WarningIcon className="h-4 w-4" />}
+              tone="amber"
+              label={t.settings.sms.dueTodayTemplateShort}
               value={values.sms_due_today_template}
-              onChange={(e) => update("sms_due_today_template", e.target.value)}
-              rows={3}
-              className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              onChange={(v) => update("sms_due_today_template", v)}
+              placeholders={PAYMENT_SMS_PLACEHOLDERS}
             />
-            <div className="flex flex-wrap gap-1.5">
-              {PAYMENT_SMS_PLACEHOLDERS.map((p) => (
-                <code
-                  key={p}
-                  className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
-                >
-                  {`{{${p}}}`}
-                </code>
-              ))}
-            </div>
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.sms.taskTemplate}</span>
-            <textarea
+            <TemplateField
+              icon={<TaskIcon className="h-4 w-4" />}
+              tone="violet"
+              label={t.settings.sms.taskTemplateShort}
               value={values.sms_task_template}
-              onChange={(e) => update("sms_task_template", e.target.value)}
+              onChange={(v) => update("sms_task_template", v)}
+              placeholders={TASK_SMS_PLACEHOLDERS}
               rows={2}
-              className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
             />
-            <div className="flex flex-wrap gap-1.5">
-              {TASK_SMS_PLACEHOLDERS.map((p) => (
-                <code
-                  key={p}
-                  className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
-                >
-                  {`{{${p}}}`}
-                </code>
-              ))}
-            </div>
-          </label>
+          </div>
 
           {/* Compact inline test-send: one row, phone + button, no separate
               card -- saves the form first so the API key/sender it tests is

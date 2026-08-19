@@ -121,6 +121,16 @@ export function WarningIcon({ className }: IconProps) {
   );
 }
 
+export function TaskIcon({ className }: IconProps) {
+  return (
+    <Icon className={className}>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3.5h6v2H9z" />
+      <path d="M8.5 12.2 10.5 14.2 15 9.5" />
+    </Icon>
+  );
+}
+
 export function DuplicateIcon({ className }: IconProps) {
   return (
     <Icon className={className}>
