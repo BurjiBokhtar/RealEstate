@@ -39,6 +39,7 @@
   --hover-c2: #f1f5f9;
   --wash-emerald: #d1fae5;
   --wash-emerald-ink: #059669;
+  --wash-emerald-border: #a7f3d0;
   --wash-rose: #ffe4e6;
   --wash-rose-ink: #e11d48;
   --wash-rose-border: #fecdd3;
@@ -89,6 +90,7 @@
   --hover-c2: #29292c;
   --wash-emerald: rgba(16, 185, 129, 0.16);
   --wash-emerald-ink: #34d399;
+  --wash-emerald-border: rgba(16, 185, 129, 0.3);
   --wash-rose: rgba(244, 63, 94, 0.16);
   --wash-rose-ink: #fb7185;
   --wash-rose-border: rgba(244, 63, 94, 0.28);

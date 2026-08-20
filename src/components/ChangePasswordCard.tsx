@@ -38,28 +38,28 @@ export function ChangePasswordCard() {
   };
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[15px] font-semibold text-slate-800">{t.password.title}</p>
-      <p className="mt-0.5 text-sm text-slate-500">{t.password.hint}</p>
+    <div className="rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+      <p className="text-[15px] font-semibold text-[var(--ink-2)]">{t.password.title}</p>
+      <p className="mt-0.5 text-sm text-[var(--ink-4)]">{t.password.hint}</p>
       <div className="mt-3 flex flex-wrap items-end gap-2.5">
         <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs">
-          <span className="font-semibold text-slate-600">{t.password.new}</span>
+          <span className="font-semibold text-[var(--ink-3)]">{t.password.new}</span>
           <input
             type="password"
             value={pw1}
             onChange={(e) => setPw1(e.target.value)}
             placeholder="••••••"
-            className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
           />
         </label>
         <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs">
-          <span className="font-semibold text-slate-600">{t.password.repeat}</span>
+          <span className="font-semibold text-[var(--ink-3)]">{t.password.repeat}</span>
           <input
             type="password"
             value={pw2}
             onChange={(e) => setPw2(e.target.value)}
             placeholder="••••••"
-            className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
           />
         </label>
         <button
@@ -72,7 +72,7 @@ export function ChangePasswordCard() {
         </button>
       </div>
       {msg && (
-        <p className={`mt-2 text-sm ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>
+        <p className={`mt-2 text-sm ${msg.ok ? "text-[var(--wash-emerald-ink)]" : "text-[var(--wash-rose-ink)]"}`}>
           {msg.text}
         </p>
       )}

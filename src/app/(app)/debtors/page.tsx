@@ -303,7 +303,7 @@ export default function DebtorsPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{t.debtors.title}</h1>
-          <p className="text-sm text-slate-500">{t.debtors.subtitle}</p>
+          <p className="text-sm text-[var(--ink-4)]">{t.debtors.subtitle}</p>
         </div>
         {totalCount > 0 && (
           <ExportMenu
@@ -328,7 +328,7 @@ export default function DebtorsPage() {
       {!configured && <SetupNotice />}
 
       {failure && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-lg border border-[var(--wash-rose-border)] bg-[var(--wash-rose)] px-4 py-3 text-sm text-[var(--wash-rose-ink)]">
           <p className="font-semibold">{t.dashboard.summaryFailed}</p>
           <p className="mt-1 text-xs opacity-80">{failure}</p>
         </div>
@@ -346,18 +346,18 @@ export default function DebtorsPage() {
           {byCurrency.map(({ currency, rows: cRows, total }) => (
             <div
               key={currency}
-              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+              className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
             >
               <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-                <p className="text-sm font-semibold text-slate-700">
+                <p className="text-sm font-semibold text-[var(--ink-2)]">
                   {t.debtors.chartTitle} · {currency}
                 </p>
                 {total && (
-                  <span className="text-xs text-slate-500">
-                    <span className="font-semibold text-rose-600">
+                  <span className="text-xs text-[var(--ink-4)]">
+                    <span className="font-semibold text-[var(--wash-rose-ink)]">
                       {formatCurrency(total.overdue, currency)}
                     </span>{" "}
-                    <span className="text-slate-400">
+                    <span className="text-[var(--ink-5)]">
                       / {formatCurrency(total.remaining, currency)}
                     </span>
                   </span>
@@ -372,7 +372,7 @@ export default function DebtorsPage() {
                 }))}
                 formatValue={(n) => formatCurrency(n, currency)}
               />
-              {total && <p className="mt-3 text-xs text-slate-400">{t.debtors.chartHint}</p>}
+              {total && <p className="mt-3 text-xs text-[var(--ink-5)]">{t.debtors.chartHint}</p>}
             </div>
           ))}
         </div>
@@ -382,7 +382,7 @@ export default function DebtorsPage() {
           options are ONE glued control instead of three loose pills. */}
       {totalCount > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-slate-500">{t.debtors.sortLabel}:</span>
+          <span className="text-[var(--ink-4)]">{t.debtors.sortLabel}:</span>
           <ControlGroup size="sm">
             {/* Filter by ЖК, in the same glued control as the sort options. */}
             <select
@@ -392,7 +392,7 @@ export default function DebtorsPage() {
                 setPage(1);
               }}
               aria-label={t.dashboard.allBuildings}
-              className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700 focus:outline-none"
+              className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-[var(--ink-2)] focus:outline-none"
             >
               <option value="all">{t.dashboard.allBuildings}</option>
               {buildings.map((b) => (
@@ -402,7 +402,7 @@ export default function DebtorsPage() {
               ))}
             </select>
             <GroupDivider />
-            <span className="pl-1 text-slate-400" aria-hidden="true">
+            <span className="pl-1 text-[var(--ink-5)]" aria-hidden="true">
               <SortIcon className="h-4 w-4" />
             </span>
             {(
@@ -426,9 +426,9 @@ export default function DebtorsPage() {
         </div>
       )}
 
-      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
+          <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
             <tr>
               <th className="px-4 py-3 font-medium">{t.debtors.client}</th>
               <th className="px-4 py-3 font-medium">{t.debtors.object}</th>
@@ -441,54 +441,54 @@ export default function DebtorsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-emerald-600">
+                <td colSpan={6} className="px-4 py-8 text-center text-[var(--wash-emerald-ink)]">
                   {t.debtors.empty}
                 </td>
               </tr>
             )}
             {rows.map((r) => (
-              <tr key={r.contractId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+              <tr key={r.contractId} className="border-b border-[var(--border-c2)] last:border-0 hover:bg-[var(--hover-c)]">
                 <td className="px-4 py-3">
                   {r.clientId ? (
                     <Link
                       href={`/clients/${r.clientId}`}
-                      className="font-medium text-slate-900 hover:underline"
+                      className="font-medium text-[var(--ink-1)] hover:underline"
                     >
                       {r.clientName}
                     </Link>
                   ) : (
-                    <span className="font-medium text-slate-900">{r.clientName}</span>
+                    <span className="font-medium text-[var(--ink-1)]">{r.clientName}</span>
                   )}
                   {r.clientPhone && (
-                    <div className="text-xs text-slate-400">{r.clientPhone}</div>
+                    <div className="text-xs text-[var(--ink-5)]">{r.clientPhone}</div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-slate-600">{r.objectName ?? "—"}</td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-[var(--ink-3)]">{r.objectName ?? "—"}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">
                   {formatShortDate(r.earliestDue)}
-                  <span className="block text-xs text-slate-400">
+                  <span className="block text-xs text-[var(--ink-5)]">
                     {r.daysOverdue} {t.debtors.days}
                   </span>
                 </td>
                 {/* Amount first, then how many payments make it up, spelled
                     out. "9 плат." said nothing about what was owed. */}
                 <td className="px-4 py-3 text-right">
-                  <div className="font-semibold text-rose-600">
+                  <div className="font-semibold text-[var(--wash-rose-ink)]">
                     {formatCurrency(r.totalOverdue, r.currency)}
                   </div>
-                  <div className="text-xs text-slate-400">
+                  <div className="text-xs text-[var(--ink-5)]">
                     {r.missedCount}{" "}
                     {r.missedCount === 1 ? t.debtors.missedOne : t.debtors.missedPayments}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right text-slate-700">
+                <td className="px-4 py-3 text-right text-[var(--ink-2)]">
                   {formatCurrency(r.remainingTotal, r.currency)}
                 </td>
                 <td className="px-4 py-3 text-right">
@@ -508,13 +508,13 @@ export default function DebtorsPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       title={t.debtors.whatsapp}
-                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition-all hover:bg-emerald-50 active:scale-95"
+                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--wash-emerald-border)] px-2.5 py-1 text-xs font-semibold text-[var(--wash-emerald-ink)] transition-all hover:bg-[var(--wash-emerald)] active:scale-95"
                     >
                       <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.2 1.2-1.7 1.2-.4.1-1 .1-1.6-.1a13 13 0 0 1-1.5-.5c-2.6-1.1-4.3-3.7-4.4-3.9-.1-.2-1-1.4-1-2.6s.6-1.8.9-2c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.1c0 .2.1.3 0 .5l-.3.5-.4.5c-.2.1-.3.3-.1.6.1.3.7 1.1 1.4 1.8.9.9 1.7 1.1 2 1.3.2.1.4.1.6-.1l.8-1c.2-.3.4-.2.6-.1l2 .9c.2.1.4.2.4.3.1.1.1.6-.1 1.1Z" /></svg>
                       {t.debtors.whatsapp}
                     </a>
                   ) : (
-                    <span className="text-xs text-slate-300">{t.debtors.noPhone}</span>
+                    <span className="text-xs text-[var(--ink-5)]">{t.debtors.noPhone}</span>
                   )}
                 </td>
               </tr>

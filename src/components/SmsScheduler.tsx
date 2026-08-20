@@ -112,7 +112,7 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
 
   // Still waiting on the one read the button actually depends on.
   if (enabled === null) {
-    return <div className="border-t border-slate-100 pt-4 text-sm text-slate-400">{t.common.loading}</div>;
+    return <div className="border-t border-[var(--border-c2)] pt-4 text-sm text-[var(--ink-5)]">{t.common.loading}</div>;
   }
 
   // Everything that has to be true before a single message can go out --
@@ -123,17 +123,17 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
   if (status?.projectRefMismatch) blockers.push(t.settings.sms.blockerProjectMismatch);
 
   return (
-    <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
+    <div className="flex flex-col gap-3 border-t border-[var(--border-c2)] pt-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <span
-            className={`h-2.5 w-2.5 shrink-0 rounded-full ${enabled ? "bg-emerald-500" : "bg-slate-300"}`}
+            className={`h-2.5 w-2.5 shrink-0 rounded-full ${enabled ? "bg-[var(--wash-emerald-ink)]" : "bg-[var(--ink-5)]"}`}
           />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-800">
+            <span className="text-sm font-semibold text-[var(--ink-2)]">
               {enabled ? t.settings.sms.stateOn : t.settings.sms.stateOff}
             </span>
-            <span className="text-xs text-slate-400">{t.settings.sms.schedule}</span>
+            <span className="text-xs text-[var(--ink-5)]">{t.settings.sms.schedule}</span>
           </div>
         </div>
 
@@ -142,7 +142,7 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
             type="button"
             onClick={runNow}
             disabled={busy || !enabled}
-            className="h-9 rounded-lg border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-40"
+            className="h-9 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3.5 text-sm font-medium text-[var(--ink-2)] transition-all hover:bg-[var(--hover-c)] active:scale-[0.98] disabled:opacity-40"
           >
             {t.settings.sms.runNow}
           </button>
@@ -169,9 +169,9 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
       </div>
 
       {blockers.length > 0 && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-          <p className="text-xs font-semibold text-amber-800">{t.settings.sms.blockersTitle}</p>
-          <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-4 text-xs text-amber-800">
+        <div className="rounded-lg border border-[var(--wash-amber-border)] bg-[var(--wash-amber)] px-3.5 py-2.5">
+          <p className="text-xs font-semibold text-[var(--wash-amber-ink)]">{t.settings.sms.blockersTitle}</p>
+          <ul className="mt-1 flex list-disc flex-col gap-0.5 pl-4 text-xs text-[var(--wash-amber-ink)]">
             {blockers.map((b) => (
               <li key={b}>{b}</li>
             ))}
@@ -184,13 +184,13 @@ export function SmsScheduler({ onMessage }: { onMessage: (text: string, ok: bool
           used to replace the button above instead of sitting quietly under
           it. */}
       {diagError && !status && (
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-[var(--ink-5)]">
           {t.settings.sms.diagUnavailable}: {diagError}
         </p>
       )}
 
       {status?.lastRunAt && (
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[var(--ink-4)]">
           {t.settings.sms.lastRun}: {new Date(status.lastRunAt).toLocaleString("ru-RU")}
           {status.lastResult ? ` · ${status.lastResult}` : ""}
         </p>

@@ -18,7 +18,7 @@ import { CalendarIcon, DocumentIcon, TaskIcon, WarningIcon } from "@/components/
 import type { SettingsInput } from "@/lib/settings/types";
 
 const FIELD_CLASS =
-  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+  "h-10 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 
 const PAYMENT_SMS_PLACEHOLDERS = [
   "client_name",
@@ -35,7 +35,7 @@ const TASK_SMS_PLACEHOLDERS = ["assignee", "title", "due_date"];
 // one visual language for "here starts a new group" everywhere on Settings.
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-1 mt-1 text-xs font-medium uppercase tracking-wide text-slate-400">
+    <p className="mb-1 mt-1 text-xs font-medium uppercase tracking-wide text-[var(--ink-5)]">
       {children}
     </p>
   );
@@ -48,14 +48,17 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 // staff reminders), so which message this is is visible before reading a
 // word of it.
 const TEMPLATE_TONES = {
-  sky: { chip: "bg-sky-50 text-sky-600", ring: "focus:border-sky-300 focus:ring-sky-900/10" },
+  sky: {
+    chip: "bg-[var(--wash-sky)] text-[var(--wash-sky-ink)]",
+    ring: "focus:border-[var(--wash-sky-ink)] focus:ring-[var(--wash-sky)]",
+  },
   amber: {
-    chip: "bg-amber-50 text-amber-600",
-    ring: "focus:border-amber-300 focus:ring-amber-900/10",
+    chip: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
+    ring: "focus:border-[var(--wash-amber-ink)] focus:ring-[var(--wash-amber)]",
   },
   violet: {
-    chip: "bg-violet-50 text-violet-600",
-    ring: "focus:border-violet-300 focus:ring-violet-900/10",
+    chip: "bg-[var(--wash-violet)] text-[var(--wash-violet-ink)]",
+    ring: "focus:border-[var(--wash-violet-ink)] focus:ring-[var(--wash-violet)]",
   },
 } as const;
 
@@ -78,22 +81,22 @@ function TemplateField({
 }) {
   const c = TEMPLATE_TONES[tone];
   return (
-    <div className="rounded-xl border border-slate-200 p-3">
+    <div className="rounded-xl border border-[var(--border-c)] p-3">
       <div className="flex items-center gap-2">
         <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${c.chip}`}>
           {icon}
         </span>
-        <span className="text-sm font-medium text-slate-700">{label}</span>
+        <span className="text-sm font-medium text-[var(--ink-2)]">{label}</span>
       </div>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         rows={rows}
-        className={`mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 font-mono text-xs transition-colors focus:outline-none focus:ring-2 ${c.ring}`}
+        className={`mt-2 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 font-mono text-xs text-[var(--ink-1)] transition-colors focus:outline-none focus:ring-2 ${c.ring}`}
       />
       <div className="mt-2 flex flex-wrap gap-1.5">
         {placeholders.map((p) => (
-          <code key={p} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
+          <code key={p} className="rounded bg-[var(--track-c)] px-1.5 py-0.5 text-xs text-[var(--ink-3)]">
             {`{{${p}}}`}
           </code>
         ))}
@@ -266,12 +269,12 @@ export default function SettingsPage() {
     setTestSending(false);
   };
 
-  if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
+  if (roleLoading) return <p className="text-[var(--ink-5)]">{t.common.loading}</p>;
   if (role !== "admin") {
     return (
       <div className="flex flex-col gap-3">
         <h1 className="text-2xl font-semibold">{t.settings.title}</h1>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
       </div>
     );
   }
@@ -284,29 +287,29 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Link
             href="/settings/users"
-            className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="group flex items-center gap-3 rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/><circle cx="17.5" cy="9.5" r="2.5"/><path d="M16 15.2c2.6.3 4.6 1.8 5.5 4.3"/></svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold text-slate-800">{t.settings.usersLink}</span>
-              <span className="block text-xs text-slate-400">{t.settings.usersHint}</span>
+              <span className="block font-semibold text-[var(--ink-2)]">{t.settings.usersLink}</span>
+              <span className="block text-xs text-[var(--ink-5)]">{t.settings.usersHint}</span>
             </span>
-            <span className="text-slate-300 transition-transform group-hover:translate-x-0.5">→</span>
+            <span className="text-[var(--ink-5)] transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
           <Link
             href="/settings/audit-log"
-            className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="group flex items-center gap-3 rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5"><path d="M4 5h16M4 12h16M4 19h10"/><circle cx="19" cy="19" r="2"/></svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block font-semibold text-slate-800">{t.settings.auditLogLink}</span>
-              <span className="block text-xs text-slate-400">{t.settings.auditHint}</span>
+              <span className="block font-semibold text-[var(--ink-2)]">{t.settings.auditLogLink}</span>
+              <span className="block text-xs text-[var(--ink-5)]">{t.settings.auditHint}</span>
             </span>
-            <span className="text-slate-300 transition-transform group-hover:translate-x-0.5">→</span>
+            <span className="text-[var(--ink-5)] transition-transform group-hover:translate-x-0.5">→</span>
           </Link>
         </div>
       )}
@@ -317,7 +320,7 @@ export default function SettingsPage() {
 
       <div className="flex flex-col gap-3">
         <Accordion title={t.settings.company.title} defaultOpen>
-          <span className="-mt-2 text-xs text-slate-400">{t.settings.company.hint}</span>
+          <span className="-mt-2 text-xs text-[var(--ink-5)]">{t.settings.company.hint}</span>
           <FileUploadField
             label={t.settings.company.logo}
             value={values.company_logo_url}
@@ -327,7 +330,7 @@ export default function SettingsPage() {
             uploadingLabel={t.objects.form.uploading}
           />
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.company.name}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.settings.company.name}</span>
             <input
               value={values.company_name}
               onChange={(e) => update("company_name", e.target.value)}
@@ -335,7 +338,7 @@ export default function SettingsPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.company.director}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.settings.company.director}</span>
             <input
               value={values.company_director}
               onChange={(e) => update("company_director", e.target.value)}
@@ -343,7 +346,7 @@ export default function SettingsPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.settings.company.address}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.settings.company.address}</span>
             <input
               value={values.company_address}
               onChange={(e) => update("company_address", e.target.value)}
@@ -351,7 +354,7 @@ export default function SettingsPage() {
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">
+            <span className="font-medium text-[var(--ink-2)]">
               {t.settings.company.bankDetails}
             </span>
             <textarea
@@ -359,18 +362,18 @@ export default function SettingsPage() {
               onChange={(e) => update("company_bank_details", e.target.value)}
               placeholder={t.settings.company.bankDetailsPlaceholder}
               rows={3}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
         </Accordion>
 
         <Accordion title={t.settings.sms.title}>
-          <span className="-mt-2 text-xs text-slate-400">{t.settings.sms.hint}</span>
+          <span className="-mt-2 text-xs text-[var(--ink-5)]">{t.settings.sms.hint}</span>
 
           <SectionLabel>{t.settings.sms.connectionSection}</SectionLabel>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">{t.settings.sms.provider}</span>
+              <span className="font-medium text-[var(--ink-2)]">{t.settings.sms.provider}</span>
               <input
                 value={values.sms_provider}
                 onChange={(e) => update("sms_provider", e.target.value)}
@@ -381,10 +384,10 @@ export default function SettingsPage() {
                   шлюз. Запрос всегда уходит на gateway.payom.tj в его формате
                   (sendPaymentReminders.ts) -- это поле только для памяти
                   администратора, если ключ выдал именно этот провайдер. */}
-              <span className="text-xs text-slate-400">{t.settings.sms.providerHint}</span>
+              <span className="text-xs text-[var(--ink-5)]">{t.settings.sms.providerHint}</span>
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">{t.settings.sms.apiKey}</span>
+              <span className="font-medium text-[var(--ink-2)]">{t.settings.sms.apiKey}</span>
               <input
                 type="password"
                 value={values.sms_api_key}
@@ -393,7 +396,7 @@ export default function SettingsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">{t.settings.sms.senderName}</span>
+              <span className="font-medium text-[var(--ink-2)]">{t.settings.sms.senderName}</span>
               <input
                 value={values.sms_sender_name}
                 onChange={(e) => update("sms_sender_name", e.target.value)}
@@ -402,7 +405,7 @@ export default function SettingsPage() {
               />
             </label>
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">{t.settings.sms.reminderDays}</span>
+              <span className="font-medium text-[var(--ink-2)]">{t.settings.sms.reminderDays}</span>
               <input
                 type="number"
                 min="0"
@@ -452,9 +455,9 @@ export default function SettingsPage() {
               exactly what's on screen, then fires one real SMS through the
               gateway so a broken key/sender surfaces immediately instead of
               days later when the reminder cron happens to run. */}
-          <div className="flex items-end gap-2 border-t border-slate-100 pt-3">
+          <div className="flex items-end gap-2 border-t border-[var(--border-c2)] pt-3">
             <label className="flex flex-1 flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">{t.settings.sms.testTitle}</span>
+              <span className="font-medium text-[var(--ink-2)]">{t.settings.sms.testTitle}</span>
               <input
                 type="tel"
                 value={testPhone}
@@ -484,13 +487,13 @@ export default function SettingsPage() {
 
       {/* Company-wide dashboard look. Applies to everyone who hasn't set a
           personal override from the dashboard swatches. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-semibold text-slate-700">{t.settings.appearance.title}</p>
-        <p className="mt-0.5 text-xs text-slate-400">{t.settings.appearance.hint}</p>
+      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-5 shadow-sm">
+        <p className="text-sm font-semibold text-[var(--ink-2)]">{t.settings.appearance.title}</p>
+        <p className="mt-0.5 text-xs text-[var(--ink-5)]">{t.settings.appearance.hint}</p>
 
         <div className="mt-4 flex flex-col gap-4">
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--ink-5)]">
               {t.settings.appearance.theme}
             </p>
             <div className="flex flex-wrap gap-2.5">
@@ -502,8 +505,8 @@ export default function SettingsPage() {
                   title={th.label}
                   className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs font-medium transition-all ${
                     values.hero_theme === th.id
-                      ? "border-slate-900 text-slate-900"
-                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      ? "border-[var(--ink-1)] text-[var(--ink-1)]"
+                      : "border-[var(--border-c)] text-[var(--ink-4)] hover:border-[var(--border-strong-c)]"
                   }`}
                 >
                   <span
@@ -519,7 +522,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--ink-5)]">
               {t.settings.appearance.pattern}
             </p>
             <div className="flex flex-wrap gap-2.5">
@@ -531,12 +534,12 @@ export default function SettingsPage() {
                   title={pt.label}
                   className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs font-medium transition-all ${
                     values.hero_pattern === pt.id
-                      ? "border-slate-900 text-slate-900"
-                      : "border-slate-200 text-slate-500 hover:border-slate-300"
+                      ? "border-[var(--ink-1)] text-[var(--ink-1)]"
+                      : "border-[var(--border-c)] text-[var(--ink-4)] hover:border-[var(--border-strong-c)]"
                   }`}
                 >
                   <span
-                    className="h-5 w-5 rounded-md border border-slate-200 bg-slate-700"
+                    className="h-5 w-5 rounded-md border border-[var(--border-c)] bg-[var(--ink-4)]"
                     style={pt.css ? { backgroundImage: pt.css } : undefined}
                   />
                   {pt.label}
@@ -549,9 +552,9 @@ export default function SettingsPage() {
 
       {/* Documentation PDF: pick a ЖК and open its full report (shakhmatka +
           sales + clients), printable / savable as PDF. */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-semibold text-slate-700">{t.settings.backup.title}</p>
-        <p className="mt-0.5 text-xs text-slate-400">{t.settings.backup.hint}</p>
+      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-5 shadow-sm">
+        <p className="text-sm font-semibold text-[var(--ink-2)]">{t.settings.backup.title}</p>
+        <p className="mt-0.5 text-xs text-[var(--ink-5)]">{t.settings.backup.hint}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <select
             value={reportBuilding}

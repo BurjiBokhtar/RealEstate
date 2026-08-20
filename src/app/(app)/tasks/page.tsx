@@ -99,9 +99,9 @@ export default function TasksPage() {
         </ControlGroup>
       </div>
 
-      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
+          <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
             <tr>
               <th className="px-4 py-3 font-medium">{t.tasks.table.title}</th>
               <th className="px-4 py-3 font-medium">{t.tasks.table.dueDate}</th>
@@ -112,14 +112,14 @@ export default function TasksPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && tasks.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.tasks.empty}
                 </td>
               </tr>
@@ -140,15 +140,15 @@ export default function TasksPage() {
               return (
                 <tr
                   key={task.id}
-                  className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                  className="cursor-pointer border-b border-[var(--border-c2)] transition-colors last:border-0 hover:bg-[var(--hover-c)]"
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900">
+                  <td className="px-4 py-3 font-medium text-[var(--ink-1)]">
                     <Link href={`/tasks/${task.id}`} className="block">
                       {task.title}
                     </Link>
                   </td>
                   <td
-                    className={`px-4 py-3 ${overdue ? "font-medium text-rose-600" : dueSoon ? "font-medium text-amber-600" : "text-slate-600"}`}
+                    className={`px-4 py-3 ${overdue ? "font-medium text-[var(--wash-rose-ink)]" : dueSoon ? "font-medium text-[var(--wash-amber-ink)]" : "text-[var(--ink-3)]"}`}
                   >
                     {task.due_date || "—"}
                   </td>
@@ -159,7 +159,7 @@ export default function TasksPage() {
                       {t.tasks.statuses[task.status]}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-600">{task.assignee || "—"}</td>
+                  <td className="px-4 py-3 text-[var(--ink-3)]">{task.assignee || "—"}</td>
                 </tr>
               );
             })}

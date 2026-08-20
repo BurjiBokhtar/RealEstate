@@ -74,9 +74,9 @@ export default function TaskDetailPage() {
       {!configured && <SetupNotice />}
 
       {configured && task === undefined && (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       )}
-      {configured && task === null && <p className="text-slate-400">{t.tasks.notFound}</p>}
+      {configured && task === null && <p className="text-[var(--ink-5)]">{t.tasks.notFound}</p>}
 
       {task && (
         <>

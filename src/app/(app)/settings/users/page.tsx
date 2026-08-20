@@ -146,12 +146,12 @@ export default function UsersPage() {
     }
   };
 
-  if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
+  if (roleLoading) return <p className="text-[var(--ink-5)]">{t.common.loading}</p>;
   if (role !== "admin") {
     return (
       <div className="flex flex-col gap-3">
         <BackLink href="/settings">{t.users.backToSettings}</BackLink>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
         <WhoAmI />
       </div>
     );
@@ -170,7 +170,7 @@ export default function UsersPage() {
       <h1 className="text-2xl font-semibold">{t.users.title}</h1>
 
       {/* How-to: the reliable path is create-in-Supabase, assign-here. */}
-      <div className="rounded-xl border border-brand-soft bg-brand-soft p-4 text-sm text-slate-600">
+      <div className="rounded-xl border border-brand-soft bg-brand-soft p-4 text-sm text-[var(--ink-3)]">
         <p className="font-semibold text-brand">{t.users.howToTitle}</p>
         <ol className="mt-1.5 list-decimal space-y-0.5 pl-5">
           <li>{t.users.howTo1}</li>
@@ -188,34 +188,34 @@ export default function UsersPage() {
 
       {/* Optional direct-create form (needs the service key). */}
       {showCreate && (
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
           <div className="flex flex-wrap items-end gap-2.5">
             <label className="flex min-w-52 flex-1 flex-col gap-1 text-xs">
-              <span className="font-semibold text-slate-600">{t.users.email}</span>
+              <span className="font-semibold text-[var(--ink-3)]">{t.users.email}</span>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@mail.com"
-                className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
               />
             </label>
             <label className="flex min-w-40 flex-1 flex-col gap-1 text-xs">
-              <span className="font-semibold text-slate-600">{t.users.password}</span>
+              <span className="font-semibold text-[var(--ink-3)]">{t.users.password}</span>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••"
-                className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+                className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="font-semibold text-slate-600">{t.users.role}</span>
+              <span className="font-semibold text-[var(--ink-3)]">{t.users.role}</span>
               <select
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value as Role)}
-                className="h-10 rounded-lg border border-slate-300 px-3 text-sm"
+                className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)]"
               >
                 <option value="manager">{t.users.roleManager}</option>
                 <option value="director">{t.users.roleDirector}</option>
@@ -234,14 +234,14 @@ export default function UsersPage() {
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-[var(--wash-rose-ink)]">{error}</p>}
 
       {loading ? (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] shadow-sm">
           <table className="w-full border-collapse text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+            <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
               <tr>
                 <th className="px-4 py-3 font-medium">{t.users.email}</th>
                 <th className="px-4 py-3 font-medium">{t.users.role}</th>
@@ -252,7 +252,7 @@ export default function UsersPage() {
             <tbody>
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                  <td colSpan={4} className="px-4 py-6 text-center text-[var(--ink-5)]">
                     {t.users.empty}
                   </td>
                 </tr>
@@ -303,20 +303,20 @@ function UserRow({
   t: ReturnType<typeof useLocale>["t"];
 }) {
   const roleTone: Record<StaffRole, string> = {
-    none: "border-slate-300 text-slate-400",
-    manager: "border-sky-300 text-sky-700",
-    director: "border-amber-300 text-amber-700",
+    none: "border-[var(--field-border)] text-[var(--ink-5)]",
+    manager: "border-[var(--wash-sky-ink)] text-[var(--wash-sky-ink)]",
+    director: "border-[var(--wash-amber-ink)] text-[var(--wash-amber-ink)]",
     admin: "border-brand-soft text-brand",
   };
   return (
     <>
-      <tr className="border-b border-slate-100 last:border-0">
+      <tr className="border-b border-[var(--border-c2)] last:border-0">
         <td className="px-4 py-2.5">{user.email}</td>
         <td className="px-4 py-2.5">
           <select
             value={user.role}
             onChange={(e) => onRoleChange(e.target.value as StaffRole)}
-            className={`rounded-md border bg-white px-2 py-1 font-medium ${roleTone[user.role]}`}
+            className={`rounded-md border bg-[var(--surface-1)] px-2 py-1 font-medium ${roleTone[user.role]}`}
           >
             {roleOptions.map((o) => (
               <option key={o.value} value={o.value}>
@@ -325,7 +325,7 @@ function UserRow({
             ))}
           </select>
         </td>
-        <td className="px-4 py-2.5 text-slate-500">
+        <td className="px-4 py-2.5 text-[var(--ink-4)]">
           {new Date(user.created_at).toLocaleDateString()}
         </td>
         <td className="px-4 py-2.5">
@@ -333,7 +333,7 @@ function UserRow({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="rounded-lg border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 transition-all hover:bg-slate-50 active:scale-95"
+              className="rounded-lg border border-[var(--field-border)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-2)] transition-all hover:bg-[var(--surface-2)] active:scale-95"
             >
               {t.users.assignBuildings} ({assigned?.size ?? 0})
             </button>
@@ -341,11 +341,11 @@ function UserRow({
         </td>
       </tr>
       {expanded && user.role === "manager" && (
-        <tr className="border-b border-slate-100">
-          <td colSpan={4} className="bg-slate-50 px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-slate-500">{t.users.assignHint}</p>
+        <tr className="border-b border-[var(--border-c2)]">
+          <td colSpan={4} className="bg-[var(--surface-2)] px-4 py-3">
+            <p className="mb-2 text-xs font-medium text-[var(--ink-4)]">{t.users.assignHint}</p>
             {buildings.length === 0 ? (
-              <p className="text-xs text-slate-400">{t.buildings.empty}</p>
+              <p className="text-xs text-[var(--ink-5)]">{t.buildings.empty}</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {buildings.map((b) => {
@@ -358,7 +358,7 @@ function UserRow({
                       className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 ${
                         checked
                           ? "border-brand bg-brand text-white"
-                          : "border-slate-300 bg-white text-slate-600 hover:bg-slate-100"
+                          : "border-[var(--field-border)] bg-[var(--surface-1)] text-[var(--ink-3)] hover:bg-[var(--hover-c2)]"
                       }`}
                     >
                       {checked ? "✓ " : ""}
@@ -395,5 +395,5 @@ function WhoAmI() {
     });
   }, []);
   if (!info) return null;
-  return <p className="text-xs text-slate-400">{info}</p>;
+  return <p className="text-xs text-[var(--ink-5)]">{info}</p>;
 }

@@ -124,10 +124,10 @@ function fieldLines(
 // The DB trigger writes 'insert'; keep 'create' too so older rows (or a
 // future rename) render the same.
 const ACTION_STYLES: Record<string, string> = {
-  insert: "bg-emerald-50 text-emerald-600",
-  create: "bg-emerald-50 text-emerald-600",
-  update: "bg-sky-50 text-sky-600",
-  delete: "bg-rose-50 text-rose-600",
+  insert: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  create: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  update: "bg-[var(--wash-sky)] text-[var(--wash-sky-ink)]",
+  delete: "bg-[var(--wash-rose)] text-[var(--wash-rose-ink)]",
 };
 
 export default function AuditLogPage() {
@@ -174,12 +174,12 @@ export default function AuditLogPage() {
     if (role === "admin") load();
   }, [role, load]);
 
-  if (roleLoading) return <p className="text-slate-400">{t.common.loading}</p>;
+  if (roleLoading) return <p className="text-[var(--ink-5)]">{t.common.loading}</p>;
   if (role !== "admin") {
     return (
       <div className="flex flex-col gap-3">
         <BackLink href="/settings">{t.auditLog.backToSettings}</BackLink>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
       </div>
     );
   }
@@ -189,23 +189,23 @@ export default function AuditLogPage() {
       <BackLink href="/settings">{t.auditLog.backToSettings}</BackLink>
       <div>
         <h1 className="text-2xl font-semibold">{t.auditLog.title}</h1>
-        <p className="text-sm text-slate-500">{t.auditLog.subtitle}</p>
+        <p className="text-sm text-[var(--ink-4)]">{t.auditLog.subtitle}</p>
       </div>
 
-      {loading && <p className="text-slate-400">{t.common.loading}</p>}
+      {loading && <p className="text-[var(--ink-5)]">{t.common.loading}</p>}
       {!loading && loadError && (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-lg border border-[var(--wash-rose-border)] bg-[var(--wash-rose)] px-4 py-3 text-sm text-[var(--wash-rose-ink)]">
           {loadError}
         </p>
       )}
       {!loading && !loadError && entries.length === 0 && (
-        <p className="text-slate-400">{t.auditLog.empty}</p>
+        <p className="text-[var(--ink-5)]">{t.auditLog.empty}</p>
       )}
 
       {!loading && entries.length > 0 && (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
           <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+            <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
               <tr>
                 <th className="px-4 py-3 font-medium">{t.auditLog.date}</th>
                 <th className="px-4 py-3 font-medium">{t.auditLog.actor}</th>
@@ -228,18 +228,18 @@ export default function AuditLogPage() {
                 const where = contextLine(entry.details);
                 const lines = fieldLines(entry.details, t);
                 return (
-                  <tr key={entry.id} className="border-b border-slate-100 last:border-0 align-top">
-                    <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                  <tr key={entry.id} className="border-b border-[var(--border-c2)] last:border-0 align-top">
+                    <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-3)]">
                       {new Date(entry.created_at).toLocaleString("ru-RU")}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-[var(--ink-3)]">
                       {entry.actor_id
                         ? (actors.get(entry.actor_id) ?? entry.actor_id.slice(0, 8))
                         : t.auditLog.unknownActor}
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${ACTION_STYLES[entry.action] ?? "bg-slate-100 text-slate-600"}`}
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${ACTION_STYLES[entry.action] ?? "bg-[var(--wash-slate)] text-[var(--wash-slate-ink)]"}`}
                       >
                         {entry.action === "create" || entry.action === "insert"
                           ? t.auditLog.actionCreate
@@ -248,23 +248,23 @@ export default function AuditLogPage() {
                             : t.auditLog.actionDelete}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-slate-700">{entityLabel}</td>
+                    <td className="px-4 py-3 text-[var(--ink-2)]">{entityLabel}</td>
                     <td className="px-4 py-3">
                       {where || lines.length > 0 ? (
                         <div className="flex flex-col gap-1">
-                          {where && <p className="font-medium text-slate-800">{where}</p>}
+                          {where && <p className="font-medium text-[var(--ink-2)]">{where}</p>}
                           {lines.length > 0 && (
                             <ul className="flex flex-col gap-0.5">
                               {lines.map((l) => (
-                                <li key={l.label} className="text-xs text-slate-500">
-                                  <span className="text-slate-400">{l.label}:</span> {l.text}
+                                <li key={l.label} className="text-xs text-[var(--ink-4)]">
+                                  <span className="text-[var(--ink-5)]">{l.label}:</span> {l.text}
                                 </li>
                               ))}
                             </ul>
                           )}
                         </div>
                       ) : (
-                        <span className="text-slate-600">—</span>
+                        <span className="text-[var(--ink-3)]">—</span>
                       )}
                     </td>
                   </tr>
