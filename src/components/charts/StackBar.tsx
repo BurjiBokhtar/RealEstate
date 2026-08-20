@@ -64,13 +64,13 @@ export function StackBar({
             key={s.key}
             onMouseEnter={() => setHover(s.key)}
             onMouseLeave={() => setHover(null)}
-            className="flex items-center gap-2 text-xs text-slate-500 transition-opacity"
+            className="flex items-center gap-2 text-xs text-[var(--ink-4)] transition-opacity"
             style={{ opacity: hover && hover !== s.key ? 0.4 : 1 }}
           >
             <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.hue.solid }} />
             {s.label}
-            <span className="font-semibold tabular-nums text-slate-900">{formatValue(s.value)}</span>
-            <span className="tabular-nums text-slate-400">{Math.round(share(s.value))}%</span>
+            <span className="font-semibold tabular-nums text-[var(--ink-1)]">{formatValue(s.value)}</span>
+            <span className="tabular-nums text-[var(--ink-5)]">{Math.round(share(s.value))}%</span>
           </li>
         ))}
       </ul>

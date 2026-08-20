@@ -10,12 +10,41 @@ import type { ReactNode } from "react";
 type Tone = "slate" | "emerald" | "rose" | "amber" | "indigo" | "plum";
 
 const TONES: Record<Tone, { chip: string; value: string; ring: string }> = {
-  slate: { chip: "bg-slate-100 text-slate-500", value: "text-slate-900", ring: "border-slate-200" },
-  emerald: { chip: "bg-emerald-100 text-emerald-600", value: "text-emerald-600", ring: "border-slate-200" },
-  rose: { chip: "bg-rose-100 text-rose-600", value: "text-rose-600", ring: "border-rose-200" },
-  amber: { chip: "bg-amber-100 text-amber-600", value: "text-amber-600", ring: "border-amber-200" },
-  indigo: { chip: "bg-indigo-100 text-indigo-600", value: "text-indigo-700", ring: "border-slate-200" },
-  plum: { chip: "bg-purple-100 text-brand", value: "text-brand", ring: "border-slate-200" },
+  slate: {
+    chip: "bg-[var(--wash-slate)] text-[var(--wash-slate-ink)]",
+    value: "text-[var(--ink-1)]",
+    ring: "border-[var(--border-c)]",
+  },
+  emerald: {
+    chip: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+    value: "text-[var(--wash-emerald-ink)]",
+    ring: "border-[var(--border-c)]",
+  },
+  rose: {
+    chip: "bg-[var(--wash-rose)] text-[var(--wash-rose-ink)]",
+    value: "text-[var(--wash-rose-ink)]",
+    ring: "border-[var(--wash-rose-border)]",
+  },
+  amber: {
+    chip: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
+    value: "text-[var(--wash-amber-ink)]",
+    ring: "border-[var(--wash-amber-border)]",
+  },
+  indigo: {
+    chip: "bg-[var(--wash-indigo)] text-[var(--wash-indigo-ink)]",
+    value: "text-[var(--wash-indigo-ink)]",
+    ring: "border-[var(--border-c)]",
+  },
+  // "plum" keeps its name (matches --brand's own family) but on the value
+  // figure specifically -- not the chip -- it now follows --wash-plum-ink,
+  // which is the one spot dark mode's fixed yellow accent shows up on a
+  // dashboard number: "potential revenue" is the figure the tone was
+  // invented for, and it reads as the accent both modes intend it to be.
+  plum: {
+    chip: "bg-[var(--wash-plum)] text-brand",
+    value: "text-[var(--wash-plum-ink)]",
+    ring: "border-[var(--border-c)]",
+  },
 };
 
 export function StatCard({
@@ -41,7 +70,7 @@ export function StatCard({
   const inner = (
     <>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-medium text-slate-500">{label}</span>
+        <span className="text-[13px] font-medium text-[var(--ink-4)]">{label}</span>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${c.chip}`}>
           {icon}
         </span>
@@ -53,11 +82,11 @@ export function StatCard({
       >
         {loading ? "…" : value}
       </div>
-      {sub && <div className="mt-0.5 text-xs text-slate-400">{sub}</div>}
+      {sub && <div className="mt-0.5 text-xs text-[var(--ink-5)]">{sub}</div>}
     </>
   );
 
-  const cls = `animate-fade-up block overflow-hidden rounded-2xl border ${c.ring} bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`;
+  const cls = `animate-fade-up block overflow-hidden rounded-2xl border ${c.ring} bg-[var(--surface-1)] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md`;
 
   if (href) {
     return (

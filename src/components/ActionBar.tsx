@@ -52,7 +52,7 @@ export function ControlGroup({
   return (
     <SizeContext.Provider value={size}>
       <div
-        className={`inline-flex w-fit items-center rounded-lg border border-slate-300 bg-white ${
+        className={`inline-flex w-fit items-center rounded-lg border border-[var(--border-strong-c)] bg-[var(--surface-1)] ${
           size === "sm" ? "gap-0.5 p-0.5" : "gap-1 p-1"
         } ${className}`}
       >
@@ -73,7 +73,7 @@ export function GroupDivider() {
   return (
     <span
       aria-hidden="true"
-      className={`mx-0.5 w-px shrink-0 bg-slate-200 ${size === "sm" ? "h-5" : "h-6"}`}
+      className={`mx-0.5 w-px shrink-0 bg-[var(--border-c)] ${size === "sm" ? "h-5" : "h-6"}`}
     />
   );
 }
@@ -107,7 +107,7 @@ export function PillButton({
           ? // --brand carries the company colour; --brand-strong is near-black
             // in every theme and made the active option look simply black.
             "bg-brand text-white shadow-sm"
-          : "text-slate-600 hover:bg-slate-100"
+          : "text-[var(--ink-3)] hover:bg-[var(--hover-c2)]"
       }`}
     >
       {label}
@@ -157,7 +157,7 @@ export function IconAction({
     "hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95 " +
     "disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none";
   const look = active
-    ? "bg-amber-100 text-amber-800"
+    ? "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]"
     : tone === "brand"
       ? // --brand, not --brand-strong: the "strong" variant is near-black in
         // every theme (#1c1a3a, #06302b, #0c1e4a...), so a themed button made
@@ -165,8 +165,8 @@ export function IconAction({
         // the company's colour.
         "bg-brand text-white hover:brightness-110"
       : tone === "danger"
-        ? "text-rose-600 hover:bg-rose-50"
-        : "text-slate-600 hover:bg-slate-100";
+        ? "text-[var(--wash-rose-ink)] hover:bg-[var(--wash-rose)]"
+        : "text-[var(--ink-3)] hover:bg-[var(--hover-c2)]";
 
   const inner = <span className="pointer-events-none">{icon}</span>;
 

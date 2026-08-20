@@ -5,6 +5,100 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Manual dark mode -- an explicit choice (the toggle in AppShell), not
+   prefers-color-scheme. data-theme="dark" on <html> is set before hydration
+   (see the inline script at the top of layout.tsx's <body>) so there is no
+   light-then-dark flash, and it is a *:where() selector so it also matches
+   plain descendant elements, not just data-theme itself carrying the class. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ---- Surface/ink tokens ----
+   This pass covers the persistent app chrome (sidebar, header) and the
+   dashboard page end to end -- every other page still reads the light
+   values below unconditionally (their components don't reference these
+   vars yet), which is exactly why they stay correct and untouched rather
+   than half-converted. Defaults are pixel-matches for the slate palette
+   already used everywhere, so nothing shifts until data-theme="dark" is
+   actually set. */
+:root {
+  --surface-0: #f8fafc;
+  --surface-1: #ffffff;
+  --surface-2: #f8fafc;
+  --border-c: #e2e8f0;
+  --border-c2: #f1f5f9;
+  --border-strong-c: #cbd5e1;
+  --ink-1: #0f172a;
+  --ink-2: #334155;
+  --ink-3: #475569;
+  --ink-4: #64748b;
+  --ink-5: #94a3b8;
+  --chart-axis: #94a3b8;
+  --chart-grid: #f1f5f9;
+  --track-c: #f1f5f9;
+  --hover-c: #f8fafc;
+  --hover-c2: #f1f5f9;
+  --wash-emerald: #d1fae5;
+  --wash-emerald-ink: #059669;
+  --wash-rose: #ffe4e6;
+  --wash-rose-ink: #e11d48;
+  --wash-rose-border: #fecdd3;
+  --wash-amber: #fef3c7;
+  --wash-amber-ink: #d97706;
+  --wash-amber-border: #fde68a;
+  --wash-indigo: #e0e7ff;
+  --wash-indigo-ink: #4338ca;
+  --wash-plum: #f3e8ff;
+  --wash-plum-ink: var(--brand);
+  --wash-slate: #f1f5f9;
+  --wash-slate-ink: #64748b;
+  --side-active-bg: #ffffff;
+  --side-active-ink: #0f172a;
+  --side-active-icon: var(--brand);
+}
+
+:root[data-theme="dark"] {
+  --surface-0: #0d0d0f;
+  --surface-1: #18181b;
+  --surface-2: #1f1f22;
+  --border-c: #29292c;
+  --border-c2: #232326;
+  --border-strong-c: #3a3a3f;
+  --ink-1: #f5f5f0;
+  --ink-2: #d4d4c9;
+  --ink-3: #b3b3a8;
+  --ink-4: #8f8f86;
+  --ink-5: #6b6b64;
+  --chart-axis: #6b6b64;
+  --chart-grid: #232326;
+  --track-c: #232326;
+  --hover-c: #1f1f22;
+  --hover-c2: #29292c;
+  --wash-emerald: rgba(16, 185, 129, 0.16);
+  --wash-emerald-ink: #34d399;
+  --wash-rose: rgba(244, 63, 94, 0.16);
+  --wash-rose-ink: #fb7185;
+  --wash-rose-border: rgba(244, 63, 94, 0.28);
+  --wash-amber: rgba(245, 158, 11, 0.16);
+  --wash-amber-ink: #fbbf24;
+  --wash-amber-border: rgba(245, 158, 11, 0.3);
+  --wash-indigo: rgba(99, 102, 241, 0.18);
+  --wash-indigo-ink: #a5b4fc;
+  --wash-plum: rgba(250, 204, 21, 0.14);
+  --wash-plum-ink: #facc15;
+  --wash-slate: #232326;
+  --wash-slate-ink: #a8a89e;
+  --side-active-bg: #232326;
+  --side-active-ink: #f5f5f0;
+  --side-active-icon: #facc15;
+  /* The one fixed accent dark mode adds on top of the company's own theme --
+     used only where the sidebar/nav need a highlight that isn't --brand
+     (staying off --brand keeps every existing bg-brand + white-text button
+     app-wide legible: --brand is still whatever the company picked, and
+     white text on THAT is already proven safe -- see the lemon theme's own
+     comment on why yellow can't be a button fill). */
+  --accent-dark: #facc15;
+}
+
 /* Contract documents (standalone print page and the in-modal preview after
    booking) share the #contract-print-area id. When printing, hide
    everything else on the page -- the sidebar, modal backdrop, buttons --
@@ -191,6 +285,25 @@
   --hero-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='20'%3E%3Cpath d='M0 10 Q15 0 30 10 T60 10' fill='none' stroke='%23fff' stroke-width='1.2'/%3E%3C/svg%3E");
   --hero-pattern-size: 60px 20px;
   --hero-pattern-opacity: 0.16;
+}
+
+/* ---- The sidebar in dark mode ----
+   Every other surface it sits next to (light: white/slate-50) inverts
+   through the tokens above. The sidebar can't just invert the same way --
+   it is ALREADY dark in light mode (the company's own hero gradient), and a
+   near-black graphite bar next to another dark colour reads as clutter, not
+   contrast. So dark mode replaces the gradient with the same flat graphite
+   the rest of the page uses, rather than darkening it further. Scoped to
+   .app-sidebar specifically (not .hero-gradient) so the rare "waiting for
+   role" screen and the small avatar/building-card swatches elsewhere keep
+   their normal company colour regardless of page theme -- this is chrome,
+   not decoration. */
+:root[data-theme="dark"] .app-sidebar {
+  background: var(--surface-1);
+  border-right: 1px solid var(--border-c);
+}
+:root[data-theme="dark"] .app-sidebar .side-glow {
+  display: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {

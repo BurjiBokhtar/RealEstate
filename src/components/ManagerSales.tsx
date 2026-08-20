@@ -27,12 +27,12 @@ function IconSelect({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex h-8 items-center gap-1 rounded-md border border-slate-200 bg-white pl-1.5 pr-1 text-slate-400 transition-colors hover:border-slate-300">
+    <label className="flex h-8 items-center gap-1 rounded-md border border-[var(--border-c)] bg-[var(--surface-1)] pl-1.5 pr-1 text-[var(--ink-5)] transition-colors hover:border-[var(--border-strong-c)]">
       {icon}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-full min-w-0 max-w-[9rem] truncate border-0 bg-transparent py-0 pl-0.5 pr-4 text-xs font-medium text-slate-600 focus:outline-none focus:ring-0"
+        className="h-full min-w-0 max-w-[9rem] truncate border-0 bg-transparent py-0 pl-0.5 pr-4 text-xs font-medium text-[var(--ink-3)] focus:outline-none focus:ring-0"
       >
         {children}
       </select>
@@ -127,9 +127,9 @@ export function ManagerSales({
   const visibleRows = activeCurrency ? rows.filter((r) => r.currency === activeCurrency) : rows;
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-slate-700">{t.dashboard.byManager}</p>
+        <p className="text-sm font-semibold text-[var(--ink-2)]">{t.dashboard.byManager}</p>
         <div className="flex flex-wrap items-center gap-1.5">
           <IconSelect
             icon={<CalendarIcon className="h-3.5 w-3.5 shrink-0" />}
@@ -181,7 +181,7 @@ export function ManagerSales({
               deals right up against 27 817 053,04 read as one number,
               8527 817 053,04. */}
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-200 text-slate-500">
+            <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
               <tr>
                 <th className="px-3 py-2 font-medium">{t.dashboard.manager}</th>
                 <th className="px-3 py-2 text-right font-medium">{t.dashboard.dealsCount}</th>
@@ -191,8 +191,8 @@ export function ManagerSales({
             </thead>
             <tbody>
               {visibleRows.map((r, i) => (
-                <tr key={`${r.manager}-${r.currency}-${i}`} className="border-b border-slate-100 last:border-0">
-                  <td className="px-3 py-2 font-medium text-slate-800">
+                <tr key={`${r.manager}-${r.currency}-${i}`} className="border-b border-[var(--border-c2)] last:border-0">
+                  <td className="px-3 py-2 font-medium text-[var(--ink-2)]">
                     {r.manager}
                     {/* The same manager gets one row PER CURRENCY -- summing
                         TJS and USD into one figure would be meaningless, the
@@ -202,7 +202,7 @@ export function ManagerSales({
                         carries an unexplained badge in a single-currency
                         company. */}
                     {currencies.length > 1 && (
-                      <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+                      <span className="ml-2 rounded-full bg-[var(--wash-slate)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--wash-slate-ink)]">
                         {r.currency}
                       </span>
                     )}
@@ -211,7 +211,7 @@ export function ManagerSales({
                   <td className="px-3 py-2 text-right tabular-nums">
                     {formatCurrency(r.total, r.currency)}
                   </td>
-                  <td className="px-3 py-2 text-right tabular-nums text-emerald-600">
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--wash-emerald-ink)]">
                     {formatCurrency(r.paid, r.currency)}
                   </td>
                 </tr>
@@ -220,7 +220,7 @@ export function ManagerSales({
           </table>
         </div>
       ) : (
-        <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+        <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
       )}
     </div>
   );

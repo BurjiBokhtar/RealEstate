@@ -336,14 +336,14 @@ export default function DashboardPage() {
       {!configured && <SetupNotice />}
 
       {failure && (
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <div className="rounded-lg border border-[var(--wash-rose-border)] bg-[var(--wash-rose)] px-4 py-3 text-sm text-[var(--wash-rose-ink)]">
           <p className="font-semibold">{t.dashboard.summaryFailed}</p>
           <p className="mt-1 text-xs opacity-80">{failure}</p>
         </div>
       )}
 
       {selectedBuildingId === "all" && completedSummary && (
-        <p className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-500">
+        <p className="rounded-lg border border-[var(--border-c)] bg-[var(--surface-2)] px-4 py-2 text-xs text-[var(--ink-4)]">
           {t.dashboard.completedSummary
             .replace("{buildings}", String(completedSummary.buildingsCount))
             .replace("{units}", String(completedSummary.unitsCount))}
@@ -392,10 +392,10 @@ export default function DashboardPage() {
       {/* Площадь по статусам, во всю ширину: только 14px высотой, поэтому ей
           не нужна отдельная колонка. */}
       {area.total > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">{t.dashboard.areaSplit}</p>
-            <p className="text-sm font-semibold tabular-nums text-slate-900">
+            <p className="text-sm font-semibold text-[var(--ink-2)]">{t.dashboard.areaSplit}</p>
+            <p className="text-sm font-semibold tabular-nums text-[var(--ink-1)]">
               {formatArea(area.total)}
             </p>
           </div>
@@ -409,19 +409,19 @@ export default function DashboardPage() {
           наведении; наведение на само кольцо переключает подпись в его
           центре на ту полосу, что под курсором, и её число. */}
       {occupancyRows.length > 0 && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-slate-700">
+            <p className="text-sm font-semibold text-[var(--ink-2)]">
               {t.dashboard.occupancyByBuilding}
             </p>
-            <div className="flex flex-wrap gap-1 text-[11px] text-slate-500">
+            <div className="flex flex-wrap gap-1 text-[11px] text-[var(--ink-4)]">
               {RING_LEGEND.map((l) => (
                 <span
                   key={l.segment}
                   onMouseEnter={() => setLegendSegment(l.segment)}
                   onMouseLeave={() => setLegendSegment(null)}
                   className={`flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-0.5 transition-colors ${
-                    legendSegment === l.segment ? "bg-slate-100 text-slate-700" : ""
+                    legendSegment === l.segment ? "bg-[var(--hover-c2)] text-[var(--ink-2)]" : ""
                   }`}
                 >
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: l.color }} />
@@ -435,26 +435,26 @@ export default function DashboardPage() {
       )}
 
       {(periodFilter === "today" || periodFilter === "month") && (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="mb-4 text-sm font-semibold text-slate-700">
+        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+          <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
             {t.dashboard.revenueByDay}
           </p>
           {dailyRevenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
             <RevenueAreaChart data={dailyRevenue} />
           ) : (
-            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+            <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
           )}
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-slate-700">
+      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+        <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
           {t.dashboard.revenueByMonth}
         </p>
         {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
           <RevenueAreaChart data={revenue} />
         ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
         )}
       </div>
 
@@ -477,13 +477,13 @@ export default function DashboardPage() {
             return (
               <div
                 key={currency}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
               >
                 <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-700">
+                  <p className="text-sm font-semibold text-[var(--ink-2)]">
                     {t.dashboard.revenueByBuilding} · {currency}
                   </p>
-                  <p className="text-sm font-semibold tabular-nums text-slate-900">
+                  <p className="text-sm font-semibold tabular-nums text-[var(--ink-1)]">
                     {formatCurrency(total, currency)}
                   </p>
                 </div>
@@ -503,11 +503,11 @@ export default function DashboardPage() {
             );
           })
         ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="mb-4 text-sm font-semibold text-slate-700">
+          <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+            <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
               {t.dashboard.revenueByBuilding}
             </p>
-            <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+            <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
           </div>
         )}
       </div>
@@ -518,8 +518,8 @@ export default function DashboardPage() {
           know that: a manager used to get the debtors card alone in a
           two-column row, half the width, with the other half simply blank. */}
       <div className={`grid items-start gap-4 ${canSeeManagerSales ? "xl:grid-cols-2" : ""}`}>
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="mb-3 text-sm font-semibold text-slate-700">{t.dashboard.topDebtors}</p>
+      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+        <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">{t.dashboard.topDebtors}</p>
         {debtors.length > 0 ? (
           // A ranked list, not a bare two-column table: the rank badge says
           // "these are ordered", and the whole row is the click target and
@@ -531,15 +531,15 @@ export default function DashboardPage() {
               <li key={`${d.clientId}-${d.currency}`}>
                 <Link
                   href={`/clients/${d.clientId}`}
-                  className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-rose-50"
+                  className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--wash-rose)]"
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-[11px] font-bold text-rose-600 transition-colors group-hover:bg-rose-100">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wash-rose)] text-[11px] font-bold text-[var(--wash-rose-ink)] transition-colors group-hover:brightness-95">
                     {i + 1}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 group-hover:underline">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink-2)] group-hover:underline">
                     {d.clientName}
                   </span>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-rose-600">
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--wash-rose-ink)]">
                     {formatCurrency(d.remaining, d.currency)}
                   </span>
                 </Link>
@@ -547,7 +547,7 @@ export default function DashboardPage() {
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-slate-400">{t.dashboard.noData}</p>
+          <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
         )}
       </div>
       {canSeeManagerSales && (

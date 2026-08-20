@@ -11,6 +11,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PinLock } from "@/components/PinLock";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 import type { Locale } from "@/lib/i18n/dictionaries";
 
@@ -126,12 +127,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     // all of it -- a fixed-height scroll container clips a printed
     // document to one viewport worth of content.
     <div className="flex h-screen w-full overflow-hidden print:block print:h-auto print:overflow-visible">
-      <aside className="hero-gradient relative hidden h-full w-60 shrink-0 overflow-y-auto sm:flex sm:flex-col print:hidden">
+      <aside className="app-sidebar hero-gradient relative hidden h-full w-60 shrink-0 overflow-y-auto sm:flex sm:flex-col print:hidden">
         {/* Same slow-drifting glow language as the hero, so the sidebar
-            belongs to the same living surface. */}
+            belongs to the same living surface. Dark mode drops it -- see
+            .app-sidebar in globals.css -- since the sidebar there is flat
+            graphite, not a gradient this would drift across. */}
         <div
           aria-hidden="true"
-          className="animate-hero-glow pointer-events-none absolute -left-16 top-1/3 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl"
+          className="side-glow animate-hero-glow pointer-events-none absolute -left-16 top-1/3 h-56 w-56 rounded-full bg-amber-300/15 blur-3xl"
         />
         {/* Same faint skyline as the dashboard hero, so the two read as one
             visual system instead of a bright gradient page dropped into a
@@ -176,13 +179,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 ${
                   active
-                    ? "bg-white text-slate-900 shadow-sm"
+                    ? "bg-[var(--side-active-bg)] text-[var(--side-active-ink)] shadow-sm"
                     : "text-white/75 hover:translate-x-1 hover:bg-white/10 hover:text-white"
                 }`}
               >
                 <span
                   className={`shrink-0 transition-transform duration-200 ${
-                    active ? "text-brand" : "group-hover:scale-110"
+                    active ? "text-[var(--side-active-icon)]" : "group-hover:scale-110"
                   }`}
                 >
                   {NAV_ICONS[item.key]}
@@ -212,7 +215,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-full min-w-0 flex-1 flex-col print:block print:h-auto">
         <InstallPrompt />
         <OfflineBanner />
-        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:justify-end print:hidden">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-c)] bg-[var(--surface-1)] px-4 py-3 sm:justify-end print:hidden">
           <Link
             href="/"
             className="flex min-w-0 flex-1 items-center gap-2 transition-opacity hover:opacity-80 sm:hidden"
@@ -225,13 +228,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 className="h-7 w-7 shrink-0 rounded object-contain"
               />
             )}
-            <span className="line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
+            <span className="line-clamp-2 text-sm font-semibold leading-tight text-[var(--ink-1)]">
               {brandName}
             </span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <QuickSearch />
-            <div className="flex items-center gap-1 rounded-full border border-slate-200 p-1 text-sm">
+            <div className="flex items-center gap-1 rounded-full border border-[var(--border-c)] p-1 text-sm">
               {(["ru", "tj"] as Locale[]).map((l) => (
                 <button
                   key={l}
@@ -239,17 +242,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className={`rounded-full px-3 py-1 font-medium transition-colors ${
                     locale === l
                       ? "bg-brand text-white"
-                      : "text-slate-500 hover:bg-slate-100"
+                      : "text-[var(--ink-4)] hover:bg-[var(--hover-c)]"
                   }`}
                 >
                   {l === "ru" ? "RU" : "ТОҶ"}
                 </button>
               ))}
             </div>
+            <ThemeToggle />
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 p-4 pb-24 sm:p-5 sm:pb-5 print:overflow-visible print:bg-white print:p-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--surface-0)] p-4 pb-24 sm:p-5 sm:pb-5 print:overflow-visible print:bg-white print:p-0">
           {children}
         </main>
 
@@ -260,7 +264,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           // width of a fixed bar makes the browser re-composite everything
           // behind it on every scroll frame, and at bg-white/95 there was
           // nothing visible to blur anyway.
-          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around border-t border-[var(--border-c)] bg-[var(--surface-1)] pb-[env(safe-area-inset-bottom)] sm:hidden print:hidden"
         >
           {visibleNavItems.map((item) => {
             const active =
@@ -270,7 +274,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.key}
                 href={item.href}
                 className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
-                  active ? "text-brand" : "text-slate-400"
+                  active ? "text-brand" : "text-[var(--ink-5)]"
                 }`}
               >
                 <span className={active ? "scale-110 transition-transform" : ""}>

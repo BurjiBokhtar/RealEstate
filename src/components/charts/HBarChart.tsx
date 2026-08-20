@@ -39,10 +39,10 @@ export function HBarChart({
             style={{ opacity: dim ? 0.4 : 1 }}
           >
             <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-slate-700" title={d.label}>
+              <span className="min-w-0 truncate text-[var(--ink-2)]" title={d.label}>
                 {d.label}
               </span>
-              <span className="shrink-0 font-semibold tabular-nums text-slate-900">
+              <span className="shrink-0 font-semibold tabular-nums text-[var(--ink-1)]">
                 {formatValue(d.value)}
               </span>
             </div>
@@ -50,7 +50,7 @@ export function HBarChart({
                 lift never fights the track's overflow-hidden -- a taller
                 fill would just get clipped back to the old height. */}
             <div
-              className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 transition-transform duration-200"
+              className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--track-c)] transition-transform duration-200"
               style={{ transform: hover === i ? "scaleY(1.4)" : undefined }}
             >
               <div
@@ -65,7 +65,7 @@ export function HBarChart({
                 }}
               />
             </div>
-            {d.hint && <span className="text-[11px] text-slate-400">{d.hint}</span>}
+            {d.hint && <span className="text-[11px] text-[var(--ink-5)]">{d.hint}</span>}
           </li>
         );
       })}

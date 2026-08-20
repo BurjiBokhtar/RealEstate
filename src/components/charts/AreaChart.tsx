@@ -118,7 +118,7 @@ export function AreaChart({
                       cx={x(i)}
                       cy={y(v)}
                       r={active ? 6.5 : 4}
-                      fill="#fff"
+                      fill="var(--surface-1)"
                       stroke={s.color}
                       strokeWidth="2.5"
                       className="transition-all"
@@ -162,10 +162,10 @@ export function AreaChart({
 
       {hover !== null && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-xl"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] px-3 py-2 text-xs shadow-xl"
           style={{ left: `${(x(hover) / W) * 100}%`, top: `${(y(Math.max(...series.map((s) => s.values[hover] ?? 0))) / H) * 100 - 4}%` }}
         >
-          <p className="mb-1 font-semibold text-slate-700">{labels[hover]}</p>
+          <p className="mb-1 font-semibold text-[var(--ink-2)]">{labels[hover]}</p>
           {series
             .filter((s) => (s.values[hover] ?? 0) > 0)
             .map((s) => (
@@ -174,8 +174,8 @@ export function AreaChart({
                   className="h-2 w-2 shrink-0 rounded-full"
                   style={{ background: s.color }}
                 />
-                <span className="text-slate-400">{s.label}</span>
-                <span className="ml-auto font-semibold tabular-nums text-slate-800">
+                <span className="text-[var(--ink-5)]">{s.label}</span>
+                <span className="ml-auto font-semibold tabular-nums text-[var(--ink-1)]">
                   {formatValue(s.values[hover] ?? 0)}
                 </span>
               </p>

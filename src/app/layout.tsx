@@ -97,7 +97,19 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       {...htmlDataAttrs}
     >
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+      <body className="min-h-full flex flex-col bg-[var(--surface-0)] text-[var(--ink-1)]">
+        {/* Blocking, runs before paint: reads the theme the user picked last
+            time (ThemeToggle in AppShell writes it) and stamps it on <html>
+            immediately. Without this the page would paint light every time,
+            then jump to dark a frame after hydration -- the same flash
+            getBranding() above exists to avoid for the hero theme, just for a
+            value only the browser (not this server render) knows. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{if(localStorage.getItem('theme')==='dark'){document.documentElement.dataset.theme='dark'}}catch(e){}",
+          }}
+        />
         <LocaleProvider>
           <SettingsProvider>
             <ConfirmProvider>{children}</ConfirmProvider>

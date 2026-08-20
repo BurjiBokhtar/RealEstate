@@ -47,8 +47,12 @@ export const CURRENCY_HUES: Record<"TJS" | "USD", ChartHue> = {
   USD: { from: "#60a5fa", to: "#1d4ed8", solid: "#3b82f6" }, // blue
 };
 
-export const AXIS_TEXT = "fill-slate-400 text-[10px] tabular-nums";
-export const GRID_STROKE = "#f1f5f9";
+export const AXIS_TEXT = "fill-[var(--chart-axis)] text-[10px] tabular-nums";
+// A CSS var, not a literal hex -- axis text (above) picks up dark mode
+// through the class, but the gridline is drawn with the `stroke` SVG
+// attribute, which needs the actual value, not a Tailwind class. Same
+// --chart-grid token either way.
+export const GRID_STROKE = "var(--chart-grid)";
 
 const nf = new Intl.NumberFormat("ru-RU");
 

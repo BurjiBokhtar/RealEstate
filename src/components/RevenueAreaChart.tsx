@@ -35,7 +35,7 @@ export function RevenueAreaChart({ data }: { data: RevenueMonth[] }) {
         return (
           <div key={p.currency} className="flex min-w-0 flex-col gap-2">
             <div className="flex items-baseline justify-between gap-3 text-xs">
-              <span className="flex items-center gap-1.5 font-semibold text-slate-600">
+              <span className="flex items-center gap-1.5 font-semibold text-[var(--ink-3)]">
                 <span
                   className="h-2.5 w-2.5 rounded-full"
                   style={{ background: hue.solid }}
@@ -45,9 +45,9 @@ export function RevenueAreaChart({ data }: { data: RevenueMonth[] }) {
               {/* The axis is compacted ("5,7 млн"), so the latest month is
                   spelled out in full -- a rounded axis label is for comparing,
                   not for reading a number off. */}
-              <span className="text-slate-400">
+              <span className="text-[var(--ink-5)]">
                 {labels[labels.length - 1]}:{" "}
-                <span className="font-semibold text-slate-700">
+                <span className="font-semibold text-[var(--ink-2)]">
                   {formatCurrency(last, p.currency)}
                 </span>
               </span>

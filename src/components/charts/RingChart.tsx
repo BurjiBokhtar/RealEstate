@@ -168,15 +168,15 @@ export function RingChart({
                 x="34"
                 y="38"
                 textAnchor="middle"
-                className="fill-slate-900 text-[14px] font-semibold tabular-nums"
+                className="fill-[var(--ink-1)] text-[14px] font-semibold tabular-nums"
               >
                 {Math.round(shown.fraction * 100)}%
               </text>
             </svg>
-            <p className="mt-2 w-full truncate text-center text-[11.5px] text-slate-600">
+            <p className="mt-2 w-full truncate text-center text-[11.5px] text-[var(--ink-3)]">
               {d.label}
             </p>
-            <p className="text-center text-[10px] tabular-nums text-slate-400">
+            <p className="text-center text-[10px] tabular-nums text-[var(--ink-5)]">
               {shown.value}/{d.total}
             </p>
           </li>
