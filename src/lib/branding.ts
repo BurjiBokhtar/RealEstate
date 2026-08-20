@@ -12,16 +12,9 @@ export type Branding = {
   logo: string | null;
   heroTheme: string | null;
   heroPattern: string | null;
-  heroStyle: string | null;
 };
 
-const EMPTY_BRANDING: Branding = {
-  name: null,
-  logo: null,
-  heroTheme: null,
-  heroPattern: null,
-  heroStyle: null,
-};
+const EMPTY_BRANDING: Branding = { name: null, logo: null, heroTheme: null, heroPattern: null };
 
 export async function getBranding(): Promise<Branding> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -48,14 +41,12 @@ export async function getBranding(): Promise<Branding> {
           company_logo_url: string | null;
           hero_theme: string | null;
           hero_pattern: string | null;
-          hero_style: string | null;
         }>
       | {
           company_name?: string | null;
           company_logo_url?: string | null;
           hero_theme?: string | null;
           hero_pattern?: string | null;
-          hero_style?: string | null;
         };
     const row = Array.isArray(rows) ? rows[0] : rows;
     return {
@@ -63,7 +54,6 @@ export async function getBranding(): Promise<Branding> {
       logo: row?.company_logo_url ?? null,
       heroTheme: row?.hero_theme ?? null,
       heroPattern: row?.hero_pattern ?? null,
-      heroStyle: row?.hero_style ?? null,
     };
   } catch {
     return EMPTY_BRANDING;

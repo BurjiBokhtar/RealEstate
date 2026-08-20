@@ -86,11 +86,10 @@ export default async function RootLayout({
     );
   }
 
-  const { heroTheme, heroPattern, heroStyle } = await getBranding();
+  const { heroTheme, heroPattern } = await getBranding();
   const htmlDataAttrs: Record<string, string> = {};
   if (heroTheme && heroTheme !== "atlas") htmlDataAttrs["data-hero-theme"] = heroTheme;
   if (heroPattern && heroPattern !== "none") htmlDataAttrs["data-hero-pattern"] = heroPattern;
-  if (heroStyle && heroStyle !== "gradient") htmlDataAttrs["data-hero-style"] = heroStyle;
 
   return (
     <html

@@ -10,7 +10,7 @@ import { FileUploadField } from "@/components/FileUploadField";
 import { Accordion } from "@/components/Accordion";
 import { SmsScheduler } from "@/components/SmsScheduler";
 import { Toast, type ToastType } from "@/components/Toast";
-import { HERO_THEMES, HERO_PATTERNS, HERO_STYLES } from "@/components/HeroThemeSwitcher";
+import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { ChangePasswordCard } from "@/components/ChangePasswordCard";
@@ -123,7 +123,6 @@ export default function SettingsPage() {
     company_logo_url: "",
     hero_theme: "atlas",
     hero_pattern: "none",
-    hero_style: "gradient",
   });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
@@ -177,7 +176,6 @@ export default function SettingsPage() {
           company_logo_url: data.company_logo_url ?? "",
           hero_theme: data.hero_theme ?? "atlas",
           hero_pattern: data.hero_pattern ?? "none",
-          hero_style: data.hero_style ?? "gradient",
         });
       });
   }, [role, configured]);
@@ -210,7 +208,6 @@ export default function SettingsPage() {
         company_logo_url: values.company_logo_url || null,
         hero_theme: values.hero_theme || null,
         hero_pattern: values.hero_pattern || null,
-        hero_style: values.hero_style || null,
       })
       .eq("id", true)
       .select("id");
@@ -543,45 +540,6 @@ export default function SettingsPage() {
                     style={pt.css ? { backgroundImage: pt.css } : undefined}
                   />
                   {pt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-              {t.settings.appearance.style}
-            </p>
-            {/* Same colour theme, different shape: gradient (animated,
-                current default) vs. flat/outline/block -- solid, still,
-                and either dark or flipped light. Independent of "Тема"
-                above, so any theme can pair with any of these. */}
-            <div className="flex flex-wrap gap-2.5">
-              {HERO_STYLES.map((st) => (
-                <button
-                  key={st.id}
-                  type="button"
-                  onClick={() => update("hero_style", st.id)}
-                  title={st.label}
-                  className={`flex items-center gap-2 rounded-full border px-2 py-1 pr-3 text-xs font-medium transition-all ${
-                    values.hero_style === st.id
-                      ? "border-slate-900 text-slate-900"
-                      : "border-slate-200 text-slate-500 hover:border-slate-300"
-                  }`}
-                >
-                  <span
-                    className="h-5 w-5 rounded-full border border-slate-200"
-                    style={
-                      st.id === "gradient"
-                        ? { background: "linear-gradient(120deg, #1c1a3a, #5b3468 55%, #e3a73b)" }
-                        : st.id === "flat"
-                          ? { background: "#18181b" }
-                          : st.id === "outline"
-                            ? { background: "#fff", boxShadow: "inset 0 0 0 2px #facc15" }
-                            : { background: "linear-gradient(90deg, #18181b 62%, #facc15 62%)" }
-                    }
-                  />
-                  {st.label}
                 </button>
               ))}
             </div>

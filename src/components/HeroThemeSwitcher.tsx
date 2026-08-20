@@ -13,22 +13,6 @@ export const HERO_THEMES = [
 
 export type HeroThemeId = (typeof HERO_THEMES)[number]["id"];
 
-// Style is a second, independent axis from colour (see migration 059): every
-// theme above only ever changed the three gradient stops, so four themes
-// still read as one design in four outfits. Style changes the SHAPE instead
-// -- solid vs. gradient, dark vs. light, animated vs. still -- using
-// whichever theme's --hero-1/2/3 are already active. "gradient" is the
-// classic animated banner (default, unchanged); the other three are for
-// anyone who wants the hero to stop moving and stop blending.
-export const HERO_STYLES = [
-  { id: "gradient", label: "Градиент" },
-  { id: "flat", label: "Контраст" },
-  { id: "outline", label: "Контур" },
-  { id: "block", label: "Блок" },
-] as const;
-
-export type HeroStyleId = (typeof HERO_STYLES)[number]["id"];
-
 // Ornament patterns laid over the gradient (see globals.css). `css` is a tiny
 // inline preview used on the Settings buttons; the real overlay is applied via
 // data-hero-pattern on <html>.
@@ -56,18 +40,11 @@ export type HeroPatternId = (typeof HERO_PATTERNS)[number]["id"];
 // Apply the company-wide theme + pattern app-wide. Called from AppShell with
 // the values loaded from Settings, so an admin change reaches every page
 // (accent-color too). No local storage / per-user override anymore.
-export function applyHeroTheme(
-  theme?: string | null,
-  pattern?: string | null,
-  style?: string | null
-) {
+export function applyHeroTheme(theme?: string | null, pattern?: string | null) {
   if (typeof document === "undefined") return;
   if (theme && theme !== "atlas") document.documentElement.dataset.heroTheme = theme;
   else delete document.documentElement.dataset.heroTheme;
 
   if (pattern && pattern !== "none") document.documentElement.dataset.heroPattern = pattern;
   else delete document.documentElement.dataset.heroPattern;
-
-  if (style && style !== "gradient") document.documentElement.dataset.heroStyle = style;
-  else delete document.documentElement.dataset.heroStyle;
 }
