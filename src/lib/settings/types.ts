@@ -27,6 +27,9 @@ export type Settings = {
   // locally; when they haven't, this is what everyone sees.
   hero_theme: string | null;
   hero_pattern: string | null;
+  // The hero's shape (gradient/flat/outline/block), independent of its
+  // colour. See migration 059.
+  hero_style: string | null;
   updated_at: string;
 };
 
@@ -45,4 +48,5 @@ export type SettingsInput = {
   company_logo_url: string;
   hero_theme: string;
   hero_pattern: string;
+  hero_style: string;
 };

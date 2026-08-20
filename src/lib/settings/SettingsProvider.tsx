@@ -26,6 +26,7 @@ const DEFAULT_SETTINGS: Settings = {
   company_logo_url: null,
   hero_theme: null,
   hero_pattern: null,
+  hero_style: null,
   updated_at: new Date(0).toISOString(),
 };
 
@@ -57,7 +58,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       .schema("crm")
       .from("settings")
       .select(
-        "id, sms_sender_name, sms_reminder_days, sms_payment_template, sms_due_today_template, sms_task_template, company_name, company_director, company_address, company_bank_details, company_logo_url, hero_theme, hero_pattern, updated_at"
+        "id, sms_sender_name, sms_reminder_days, sms_payment_template, sms_due_today_template, sms_task_template, company_name, company_director, company_address, company_bank_details, company_logo_url, hero_theme, hero_pattern, hero_style, updated_at"
       )
       .maybeSingle();
     if (data) {

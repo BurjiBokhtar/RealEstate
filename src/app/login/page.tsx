@@ -55,7 +55,7 @@ export default function LoginPage() {
           });
           // Paint the login page in the company's chosen theme too (the
           // AppShell that normally applies it isn't mounted here).
-          applyHeroTheme(row.hero_theme ?? null, row.hero_pattern ?? null);
+          applyHeroTheme(row.hero_theme ?? null, row.hero_pattern ?? null, row.hero_style ?? null);
         }
       });
   }, [configured]);

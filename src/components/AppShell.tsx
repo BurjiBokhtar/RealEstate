@@ -84,8 +84,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // guard exists to prevent.
   useEffect(() => {
     if (settingsLoading) return;
-    applyHeroTheme(settings.hero_theme, settings.hero_pattern);
-  }, [settingsLoading, settings.hero_theme, settings.hero_pattern]);
+    applyHeroTheme(settings.hero_theme, settings.hero_pattern, settings.hero_style);
+  }, [settingsLoading, settings.hero_theme, settings.hero_pattern, settings.hero_style]);
 
   const handleLogout = async () => {
     const supabase = createClient();

@@ -13,7 +13,7 @@ type PeriodFilter = "all" | "today" | "month" | "year";
 // Borderless now: the two selects sit inside one shared bordered group (see
 // below), so each carrying its own outline would draw a box inside a box.
 const GLASS_SELECT =
-  "h-8 rounded-md border-0 bg-transparent px-2.5 text-xs font-medium text-white transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/40";
+  "h-8 rounded-md border-0 bg-transparent px-2.5 text-xs font-medium text-[var(--hero-ink)] transition-colors hover:bg-[var(--hero-ink)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--hero-ink)]/40";
 
 // The dashboard's one bold move: a sales-progress hero (the single figure
 // that answers "how is the portfolio doing" faster than four separate
@@ -74,13 +74,13 @@ export function DashboardHero({
   ];
 
   return (
-    <div className="hero-gradient hero-surface relative overflow-hidden rounded-2xl px-6 py-8 text-white shadow-lg shadow-slate-900/10 sm:px-10 sm:py-10">
+    <div className="hero-gradient hero-surface relative overflow-hidden rounded-2xl px-6 py-8 text-[var(--hero-ink)] shadow-lg shadow-slate-900/10 sm:px-10 sm:py-10">
       {/* Mountain skyline signature, low-opacity so it stays atmosphere, not decoration. */}
       <svg
         viewBox="0 0 1000 200"
         preserveAspectRatio="none"
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full text-white/10 sm:h-36"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-28 w-full text-[var(--hero-ink)]/10 sm:h-36"
       >
         <path
           fill="currentColor"
@@ -92,11 +92,11 @@ export function DashboardHero({
           you touch anything. */}
       <div
         aria-hidden="true"
-        className="animate-hero-glow pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl"
+        className="hero-glow-decor animate-hero-glow pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-amber-300/20 blur-3xl"
       />
       <div
         aria-hidden="true"
-        className="animate-hero-glow-2 pointer-events-none absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-fuchsia-400/15 blur-3xl"
+        className="hero-glow-decor animate-hero-glow-2 pointer-events-none absolute -right-20 bottom-0 h-64 w-64 rounded-full bg-fuchsia-400/15 blur-3xl"
       />
 
       <div className="relative flex flex-col gap-7">
@@ -105,7 +105,7 @@ export function DashboardHero({
           {/* Building and period are ONE control, not two glass pills with a
               gap. Same rule as every other filter row in the app -- kept on
               the hero's own translucent surface rather than a white group. */}
-          <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-white/25 bg-white/10 p-1 backdrop-blur-sm">
+          <div className="inline-flex flex-wrap items-center gap-1 rounded-lg border border-[var(--hero-ink)]/25 bg-[var(--hero-ink)]/10 p-1 backdrop-blur-sm">
             <select
               value={selectedBuildingId}
               onChange={(e) => onBuildingChange(e.target.value)}
@@ -121,7 +121,7 @@ export function DashboardHero({
                 </option>
               ))}
             </select>
-            <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-white/25" />
+            <span aria-hidden="true" className="mx-0.5 h-5 w-px shrink-0 bg-[var(--hero-ink)]/25" />
             <select
               value={periodFilter}
               onChange={(e) => onPeriodChange(e.target.value as PeriodFilter)}
@@ -145,7 +145,7 @@ export function DashboardHero({
 
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="animate-fade-up flex w-full max-w-md flex-col gap-2">
-            <span className="text-xs font-medium uppercase tracking-[0.2em] text-amber-100/80">
+            <span className="text-xs font-medium uppercase tracking-[0.2em] text-[var(--hero-label)]/80">
               {t.dashboard.hero.salesProgress}
             </span>
             {/* "Sold X of Y" reads instantly; a bare percentage was the
@@ -160,38 +160,38 @@ export function DashboardHero({
                   <span className="text-6xl font-bold tabular-nums sm:text-7xl">
                     {displaySold}
                   </span>
-                  <span className="text-2xl font-semibold text-white/60">
+                  <span className="text-2xl font-semibold text-[var(--hero-ink)]/60">
                     / {totalUnits}
                   </span>
                 </div>
-                <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-white/15">
+                <div className="mt-1 flex h-2.5 w-full overflow-hidden rounded-full bg-[var(--hero-ink)]/15">
                   <div
-                    className="h-full rounded-l-full bg-amber-300 transition-[width] duration-1000 ease-out"
+                    className="h-full rounded-l-full bg-[var(--hero-fill-sold)] transition-[width] duration-1000 ease-out"
                     style={{ width: `${soldPct}%` }}
                   />
                   <div
-                    className="h-full bg-white/50 transition-[width] duration-1000 ease-out"
+                    className="h-full bg-[var(--hero-ink)]/50 transition-[width] duration-1000 ease-out"
                     style={{ width: `${reservedPct}%` }}
                   />
                 </div>
-                <div className="flex flex-wrap gap-4 text-xs text-white/80">
+                <div className="flex flex-wrap gap-4 text-xs text-[var(--hero-ink)]/80">
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-amber-300" />
+                    <span className="h-2 w-2 rounded-full bg-[var(--hero-fill-sold)]" />
                     {t.dashboard.sold}: {soldCount}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-white/50" />
+                    <span className="h-2 w-2 rounded-full bg-[var(--hero-ink)]/50" />
                     {t.dashboard.reserved}: {reservedCount}
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-white/20" />
+                    <span className="h-2 w-2 rounded-full bg-[var(--hero-ink)]/20" />
                     {t.dashboard.available}: {availableCount}
                   </span>
                 </div>
               </>
             )}
             {!loading && !hasUnits && (
-              <p className="max-w-xs text-sm leading-tight text-white/70">
+              <p className="max-w-xs text-sm leading-tight text-[var(--hero-ink)]/70">
                 {t.dashboard.hero.noUnitsYet}
               </p>
             )}
@@ -201,8 +201,8 @@ export function DashboardHero({
             className="animate-fade-up flex flex-wrap items-center gap-3"
             style={{ animationDelay: "80ms" }}
           >
-            <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
-              <p className="text-[11px] uppercase tracking-wide text-white/60">
+            <div className="rounded-xl bg-[var(--hero-revenue-bg)] px-4 py-3 text-[var(--hero-revenue-ink)] backdrop-blur-sm">
+              <p className="text-[11px] uppercase tracking-wide text-[var(--hero-revenue-ink)]/60">
                 {t.dashboard.paidRevenue}
               </p>
               <div className="mt-1 text-2xl">
@@ -211,7 +211,7 @@ export function DashboardHero({
             </div>
             <Link
               href="/buildings"
-              className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm transition-all hover:shadow-md active:scale-[0.97]"
+              className="rounded-xl bg-[var(--hero-cta-bg)] px-5 py-3 text-sm font-semibold text-[var(--hero-cta-ink)] shadow-sm transition-all hover:shadow-md active:scale-[0.97]"
             >
               {t.dashboard.hero.cta} →
             </Link>
@@ -223,13 +223,13 @@ export function DashboardHero({
             {stats.map((stat, i) => (
               <div
                 key={stat.label}
-                className="animate-fade-up rounded-xl border border-white/10 bg-white/[0.07] px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.12]"
+                className="animate-fade-up rounded-xl border border-[var(--hero-panel-border)] bg-[var(--hero-panel-bg)] px-4 py-3 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--hero-panel-bg-hover)]"
                 style={{ animationDelay: `${180 + i * 40}ms` }}
               >
                 <p className="text-3xl font-bold tabular-nums sm:text-4xl">
                   <CountUp value={stat.value} enabled={!loading} />
                 </p>
-                <p className="mt-0.5 text-xs text-white/60">{stat.label}</p>
+                <p className="mt-0.5 text-xs text-[var(--hero-ink)]/60">{stat.label}</p>
               </div>
             ))}
           </div>

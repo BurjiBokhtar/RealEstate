@@ -193,6 +193,78 @@
   --hero-pattern-opacity: 0.16;
 }
 
+/* ---- Hero style ----
+   A second, independent axis from the colour theme above (see migration
+   059). DashboardHero.tsx no longer hardcodes white/amber -- every colour
+   that used to be a literal Tailwind class (text-white/60, bg-amber-300,
+   bg-white/[0.07]...) now reads one of these variables. The defaults below
+   are the OLD literal values, unchanged pixel-for-pixel, so a company that
+   never touches "Стиль" sees exactly what it saw before this migration;
+   only the overrides further down make it diverge. */
+:root {
+  --hero-ink: #fff;
+  --hero-label: #fef3c7;
+  --hero-fill-sold: #fcd34d;
+  --hero-panel-bg: rgb(255 255 255 / 0.07);
+  --hero-panel-bg-hover: rgb(255 255 255 / 0.12);
+  --hero-panel-border: rgb(255 255 255 / 0.1);
+  --hero-revenue-bg: rgb(255 255 255 / 0.1);
+  --hero-revenue-ink: var(--hero-ink);
+  --hero-cta-bg: #fff;
+  --hero-cta-ink: #0f172a;
+}
+
+:root[data-hero-style="flat"],
+:root[data-hero-style="block"] {
+  --hero-fill-sold: var(--hero-3);
+  --hero-label: var(--hero-3);
+}
+
+:root[data-hero-style="outline"] {
+  --hero-ink: #0f172a;
+  --hero-label: var(--hero-1);
+  --hero-fill-sold: var(--hero-3);
+  --hero-panel-bg: #f8fafc;
+  --hero-panel-bg-hover: #f1f5f9;
+  --hero-panel-border: #e2e8f0;
+  --hero-revenue-bg: #f8fafc;
+  --hero-cta-bg: var(--hero-1);
+  --hero-cta-ink: #fff;
+}
+
+/* The revenue figure gets its own ink var (rather than following --hero-ink)
+   because "block" is the one style where its panel goes a different
+   direction from the rest of the card: solid accent fill, so it needs dark
+   text while the card around it stays light-on-dark. Every other style
+   just inherits --hero-ink here, same as before this existed. */
+:root[data-hero-style="block"] {
+  --hero-revenue-bg: var(--hero-3);
+  --hero-revenue-ink: var(--hero-1);
+}
+
+/* The surface itself: solid instead of a blended gradient, and -- the point
+   of adding this at all -- no pan, no drifting glow. Targeting the two
+   classes together keeps this scoped to the one big dashboard hero;
+   .hero-gradient alone also paints the sidebar, avatars and building-card
+   placeholders, none of which carry .hero-surface and none of which this
+   is meant to touch. */
+:root[data-hero-style="flat"] .hero-gradient.hero-surface,
+:root[data-hero-style="block"] .hero-gradient.hero-surface {
+  background: var(--hero-1);
+  animation: none;
+}
+:root[data-hero-style="outline"] .hero-gradient.hero-surface {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  animation: none;
+  color: #0f172a;
+}
+:root[data-hero-style="flat"] .hero-glow-decor,
+:root[data-hero-style="outline"] .hero-glow-decor,
+:root[data-hero-style="block"] .hero-glow-decor {
+  display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   @keyframes fade-up {
     from {
