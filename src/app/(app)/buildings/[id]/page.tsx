@@ -448,10 +448,10 @@ export default function BuildingDetailPage() {
       {!configured && <SetupNotice />}
 
       {configured && building === undefined && (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       )}
       {configured && building === null && (
-        <p className="text-slate-400">{t.buildings.notFound}</p>
+        <p className="text-[var(--ink-5)]">{t.buildings.notFound}</p>
       )}
 
       {building && (
@@ -462,7 +462,7 @@ export default function BuildingDetailPage() {
                 <h1 className="text-2xl font-semibold">{building.name}</h1>
                 <ConstructionStatusBadge status={building.construction_status} />
               </div>
-              {building.address && <p className="text-sm text-slate-500">{building.address}</p>}
+              {building.address && <p className="text-sm text-[var(--ink-4)]">{building.address}</p>}
             </div>
             {/* Four wide labelled buttons became one icon toolbar: the row
                 took most of the header and pushed the building's own name
@@ -548,13 +548,13 @@ export default function BuildingDetailPage() {
           )}
 
           {editMode && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--wash-amber-border)] bg-[var(--wash-amber)] px-4 py-2 text-sm text-[var(--wash-amber-ink)]">
               <span>{t.buildings.editModeHint}</span>
               <button
                 type="button"
                 onClick={handleUndo}
                 disabled={undoStack.length === 0}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--wash-amber-ink)] bg-[var(--surface-1)] px-3 py-1.5 text-xs font-semibold text-[var(--wash-amber-ink)] transition-all hover:bg-[var(--wash-amber)] active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <span aria-hidden="true">↶</span>
                 {t.buildings.cellActions.undo}

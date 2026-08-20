@@ -76,18 +76,18 @@ export function QuickAddUnitModal({
     <Modal title={`${t.buildings.addUnitHere} — ${name}`} onClose={onClose} guardClose>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {siblingUnit && (
-          <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <p className="rounded-lg bg-[var(--surface-2)] px-3 py-2 text-xs text-[var(--ink-4)]">
             {t.buildings.addUnitPrefilled}
           </p>
         )}
 
         <div className="grid grid-cols-2 gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.objects.form.type}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.objects.form.type}</span>
             <select
               value={type}
               onChange={(e) => setType(e.target.value as ObjectType)}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             >
               {OBJECT_TYPES.map((t2) => (
                 <option key={t2} value={t2}>
@@ -97,45 +97,45 @@ export function QuickAddUnitModal({
             </select>
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.objects.form.rooms}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.objects.form.rooms}</span>
             <input
               type="number"
               min="0"
               value={rooms}
               onChange={(e) => setRooms(e.target.value)}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
         </div>
 
         <div className="grid grid-cols-3 gap-4">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.objects.form.area}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.objects.form.area}</span>
             <input
               type="number"
               min="0"
               step="0.01"
               value={area}
               onChange={(e) => setArea(e.target.value)}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.objects.form.price}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.objects.form.price}</span>
             <input
               type="number"
               min="0"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.contracts.form.currency}</span>
+            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.currency}</span>
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value as Currency)}
-              className="h-10 rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+              className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             >
               {CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -153,7 +153,7 @@ export function QuickAddUnitModal({
         >
           {submitting ? t.common.loading : t.buildings.addUnitHere}
         </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-[var(--wash-rose-ink)]">{error}</p>}
       </form>
     </Modal>
   );

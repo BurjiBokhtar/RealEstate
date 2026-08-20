@@ -95,42 +95,42 @@ export function UnitPriceModal({
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-semibold text-slate-600">{t.buildings.unitPrice.area}</span>
+            <span className="font-semibold text-[var(--ink-3)]">{t.buildings.unitPrice.area}</span>
             <input
               type="number"
               inputMode="decimal"
               value={areaStr}
               onChange={(e) => setAreaStr(e.target.value)}
-              className="h-11 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none"
+              className="h-11 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-semibold text-slate-600">{t.buildings.unitPrice.rate}</span>
+            <span className="font-semibold text-[var(--ink-3)]">{t.buildings.unitPrice.rate}</span>
             <input
               type="number"
               inputMode="decimal"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
-              className="h-11 rounded-lg border border-slate-300 px-3 text-sm focus:outline-none"
+              className="h-11 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
             />
           </label>
         </div>
 
-        <div className="rounded-lg bg-slate-50 px-4 py-3">
-          <p className="text-[11px] uppercase tracking-wide text-slate-400">
+        <div className="rounded-lg bg-[var(--surface-2)] px-4 py-3">
+          <p className="text-[11px] uppercase tracking-wide text-[var(--ink-5)]">
             {t.buildings.unitPrice.newPrice}
           </p>
-          <p className="text-xl font-bold text-slate-900">
+          <p className="text-xl font-bold text-[var(--ink-1)]">
             {total != null ? formatCurrency(total, currency) : "—"}
           </p>
           {price != null && (
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-[var(--ink-5)]">
               {t.buildings.unitPrice.wasPrice}: {formatCurrency(price, currency)}
             </p>
           )}
         </div>
 
-        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-slate-200 px-3.5 py-3">
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[var(--border-c)] px-3.5 py-3">
           <input
             type="checkbox"
             checked={syncContract}
@@ -138,10 +138,10 @@ export function UnitPriceModal({
             className="mt-0.5 h-4 w-4 shrink-0"
           />
           <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-slate-800">
+            <span className="text-sm font-medium text-[var(--ink-2)]">
               {t.buildings.unitPrice.syncContract}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-[var(--ink-4)]">
               {t.buildings.unitPrice.syncContractHint.replace(
                 "{amount}",
                 formatCurrency(contractAmount, currency)
@@ -150,13 +150,13 @@ export function UnitPriceModal({
           </span>
         </label>
 
-        {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+        {error && <p className="text-sm font-medium text-[var(--wash-rose-ink)]">{error}</p>}
 
         <div className="flex gap-2">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+            className="flex-1 rounded-lg border border-[var(--field-border)] px-4 py-2.5 text-sm font-medium text-[var(--ink-2)] transition-all hover:bg-[var(--surface-2)] active:scale-[0.98]"
           >
             {t.common.cancel}
           </button>

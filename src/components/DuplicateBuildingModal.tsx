@@ -90,19 +90,19 @@ export function DuplicateBuildingModal({
   return (
     <Modal title={t.buildings.duplicate.title} onClose={onClose} guardClose>
       <div className="flex flex-col gap-4 text-sm">
-        <p className="text-slate-500">
+        <p className="text-[var(--ink-4)]">
           {t.buildings.duplicate.hint.replace("{n}", String(units.length))}
         </p>
         <label className="flex flex-col gap-1">
-          <span className="font-medium text-slate-700">{t.buildings.duplicate.nameLabel}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.buildings.duplicate.nameLabel}</span>
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+            className="h-10 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
           />
         </label>
-        {error && <p className="text-red-600">{error}</p>}
+        {error && <p className="text-[var(--wash-rose-ink)]">{error}</p>}
         <button
           type="button"
           onClick={duplicate}

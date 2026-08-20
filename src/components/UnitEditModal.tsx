@@ -120,7 +120,7 @@ export function UnitEditModal({
   };
 
   const FIELD =
-    "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+    "h-10 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 
   const title =
     apartmentNumber != null ? `№${apartmentNumber} · ${unit.name}` : unit.name;
@@ -129,7 +129,7 @@ export function UnitEditModal({
     return (
       <Modal title={title} onClose={onClose} guardClose>
         <div className="flex flex-col gap-3 text-sm">
-          <p className="text-xs text-slate-400">{t.buildings.viewOnlyHint}</p>
+          <p className="text-xs text-[var(--ink-5)]">{t.buildings.viewOnlyHint}</p>
           <Row label={t.buildings.hover.rooms} value={unit.rooms ?? "—"} />
           <Row label={t.buildings.hover.area} value={unit.area ?? "—"} />
         </div>
@@ -142,7 +142,7 @@ export function UnitEditModal({
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-3 gap-3">
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium text-slate-600">{t.buildings.hover.rooms}</span>
+            <span className="font-medium text-[var(--ink-3)]">{t.buildings.hover.rooms}</span>
             <input
               type="number"
               min="0"
@@ -152,7 +152,7 @@ export function UnitEditModal({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium text-slate-600">
+            <span className="font-medium text-[var(--ink-3)]">
               {t.buildings.floorBuilder.area}
             </span>
             <input
@@ -165,7 +165,7 @@ export function UnitEditModal({
             />
           </label>
           <label className="flex flex-col gap-1 text-xs">
-            <span className="font-medium text-slate-600">
+            <span className="font-medium text-[var(--ink-3)]">
               {t.buildings.unitEdit.pricePerSqm}
             </span>
             <input
@@ -183,8 +183,8 @@ export function UnitEditModal({
         </div>
 
         {/* Total is computed from area × price/m², never typed directly. */}
-        <div className="flex items-baseline justify-between rounded-lg bg-slate-50 px-3 py-2">
-          <span className="text-xs font-medium text-slate-500">
+        <div className="flex items-baseline justify-between rounded-lg bg-[var(--surface-2)] px-3 py-2">
+          <span className="text-xs font-medium text-[var(--ink-4)]">
             {t.buildings.unitEdit.totalPrice}
           </span>
           <span className="text-lg font-bold text-brand">
@@ -199,7 +199,7 @@ export function UnitEditModal({
             nothing to multiply and the price saves as empty. Say so instead
             of showing a dash and letting the person guess. */}
         {!(areaNum != null && areaNum > 0) && (
-          <p className="-mt-2 text-xs text-amber-600">{t.buildings.unitEdit.needsArea}</p>
+          <p className="-mt-2 text-xs text-[var(--wash-amber-ink)]">{t.buildings.unitEdit.needsArea}</p>
         )}
 
         <button
@@ -212,16 +212,16 @@ export function UnitEditModal({
         </button>
 
         {/* Copy the values above to the same position on a range of floors. */}
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-          <p className="text-xs font-semibold text-slate-600">
+        <div className="rounded-lg border border-[var(--border-c)] bg-[var(--surface-2)] p-3">
+          <p className="text-xs font-semibold text-[var(--ink-3)]">
             {t.buildings.unitEdit.copyTitle}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-400">
+          <p className="mt-0.5 text-[11px] text-[var(--ink-5)]">
             {t.buildings.unitEdit.copyHint}
           </p>
           <div className="mt-2 flex items-end gap-2">
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-500">{t.buildings.floorBuilder.floorsFrom}</span>
+              <span className="text-[var(--ink-4)]">{t.buildings.floorBuilder.floorsFrom}</span>
               <input
                 type="number"
                 value={copyFrom}
@@ -230,7 +230,7 @@ export function UnitEditModal({
               />
             </label>
             <label className="flex flex-col gap-1 text-xs">
-              <span className="text-slate-500">{t.buildings.floorBuilder.floorsTo}</span>
+              <span className="text-[var(--ink-4)]">{t.buildings.floorBuilder.floorsTo}</span>
               <input
                 type="number"
                 value={copyTo}
@@ -242,7 +242,7 @@ export function UnitEditModal({
               type="button"
               onClick={copyToFloors}
               disabled={saving || !copyFrom || !copyTo}
-              className="h-10 rounded-lg border border-brand px-3 text-sm font-medium text-brand transition-all hover:bg-purple-50 active:scale-[0.98] disabled:opacity-40"
+              className="h-10 rounded-lg border border-brand px-3 text-sm font-medium text-brand transition-all hover:bg-[var(--wash-plum)] active:scale-[0.98] disabled:opacity-40"
             >
               {t.buildings.unitEdit.copyBtn}
             </button>
@@ -250,7 +250,7 @@ export function UnitEditModal({
         </div>
 
         {msg && (
-          <p className={`text-sm ${msg.ok ? "text-emerald-600" : "text-red-600"}`}>
+          <p className={`text-sm ${msg.ok ? "text-[var(--wash-emerald-ink)]" : "text-[var(--wash-rose-ink)]"}`}>
             {msg.text}
           </p>
         )}
@@ -262,8 +262,8 @@ export function UnitEditModal({
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex justify-between">
-      <span className="text-slate-500">{label}</span>
-      <span className="font-medium text-slate-900">{value}</span>
+      <span className="text-[var(--ink-4)]">{label}</span>
+      <span className="font-medium text-[var(--ink-1)]">{value}</span>
     </div>
   );
 }

@@ -29,7 +29,7 @@ export function PlanViewerModal({
   return (
     <Modal title={title} onClose={onClose} size="lg">
       <div className="flex flex-col gap-3">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+        <div className="overflow-hidden rounded-xl border border-[var(--border-c)] bg-[var(--surface-2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt={title} className="max-h-[70vh] w-full object-contain" />
         </div>
