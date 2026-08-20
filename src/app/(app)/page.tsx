@@ -536,7 +536,7 @@ export default function DashboardPage() {
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wash-rose)] text-[11px] font-bold text-[var(--wash-rose-ink)] transition-colors group-hover:brightness-95">
                     {i + 1}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink-2)] group-hover:underline">
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink-2)]">
                     {d.clientName}
                   </span>
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--wash-rose-ink)]">

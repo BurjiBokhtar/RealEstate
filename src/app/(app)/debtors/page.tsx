@@ -459,7 +459,7 @@ export default function DebtorsPage() {
                   {r.clientId ? (
                     <Link
                       href={`/clients/${r.clientId}`}
-                      className="font-medium text-[var(--ink-1)] hover:underline"
+                      className="-mx-1 rounded px-1 font-medium text-[var(--ink-1)] transition-colors hover:bg-[var(--wash-plum)] hover:text-brand"
                     >
                       {r.clientName}
                     </Link>

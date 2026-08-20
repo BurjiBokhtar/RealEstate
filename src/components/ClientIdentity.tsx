@@ -53,7 +53,7 @@ export function ClientIdentity({
           {href ? (
             <Link
               href={href}
-              className={`block truncate font-semibold leading-tight text-slate-900 hover:underline ${NAME_SIZE[size]}`}
+              className={`-mx-1 block truncate rounded px-1 font-semibold leading-tight text-slate-900 transition-colors hover:bg-brand-soft hover:text-brand ${NAME_SIZE[size]}`}
             >
               {name}
             </Link>

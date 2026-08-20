@@ -478,7 +478,7 @@ export default function ClientDetailPage() {
                       {f.href && f.value ? (
                         <a
                           href={f.href}
-                          className="truncate text-sm font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline"
+                          className="-mx-1 truncate rounded px-1 text-sm font-semibold text-slate-800 transition-colors hover:bg-brand-soft hover:text-[var(--brand)]"
                         >
                           {f.value}
                         </a>
@@ -548,7 +548,7 @@ export default function ClientDetailPage() {
                           ? `/buildings/${interestedObject.building_id}`
                           : "/buildings"
                       }
-                      className="font-medium text-slate-900 hover:underline"
+                      className="-mx-1 rounded px-1 font-medium text-slate-900 transition-colors hover:bg-brand-soft hover:text-brand"
                     >
                       {interestedObject.name} → {t.dashboard.hero.cta}
                     </Link>

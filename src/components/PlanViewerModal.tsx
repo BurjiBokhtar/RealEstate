@@ -37,7 +37,7 @@ export function PlanViewerModal({
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="self-start text-sm font-medium text-brand underline-offset-2 hover:underline"
+          className="-mx-1 self-start rounded px-1 text-sm font-medium text-brand transition-colors hover:bg-brand-soft"
         >
           {t.buildings.planOpenOriginal} ↗
         </a>

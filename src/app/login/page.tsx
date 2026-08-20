@@ -97,7 +97,7 @@ export default function LoginPage() {
             href="https://www.instagram.com/iammirzozoda"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-semibold text-white/80 underline-offset-2 transition-colors hover:text-white hover:underline"
+            className="-mx-1.5 rounded px-1.5 font-semibold text-white/80 transition-colors hover:bg-white/15 hover:text-white"
           >
             IMRON
           </a>
@@ -205,7 +205,7 @@ export default function LoginPage() {
             setResetting(false);
             setNotice(t.login.resetSent);
           }}
-          className="self-center text-sm text-slate-500 underline-offset-2 transition-colors hover:text-slate-800 hover:underline disabled:opacity-50"
+          className="-mx-1.5 self-center rounded px-1.5 py-0.5 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50"
         >
           {t.login.forgot}
         </button>
@@ -231,7 +231,7 @@ export default function LoginPage() {
           href="https://www.instagram.com/iammirzozoda"
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold text-white/90 underline-offset-2 transition-colors hover:underline"
+          className="-mx-1.5 rounded px-1.5 font-semibold text-white/90 transition-colors hover:bg-white/15"
         >
           IMRON
         </a>

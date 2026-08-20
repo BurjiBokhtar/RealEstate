@@ -180,7 +180,7 @@ export default function UsersPage() {
         <button
           type="button"
           onClick={() => setShowCreate((s) => !s)}
-          className="mt-2 text-xs font-medium text-brand underline-offset-2 hover:underline"
+          className="-mx-1 mt-2 w-fit rounded px-1 text-xs font-medium text-brand transition-colors hover:bg-brand-soft"
         >
           {showCreate ? t.users.hideCreate : t.users.showCreate}
         </button>
