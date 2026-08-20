@@ -83,10 +83,10 @@ export default function ObjectDetailPage() {
       {!configured && <SetupNotice />}
 
       {configured && object === undefined && (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       )}
       {configured && object === null && (
-        <p className="text-slate-400">{t.objects.notFound}</p>
+        <p className="text-[var(--ink-5)]">{t.objects.notFound}</p>
       )}
 
       {object && (
@@ -110,7 +110,7 @@ export default function ObjectDetailPage() {
             onDelete={role === "admin" ? handleDelete : undefined}
             readOnly={role !== "admin"}
           />
-          {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+          {deleteError && <p className="text-sm text-[var(--wash-rose-ink)]">{deleteError}</p>}
         </>
       )}
     </div>

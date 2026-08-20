@@ -8,9 +8,9 @@ import type { ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
 const FIELD_CLASS =
-  "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+  "h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 const TEXTAREA_CLASS =
-  "rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+  "rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 
 const emptyInput: ClientInput = {
   name: "",
@@ -68,10 +68,10 @@ export function ClientForm({
         if (birthInvalid) return;
         onSubmit(values);
       }}
-      className="flex max-w-xl flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+      className="flex max-w-xl flex-col gap-4 rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-5 shadow-sm"
     >
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.clients.form.name}</span>
+        <span className="font-medium text-[var(--ink-2)]">{t.clients.form.name}</span>
         <input
           required
           value={values.name}
@@ -82,7 +82,7 @@ export function ClientForm({
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.phone}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.phone}</span>
           <input
             value={values.phone}
             onChange={(e) => update("phone", e.target.value)}
@@ -93,7 +93,7 @@ export function ClientForm({
             actually picks up). It used to end up in the notes field, where
             search can't find it and nothing can dial it. */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.phone2}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.phone2}</span>
           <input
             value={values.phone2}
             onChange={(e) => update("phone2", e.target.value)}
@@ -101,7 +101,7 @@ export function ClientForm({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.email}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.email}</span>
           <input
             type="email"
             value={values.email}
@@ -113,7 +113,7 @@ export function ClientForm({
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.passport}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.passport}</span>
           <input
             value={values.passport}
             onChange={(e) => update("passport", e.target.value)}
@@ -122,7 +122,7 @@ export function ClientForm({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">
+          <span className="font-medium text-[var(--ink-2)]">
             {t.clients.form.passportIssuedBy}
           </span>
           <input
@@ -135,17 +135,17 @@ export function ClientForm({
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.birthDate}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.birthDate}</span>
           <input
             type="date"
             value={values.birth_date}
             min={birthBounds.min}
             max={birthBounds.max}
             onChange={(e) => update("birth_date", e.target.value)}
-            className={`${FIELD_CLASS} ${birthInvalid ? "border-red-400" : ""}`}
+            className={`${FIELD_CLASS} ${birthInvalid ? "border-[var(--wash-rose-ink)]" : ""}`}
           />
           {birthInvalid && (
-            <span className="text-xs font-medium text-red-600">
+            <span className="text-xs font-medium text-[var(--wash-rose-ink)]">
               {t.clients.form.birthDateRange
                 .replace("{min}", birthBounds.min)
                 .replace("{max}", birthBounds.max)}
@@ -153,7 +153,7 @@ export function ClientForm({
           )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-slate-700">{t.clients.form.address}</span>
+          <span className="font-medium text-[var(--ink-2)]">{t.clients.form.address}</span>
           <input
             value={values.address}
             onChange={(e) => update("address", e.target.value)}
@@ -163,7 +163,7 @@ export function ClientForm({
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">
+        <span className="font-medium text-[var(--ink-2)]">
           {t.clients.form.interestedObject}
         </span>
         <select
@@ -181,7 +181,7 @@ export function ClientForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.clients.form.notes}</span>
+        <span className="font-medium text-[var(--ink-2)]">{t.clients.form.notes}</span>
         <textarea
           value={values.notes}
           onChange={(e) => update("notes", e.target.value)}
@@ -202,7 +202,7 @@ export function ClientForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
+            className="rounded-lg border border-[var(--wash-rose-border)] px-4 py-2.5 text-sm font-medium text-[var(--wash-rose-ink)] transition-all hover:border-[var(--wash-rose-ink)] hover:bg-[var(--wash-rose)] active:scale-[0.98]"
           >
             {t.clients.form.delete}
           </button>

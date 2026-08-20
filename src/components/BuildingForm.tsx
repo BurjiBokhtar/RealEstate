@@ -5,7 +5,7 @@ import { FileUploadField } from "@/components/FileUploadField";
 import { CONSTRUCTION_STATUSES, type BuildingInput } from "@/lib/buildings/types";
 
 const FIELD_CLASS =
-  "h-10 w-full rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+  "h-10 w-full rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 
 export function BuildingForm({
   values,
@@ -40,7 +40,7 @@ export function BuildingForm({
       className="flex max-w-3xl flex-col gap-4"
     >
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.buildings.form.name}</span>
+        <span className="font-medium text-[var(--ink-2)]">{t.buildings.form.name}</span>
         <input
           required
           value={values.name}
@@ -50,7 +50,7 @@ export function BuildingForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.buildings.form.address}</span>
+        <span className="font-medium text-[var(--ink-2)]">{t.buildings.form.address}</span>
         <input
           value={values.address}
           onChange={(e) => update("address", e.target.value)}
@@ -59,7 +59,7 @@ export function BuildingForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">
+        <span className="font-medium text-[var(--ink-2)]">
           {t.buildings.form.constructionStatus}
         </span>
         <select
@@ -81,7 +81,7 @@ export function BuildingForm({
         <div className="grid grid-cols-2 gap-4">
           {!hideFloorsCount && (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">
+              <span className="font-medium text-[var(--ink-2)]">
                 {t.buildings.form.floorsCount}
               </span>
               <input
@@ -95,7 +95,7 @@ export function BuildingForm({
           )}
           {!hideUnitsPerFloor && (
             <label className="flex flex-col gap-1 text-sm">
-              <span className="font-medium text-slate-700">
+              <span className="font-medium text-[var(--ink-2)]">
                 {t.buildings.form.unitsPerFloor}
               </span>
               <input
@@ -111,7 +111,7 @@ export function BuildingForm({
       )}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700">{t.buildings.form.pricePerSqm}</span>
+        <span className="font-medium text-[var(--ink-2)]">{t.buildings.form.pricePerSqm}</span>
         <input
           type="number"
           min="0"
@@ -155,7 +155,7 @@ export function BuildingForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
+            className="rounded-lg border border-[var(--wash-rose-border)] px-4 py-2.5 text-sm font-medium text-[var(--wash-rose-ink)] transition-all hover:border-[var(--wash-rose-ink)] hover:bg-[var(--wash-rose)] active:scale-[0.98]"
           >
             {t.buildings.form.delete}
           </button>
