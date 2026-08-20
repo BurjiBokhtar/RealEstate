@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -307,6 +306,17 @@ export default function DashboardPage() {
     [summary.top_debtors]
   );
 
+  // Same split as revenue-by-building, and for the same reason: a bar's
+  // LENGTH is a claim about magnitude, and 500 USD next to 50 000 TJS on one
+  // scale would draw the smaller number as the bigger bar. Usually resolves
+  // to a single block -- most books run one dominant currency -- so this
+  // only costs a second card on the (real, if rarer) mixed-currency month.
+  const debtorsByCurrency = useMemo(() => {
+    return (["TJS", "USD"] as Currency[])
+      .map((currency) => ({ currency, rows: debtors.filter((d) => d.currency === currency) }))
+      .filter((block) => block.rows.length > 0);
+  }, [debtors]);
+
   // A finished ЖК is done selling -- its numbers are settled history, so the
   // aggregate view drops it and folds it into one compact line instead.
   // Picking that building explicitly in the filter still shows its full data.
@@ -447,14 +457,74 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
-          {t.dashboard.revenueByMonth}
-        </p>
-        {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
-          <RevenueAreaChart data={revenue} />
-        ) : (
-          <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
+      {/* Revenue, debtors and manager sales used to be three separate
+          full-width rows -- three things that are all really the same
+          question ("how is money moving") read as three unrelated cards
+          with no more claim on each other than the occupancy ring above
+          them. Revenue and debtors now share one row (money coming in
+          against money still owed, side by side); manager sales sits
+          directly under them with nothing else between -- one cluster,
+          not three stops down the page. */}
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm lg:col-span-2">
+          <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
+            {t.dashboard.revenueByMonth}
+          </p>
+          {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
+            <RevenueAreaChart data={revenue} />
+          ) : (
+            <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {debtorsByCurrency.length > 0 ? (
+            debtorsByCurrency.map(({ currency, rows }) => (
+              <div
+                key={currency}
+                className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
+              >
+                <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">
+                  {t.dashboard.topDebtors}
+                  {debtorsByCurrency.length > 1 ? ` · ${currency}` : ""}
+                </p>
+                {/* Same instrument as revenue-by-building -- a bar's own
+                    length says "how much", the way every other ranking on
+                    this dashboard already does, instead of a plain list
+                    with no visual scale to read at a glance. */}
+                <HBarChart
+                  data={rows.map((d) => ({
+                    label: d.clientName,
+                    value: d.remaining,
+                    hue: STATUS_HUES.sold,
+                    href: `/clients/${d.clientId}`,
+                  }))}
+                  formatValue={(n) => formatCurrency(n, currency)}
+                />
+              </div>
+            ))
+          ) : (
+            <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+              <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">
+                {t.dashboard.topDebtors}
+              </p>
+              <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
+            </div>
+          )}
+        </div>
+
+        {canSeeManagerSales && (
+          <div className="lg:col-span-3">
+            <ManagerSales
+              periodBounds={periodBounds}
+              buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
+              periodFilter={periodFilter}
+              onPeriodChange={setPeriodFilter}
+              buildings={buildings}
+              selectedBuildingId={selectedBuildingId}
+              onBuildingChange={setSelectedBuildingId}
+            />
+          </div>
         )}
       </div>
 
@@ -512,56 +582,6 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* The page's two tables share a row instead of stacking -- but only
-          when there IS a second table. ManagerSales renders nothing for a
-          manager account (admin/director only), and xl:grid-cols-2 doesn't
-          know that: a manager used to get the debtors card alone in a
-          two-column row, half the width, with the other half simply blank. */}
-      <div className={`grid items-start gap-4 ${canSeeManagerSales ? "xl:grid-cols-2" : ""}`}>
-      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
-        <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">{t.dashboard.topDebtors}</p>
-        {debtors.length > 0 ? (
-          // A ranked list, not a bare two-column table: the rank badge says
-          // "these are ordered", and the whole row is the click target and
-          // hover target instead of just the name text -- both missing
-          // before, and both why it read as a leftover HTML table rather
-          // than a part of this dashboard.
-          <ul className="flex flex-col gap-0.5">
-            {debtors.map((d, i) => (
-              <li key={`${d.clientId}-${d.currency}`}>
-                <Link
-                  href={`/clients/${d.clientId}`}
-                  className="group flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-[var(--wash-rose)]"
-                >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--wash-rose)] text-[11px] font-bold text-[var(--wash-rose-ink)] transition-colors group-hover:brightness-95">
-                    {i + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--ink-2)]">
-                    {d.clientName}
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--wash-rose-ink)]">
-                    {formatCurrency(d.remaining, d.currency)}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
-        )}
-      </div>
-      {canSeeManagerSales && (
-        <ManagerSales
-          periodBounds={periodBounds}
-          buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
-          periodFilter={periodFilter}
-          onPeriodChange={setPeriodFilter}
-          buildings={buildings}
-          selectedBuildingId={selectedBuildingId}
-          onBuildingChange={setSelectedBuildingId}
-        />
-      )}
-      </div>
     </div>
   );
 }

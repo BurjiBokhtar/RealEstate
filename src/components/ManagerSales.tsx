@@ -6,6 +6,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { ControlGroup, PillButton } from "@/components/ActionBar";
+import { CURRENCY_HUES } from "@/components/charts/palette";
 import { CalendarIcon, HomeIcon } from "@/components/icons";
 import type { Building } from "@/lib/buildings/types";
 
@@ -190,8 +191,18 @@ export function ManagerSales({
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((r, i) => (
-                <tr key={`${r.manager}-${r.currency}-${i}`} className="border-b border-[var(--border-c2)] last:border-0">
+              {visibleRows.map((r, i) => {
+                // Same green/blue split the revenue chart and every other
+                // currency-aware card on this dashboard already use -- a
+                // TJS badge and a USD badge used to both be the same grey,
+                // so "which currency" took reading the three letters
+                // instead of recognising the colour at a glance.
+                const hue = CURRENCY_HUES[r.currency];
+                return (
+                <tr
+                  key={`${r.manager}-${r.currency}-${i}`}
+                  className="border-b border-[var(--border-c2)] transition-colors last:border-0 hover:bg-[var(--hover-c)]"
+                >
                   <td className="px-3 py-2 font-medium text-[var(--ink-2)]">
                     {r.manager}
                     {/* The same manager gets one row PER CURRENCY -- summing
@@ -202,7 +213,10 @@ export function ManagerSales({
                         carries an unexplained badge in a single-currency
                         company. */}
                     {currencies.length > 1 && (
-                      <span className="ml-2 rounded-full bg-[var(--wash-slate)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--wash-slate-ink)]">
+                      <span
+                        className="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+                        style={{ background: `${hue.solid}22`, color: hue.solid }}
+                      >
                         {r.currency}
                       </span>
                     )}
@@ -215,7 +229,8 @@ export function ManagerSales({
                     {formatCurrency(r.paid, r.currency)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

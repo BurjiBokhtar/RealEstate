@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { compactNumber, hueAt, type ChartHue } from "./palette";
 
-export type HBarDatum = { label: string; value: number; hue?: ChartHue; hint?: string };
+export type HBarDatum = {
+  label: string;
+  value: number;
+  hue?: ChartHue;
+  hint?: string;
+  /** Optional -- when set, the whole row is a link (e.g. a debtor's client
+      page), and the label picks up the same hover colour every other link
+      on the dashboard uses instead of a bare underline. */
+  href?: string;
+};
 
 // Horizontal bars, sorted longest first.
 //
@@ -39,9 +49,19 @@ export function HBarChart({
             style={{ opacity: dim ? 0.4 : 1 }}
           >
             <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="min-w-0 truncate text-[var(--ink-2)]" title={d.label}>
-                {d.label}
-              </span>
+              {d.href ? (
+                <Link
+                  href={d.href}
+                  className="-mx-1 min-w-0 truncate rounded px-1 text-[var(--ink-2)] transition-colors hover:bg-brand-soft hover:text-brand"
+                  title={d.label}
+                >
+                  {d.label}
+                </Link>
+              ) : (
+                <span className="min-w-0 truncate text-[var(--ink-2)]" title={d.label}>
+                  {d.label}
+                </span>
+              )}
               <span className="shrink-0 font-semibold tabular-nums text-[var(--ink-1)]">
                 {formatValue(d.value)}
               </span>
