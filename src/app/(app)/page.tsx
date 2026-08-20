@@ -457,76 +457,28 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Revenue, debtors and manager sales used to be three separate
-          full-width rows -- three things that are all really the same
-          question ("how is money moving") read as three unrelated cards
-          with no more claim on each other than the occupancy ring above
-          them. Revenue and debtors now share one row (money coming in
-          against money still owed, side by side); manager sales sits
-          directly under them with nothing else between -- one cluster,
-          not three stops down the page. */}
-      <div className="grid items-start gap-4 lg:grid-cols-3">
-        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm lg:col-span-2">
-          <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
-            {t.dashboard.revenueByMonth}
-          </p>
-          {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
-            <RevenueAreaChart data={revenue} />
-          ) : (
-            <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {debtorsByCurrency.length > 0 ? (
-            debtorsByCurrency.map(({ currency, rows }) => (
-              <div
-                key={currency}
-                className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
-              >
-                <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">
-                  {t.dashboard.topDebtors}
-                  {debtorsByCurrency.length > 1 ? ` · ${currency}` : ""}
-                </p>
-                {/* Same instrument as revenue-by-building -- a bar's own
-                    length says "how much", the way every other ranking on
-                    this dashboard already does, instead of a plain list
-                    with no visual scale to read at a glance. */}
-                <HBarChart
-                  data={rows.map((d) => ({
-                    label: d.clientName,
-                    value: d.remaining,
-                    hue: STATUS_HUES.sold,
-                    href: `/clients/${d.clientId}`,
-                  }))}
-                  formatValue={(n) => formatCurrency(n, currency)}
-                />
-              </div>
-            ))
-          ) : (
-            <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
-              <p className="mb-3 text-sm font-semibold text-[var(--ink-2)]">
-                {t.dashboard.topDebtors}
-              </p>
-              <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
-            </div>
-          )}
-        </div>
-
-        {canSeeManagerSales && (
-          <div className="lg:col-span-3">
-            <ManagerSales
-              periodBounds={periodBounds}
-              buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
-              periodFilter={periodFilter}
-              onPeriodChange={setPeriodFilter}
-              buildings={buildings}
-              selectedBuildingId={selectedBuildingId}
-              onBuildingChange={setSelectedBuildingId}
-            />
-          </div>
+      <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+        <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
+          {t.dashboard.revenueByMonth}
+        </p>
+        {revenue.some((d) => d.tjs > 0 || d.usd > 0) ? (
+          <RevenueAreaChart data={revenue} />
+        ) : (
+          <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
         )}
       </div>
+
+      {canSeeManagerSales && (
+        <ManagerSales
+          periodBounds={periodBounds}
+          buildingId={selectedBuildingId === "all" ? null : selectedBuildingId}
+          periodFilter={periodFilter}
+          onPeriodChange={setPeriodFilter}
+          buildings={buildings}
+          selectedBuildingId={selectedBuildingId}
+          onBuildingChange={setSelectedBuildingId}
+        />
+      )}
 
       {/* Revenue by building, ONE CARD PER CURRENCY, as ranked bars.
           Two currencies never share a scale: adding 10 265 129 TJS to
@@ -582,6 +534,42 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Debtors, last on the page rather than squeezed into a sidebar
+          column: it earns the same width revenue-by-building gets above --
+          one card per currency, ranked bars -- instead of being the one
+          thing on the page narrow enough that a bar chart had no room to
+          be one. */}
+      <div className={debtorsByCurrency.length > 1 ? "grid gap-4 lg:grid-cols-2" : "grid gap-4"}>
+        {debtorsByCurrency.length > 0 ? (
+          debtorsByCurrency.map(({ currency, rows }) => (
+            <div
+              key={currency}
+              className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
+            >
+              <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
+                {t.dashboard.topDebtors}
+                {debtorsByCurrency.length > 1 ? ` · ${currency}` : ""}
+              </p>
+              <HBarChart
+                data={rows.map((d) => ({
+                  label: d.clientName,
+                  value: d.remaining,
+                  hue: STATUS_HUES.sold,
+                  href: `/clients/${d.clientId}`,
+                }))}
+                formatValue={(n) => formatCurrency(n, currency)}
+              />
+            </div>
+          ))
+        ) : (
+          <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+            <p className="mb-4 text-sm font-semibold text-[var(--ink-2)]">
+              {t.dashboard.topDebtors}
+            </p>
+            <p className="text-sm text-[var(--ink-5)]">{t.dashboard.noData}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
