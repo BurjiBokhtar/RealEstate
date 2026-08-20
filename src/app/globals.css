@@ -90,12 +90,11 @@
   --side-active-bg: #232326;
   --side-active-ink: #f5f5f0;
   --side-active-icon: #facc15;
-  /* The one fixed accent dark mode adds on top of the company's own theme --
-     used only where the sidebar/nav need a highlight that isn't --brand
-     (staying off --brand keeps every existing bg-brand + white-text button
-     app-wide legible: --brand is still whatever the company picked, and
-     white text on THAT is already proven safe -- see the lemon theme's own
-     comment on why yellow can't be a button fill). */
+  /* The one fixed accent dark mode adds on top of the company's own theme.
+     Used directly for the sidebar/nav highlight, and indirectly -- via the
+     .bg-brand/.btn-brand overrides further down -- for every primary
+     button app-wide, so "yellow" reads as ONE consistent accent rather
+     than several near-yellows. */
   --accent-dark: #facc15;
 }
 
@@ -208,6 +207,35 @@
 .bg-brand-soft { background-color: color-mix(in srgb, var(--brand) 8%, transparent); }
 .border-brand-soft { border-color: color-mix(in srgb, var(--brand) 28%, transparent); }
 
+/* Dark mode's primary-action colour. --brand itself is left alone (still
+   whatever the company's light-mode theme picked) -- these override the
+   utility CLASSES instead, which is every button/pill in the app that
+   asked for "the brand colour" specifically as its own surface, paired
+   with white text right on the same element. That pairing is exactly what
+   swaps: yellow fill, dark ink, so it stays legible instead of repeating
+   the lemon theme's own white-on-#facc15 problem (see .btn-brand's
+   original comment on that contract). Scoped to the classes, not the
+   variable, so nothing that reads --brand for some OTHER reason silently
+   changes underneath it. */
+:root[data-theme="dark"] .btn-brand,
+:root[data-theme="dark"] .bg-brand {
+  background: var(--accent-dark);
+  background-image: none;
+  color: #18181b;
+}
+:root[data-theme="dark"] .text-brand {
+  color: var(--accent-dark);
+}
+:root[data-theme="dark"] .border-brand {
+  border-color: var(--accent-dark);
+}
+:root[data-theme="dark"] .bg-brand-soft {
+  background-color: color-mix(in srgb, var(--accent-dark) 14%, transparent);
+}
+:root[data-theme="dark"] .border-brand-soft {
+  border-color: color-mix(in srgb, var(--accent-dark) 35%, transparent);
+}
+
 ::selection {
   background: rgb(227 167 59 / 0.35);
   color: var(--atlas-indigo);
@@ -249,6 +277,18 @@
   .hero-surface {
     animation: none;
   }
+}
+
+/* Лимӯ asked to be the quiet theme from the start: no pan, no drifting
+   glow, wherever those would otherwise show -- the dashboard hero AND the
+   sidebar's glow blob, not conditional on dark mode also being on. Every
+   other theme keeps its motion; this is Лимӯ specifically, by name. */
+:root[data-hero-theme="lemon"] .hero-surface {
+  animation: none;
+}
+:root[data-hero-theme="lemon"] .animate-hero-glow,
+:root[data-hero-theme="lemon"] .animate-hero-glow-2 {
+  display: none;
 }
 
 /* ---- Hero ornament overlay ----
