@@ -83,11 +83,13 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="animate-modal-panel w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl"
+            className="animate-modal-panel w-full max-w-sm rounded-2xl bg-[var(--surface-1)] p-6 text-center shadow-2xl"
           >
             <div
               className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl ${
-                pending.danger ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"
+                pending.danger
+                  ? "bg-[var(--wash-rose)] text-[var(--wash-rose-ink)]"
+                  : "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]"
               }`}
             >
               {pending.danger ? (
@@ -114,14 +116,14 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
                 </svg>
               )}
             </div>
-            <p className="mt-4 text-[15px] font-medium leading-snug text-slate-800">
+            <p className="mt-4 text-[15px] font-medium leading-snug text-[var(--ink-2)]">
               {pending.message}
             </p>
             <div className="mt-5 flex gap-2">
               <button
                 type="button"
                 onClick={() => settle(false)}
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                className="flex-1 rounded-lg border border-[var(--field-border)] px-4 py-2.5 text-sm font-medium text-[var(--ink-2)] transition-all hover:bg-[var(--hover-c)] active:scale-[0.98]"
               >
                 {pending.cancelLabel}
               </button>

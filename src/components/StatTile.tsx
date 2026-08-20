@@ -21,9 +21,9 @@ export function StatTile({
   return (
     <div
       style={{ animationDelay: `${delay}ms` }}
-      className="animate-fade-up rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      className="animate-fade-up rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
     >
-      <p className="text-[11px] uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-[11px] uppercase tracking-wide text-[var(--ink-5)]">{label}</p>
       <div className={`mt-1.5 text-3xl font-bold tabular-nums ${tone}`}>{value}</div>
     </div>
   );

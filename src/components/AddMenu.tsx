@@ -39,13 +39,13 @@ export function AddMenu({
         />
       </ControlGroup>
       {open && (
-        <div className="animate-modal-panel absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="animate-modal-panel absolute right-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)] py-1 shadow-lg">
           {items.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setOpen(false)}
-              className="block px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-50"
+              className="block px-3 py-2 text-sm text-[var(--ink-2)] transition-colors hover:bg-[var(--hover-c)]"
             >
               {item.label}
             </Link>

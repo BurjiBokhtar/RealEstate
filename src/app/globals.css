@@ -51,9 +51,18 @@
   --wash-plum-ink: var(--brand);
   --wash-slate: #f1f5f9;
   --wash-slate-ink: #64748b;
+  --wash-sky: #e0f2fe;
+  --wash-sky-ink: #0369a1;
+  --wash-violet: #ede9fe;
+  --wash-violet-ink: #6d28d9;
   --side-active-bg: #ffffff;
   --side-active-ink: #0f172a;
   --side-active-icon: var(--brand);
+  --field-bg: #ffffff;
+  --field-border: #cbd5e1;
+  --field-focus-border: #94a3b8;
+  --field-focus-ring: rgb(15 23 42 / 0.1);
+  --modal-scrim: rgb(15 23 42 / 0.5);
 }
 
 :root[data-theme="dark"] {
@@ -87,9 +96,24 @@
   --wash-plum-ink: #facc15;
   --wash-slate: #232326;
   --wash-slate-ink: #a8a89e;
+  --wash-sky: rgba(56, 189, 248, 0.16);
+  --wash-sky-ink: #38bdf8;
+  --wash-violet: rgba(167, 139, 250, 0.18);
+  --wash-violet-ink: #c4b5fd;
   --side-active-bg: #232326;
   --side-active-ink: #f5f5f0;
   --side-active-icon: #facc15;
+  /* Fields get the yellow accent on focus -- the one place "bright, yellow,
+     obviously interactive" (the actual ask) matters most, since it's the
+     control the user is looking at right when it matters. Idle, a field
+     stays quiet (--field-border, not yellow) so the accent still reads as
+     "this one is active" rather than wallpapering every input on the
+     page. */
+  --field-bg: #1c1c1f;
+  --field-border: #3a3a3f;
+  --field-focus-border: #facc15;
+  --field-focus-ring: rgb(250 204 21 / 0.3);
+  --modal-scrim: rgb(0 0 0 / 0.6);
   /* The one fixed accent dark mode adds on top of the company's own theme.
      Used directly for the sidebar/nav highlight, and indirectly -- via the
      .bg-brand/.btn-brand overrides further down -- for every primary

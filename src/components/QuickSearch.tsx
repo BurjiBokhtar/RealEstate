@@ -127,14 +127,14 @@ export function QuickSearch() {
         type="button"
         onClick={() => setOpen(true)}
         title={t.search.hint}
-        className="flex shrink-0 items-center gap-2 rounded-full border border-slate-200 px-3.5 py-1.5 text-sm text-slate-500 transition-all hover:border-slate-300 hover:text-slate-700"
+        className="flex shrink-0 items-center gap-2 rounded-full border border-[var(--field-border)] px-3.5 py-1.5 text-sm text-[var(--ink-4)] transition-all hover:border-[var(--field-focus-border)] hover:text-[var(--ink-2)]"
       >
         <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
           <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
           <path d="m14 14 4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         </svg>
         <span className="hidden sm:inline">{t.search.hint}</span>
-        <span className="hidden rounded border border-slate-200 px-1.5 py-0.5 text-[10px] font-medium text-slate-400 sm:inline">
+        <span className="hidden rounded border border-[var(--border-c)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--ink-5)] sm:inline">
           ⌘K
         </span>
       </button>
@@ -146,10 +146,10 @@ export function QuickSearch() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="animate-fade-up w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
+            className="animate-fade-up w-full max-w-lg overflow-hidden rounded-2xl bg-[var(--surface-1)] shadow-2xl"
           >
-            <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
-              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-slate-400">
+            <div className="flex items-center gap-2 border-b border-[var(--border-c2)] px-4 py-3">
+              <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4 shrink-0 text-[var(--ink-5)]">
                 <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
                 <path
                   d="m14 14 4 4"
@@ -163,22 +163,22 @@ export function QuickSearch() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t.search.placeholder}
-                className="w-full text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none"
+                className="w-full bg-transparent text-sm text-[var(--ink-1)] placeholder:text-[var(--ink-5)] focus:outline-none"
               />
             </div>
 
             <div className="max-h-[50vh] overflow-y-auto p-2">
               {query.trim().length < 2 && (
-                <p className="px-3 py-6 text-center text-sm text-slate-400">
+                <p className="px-3 py-6 text-center text-sm text-[var(--ink-5)]">
                   {t.search.typeToSearch}
                 </p>
               )}
               {query.trim().length >= 2 && !searching && groups.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-slate-400">{t.search.empty}</p>
+                <p className="px-3 py-6 text-center text-sm text-[var(--ink-5)]">{t.search.empty}</p>
               )}
               {groups.map((group) => (
                 <div key={group.label} className="mb-1">
-                  <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  <p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-[var(--ink-5)]">
                     {group.label}
                   </p>
                   {group.hits.map((hit) => (
@@ -186,11 +186,11 @@ export function QuickSearch() {
                       key={`${hit.kind}-${hit.id}`}
                       type="button"
                       onClick={() => go(hit)}
-                      className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left transition-colors hover:bg-slate-50"
+                      className="flex w-full flex-col items-start rounded-lg px-3 py-2 text-left transition-colors hover:bg-[var(--hover-c)]"
                     >
-                      <span className="text-sm font-medium text-slate-900">{hit.title}</span>
+                      <span className="text-sm font-medium text-[var(--ink-1)]">{hit.title}</span>
                       {hit.subtitle && (
-                        <span className="text-xs text-slate-500">{hit.subtitle}</span>
+                        <span className="text-xs text-[var(--ink-4)]">{hit.subtitle}</span>
                       )}
                     </button>
                   ))}

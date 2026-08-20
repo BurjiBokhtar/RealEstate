@@ -71,18 +71,18 @@ export function ExportMenu({
         return bare ? trigger : <ControlGroup size={size}>{trigger}</ControlGroup>;
       })()}
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div className="absolute right-0 z-20 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)] shadow-lg">
           <button
             type="button"
             onClick={() => run("excel")}
-            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+            className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm text-[var(--ink-2)] transition-colors hover:bg-[var(--hover-c)]"
           >
             <TableIcon className="h-4 w-4 text-emerald-600" /> {t.exportMenu.excel}
           </button>
           <button
             type="button"
             onClick={() => run("pdf")}
-            className="flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2.5 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+            className="flex w-full items-center gap-2 border-t border-[var(--border-c2)] px-3 py-2.5 text-left text-sm text-[var(--ink-2)] transition-colors hover:bg-[var(--hover-c)]"
           >
             <PdfIcon className="h-4 w-4 text-rose-600" /> {t.exportMenu.pdf}
           </button>

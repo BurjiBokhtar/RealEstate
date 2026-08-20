@@ -14,15 +14,15 @@ export function Accordion({
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-slate-50"
+        className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left transition-colors hover:bg-[var(--hover-c)]"
       >
-        <span className="text-sm font-semibold text-slate-700">{title}</span>
+        <span className="text-sm font-semibold text-[var(--ink-2)]">{title}</span>
         <span
-          className={`text-slate-400 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
+          className={`text-[var(--ink-5)] transition-transform duration-300 ${open ? "rotate-180" : ""}`}
         >
           ⌄
         </span>
@@ -32,7 +32,7 @@ export function Accordion({
         style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
-          <div className="flex flex-col gap-4 border-t border-slate-100 px-4 py-4">
+          <div className="flex flex-col gap-4 border-t border-[var(--border-c2)] px-4 py-4">
             {children}
           </div>
         </div>

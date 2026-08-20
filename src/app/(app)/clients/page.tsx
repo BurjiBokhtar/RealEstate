@@ -260,15 +260,15 @@ export default function ClientsPage() {
           value={searchInput}
           onChange={(e) => onFilterChange(setSearchInput)(e.target.value)}
           placeholder={t.clients.search}
-          className="h-10 min-w-[160px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="h-10 min-w-[160px] flex-1 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
         />
         {/* Dates and sort are ONE glued control, not two floating pills.
             List page, so full size; a divider keeps the two jobs legible. */}
         <ControlGroup>
-          <span className="pl-1.5 pr-0.5 text-slate-400" aria-hidden="true">
+          <span className="pl-1.5 pr-0.5 text-[var(--ink-5)]" aria-hidden="true">
             <CalendarIcon className="h-[19px] w-[19px]" />
           </span>
-          <span className="text-xs text-slate-400">{t.clients.dateRange.from}</span>
+          <span className="text-xs text-[var(--ink-5)]">{t.clients.dateRange.from}</span>
           <input
             type="date"
             value={dateFrom}
@@ -276,9 +276,9 @@ export default function ClientsPage() {
             max={dateTo || todayISO()}
             onChange={(e) => onFilterChange(setDateFrom)(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.from}`}
-            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-[var(--ink-2)] hover:border-[var(--border-c)] focus:border-[var(--field-focus-border)] focus:outline-none"
           />
-          <span className="text-xs text-slate-400">{t.clients.dateRange.to}</span>
+          <span className="text-xs text-[var(--ink-5)]">{t.clients.dateRange.to}</span>
           <input
             type="date"
             value={dateTo}
@@ -286,7 +286,7 @@ export default function ClientsPage() {
             max={todayISO()}
             onChange={(e) => onFilterChange(setDateTo)(e.target.value)}
             aria-label={`${t.clients.dateRange.label} ${t.clients.dateRange.to}`}
-            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none"
+            className="h-10 rounded-md border border-transparent bg-transparent px-1 text-xs text-[var(--ink-2)] hover:border-[var(--border-c)] focus:border-[var(--field-focus-border)] focus:outline-none"
           />
           {(dateFrom || dateTo) && (
             <IconAction
@@ -312,7 +312,7 @@ export default function ClientsPage() {
             onChange={(e) => onFilterChange(setBuildingId)(e.target.value)}
             aria-label={t.clients.buildingFilter}
             title={t.clients.buildingFilter}
-            className="h-10 max-w-[150px] rounded-md border-0 bg-transparent px-1.5 text-xs text-slate-700 focus:outline-none"
+            className="h-10 max-w-[150px] rounded-md border-0 bg-transparent px-1.5 text-xs text-[var(--ink-2)] focus:outline-none"
           >
             <option value="all">{t.clients.allObjects}</option>
             {buildings.map((b) => (
@@ -372,9 +372,9 @@ export default function ClientsPage() {
         </ControlGroup>
       </div>
 
-      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
+          <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
             <tr>
               <th className="px-4 py-3 font-medium">{t.clients.table.name}</th>
               <th className="px-4 py-3 font-medium">{t.clients.table.phone}</th>
@@ -385,14 +385,14 @@ export default function ClientsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {!loading && clients.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={4} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.clients.empty}
                 </td>
               </tr>
@@ -400,15 +400,15 @@ export default function ClientsPage() {
             {clients.map((client) => (
               <tr
                 key={client.id}
-                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-[var(--border-c2)] transition-colors last:border-0 hover:bg-[var(--hover-c)]"
               >
-                <td className="px-4 py-3 font-medium text-slate-900">
+                <td className="px-4 py-3 font-medium text-[var(--ink-1)]">
                   <Link href={`/clients/${client.id}`} className="block">
                     {client.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{client.phone || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-[var(--ink-3)]">{client.phone || "—"}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">
                   <Link href={`/clients/${client.id}`} className="block">
                     <UnitCell units={units[client.id]} />
                   </Link>
@@ -435,13 +435,13 @@ export default function ClientsPage() {
 // with more than one: a comma-run of "ЖК А №5, ЖК Б №12" is one long string
 // to parse, two short lines are two facts to read.
 function UnitCell({ units }: { units: ClientUnit[] | undefined }) {
-  if (!units || units.length === 0) return <span className="text-slate-300">—</span>;
+  if (!units || units.length === 0) return <span className="text-[var(--ink-5)]">—</span>;
   return (
     <div className="flex flex-col gap-1">
       {units.map((u, i) => (
         <div key={i} className="leading-tight">
-          {u.buildingName && <p className="text-xs text-slate-400">{u.buildingName}</p>}
-          <p className="font-medium text-slate-700">№{u.unitName}</p>
+          {u.buildingName && <p className="text-xs text-[var(--ink-5)]">{u.buildingName}</p>}
+          <p className="font-medium text-[var(--ink-2)]">№{u.unitName}</p>
         </div>
       ))}
     </div>
@@ -451,9 +451,9 @@ function UnitCell({ units }: { units: ClientUnit[] | undefined }) {
 // The debt cell: one bar per currency (TJS and USD don't mix into one
 // percentage), green fill = share paid, red figure = what's still owed.
 function DebtBar({ debt }: { debt: ClientDebt | undefined }) {
-  if (!debt) return <span className="text-slate-300">—</span>;
+  if (!debt) return <span className="text-[var(--ink-5)]">—</span>;
   const entries = Object.entries(debt.byCurrency).filter(([, v]) => v.total > 0);
-  if (entries.length === 0) return <span className="text-slate-300">—</span>;
+  if (entries.length === 0) return <span className="text-[var(--ink-5)]">—</span>;
   return (
     <div className="flex flex-col gap-1.5">
       {entries.map(([currency, v]) => {
@@ -462,18 +462,18 @@ function DebtBar({ debt }: { debt: ClientDebt | undefined }) {
         return (
           <div key={currency}>
             <div className="flex items-baseline justify-between gap-2 text-[11px]">
-              <span className={pct === 100 ? "font-semibold text-emerald-600" : "text-slate-400"}>
+              <span className={pct === 100 ? "font-semibold text-[var(--wash-emerald-ink)]" : "text-[var(--ink-5)]"}>
                 {pct}%
               </span>
               {remaining > 0 ? (
-                <span className="font-semibold text-rose-600">
+                <span className="font-semibold text-[var(--wash-rose-ink)]">
                   −{formatCurrency(remaining, currency as Currency)}
                 </span>
               ) : (
-                <span className="font-semibold text-emerald-600">✓</span>
+                <span className="font-semibold text-[var(--wash-emerald-ink)]">✓</span>
               )}
             </div>
-            <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-[var(--track-c)]">
               <div
                 className={`h-full rounded-full ${
                   pct === 100

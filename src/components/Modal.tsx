@@ -56,14 +56,14 @@ export function Modal({
         onClick={(e) => e.stopPropagation()}
         onInput={() => setTouched(true)}
         onChange={() => setTouched(true)}
-        className={`animate-modal-panel max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl ${SIZE_CLASSES[size]}`}
+        className={`animate-modal-panel max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-[var(--surface-1)] p-6 shadow-2xl ${SIZE_CLASSES[size]}`}
       >
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-[var(--ink-1)]">{title}</h2>
           <button
             type="button"
             onClick={() => closeRef.current()}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-md p-1 text-[var(--ink-5)] hover:bg-[var(--hover-c2)] hover:text-[var(--ink-3)]"
           >
             ✕
           </button>

@@ -172,7 +172,7 @@ export default function ObjectsPage() {
           value={searchInput}
           onChange={(e) => onFilterChange(setSearchInput)(e.target.value)}
           placeholder={t.objects.search}
-          className="h-10 min-w-[220px] flex-1 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10"
+          className="h-10 min-w-[220px] flex-1 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]"
         />
         {/* The two filters were separate bordered selects sitting side by
             side; glued into one control with a hairline between them. */}
@@ -180,7 +180,7 @@ export default function ObjectsPage() {
           <select
             value={typeFilter}
             onChange={(e) => onFilterChange(setTypeFilter)(e.target.value as ObjectType | "all")}
-            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
+            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-[var(--ink-2)] focus:outline-none"
           >
             <option value="all">{t.objects.filters.allTypes}</option>
             {OBJECT_TYPES.map((type) => (
@@ -193,7 +193,7 @@ export default function ObjectsPage() {
           <select
             value={statusFilter}
             onChange={(e) => onFilterChange(setStatusFilter)(e.target.value as ObjectStatus | "all")}
-            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-slate-700 focus:outline-none"
+            className="h-8 rounded-md border-0 bg-transparent px-2 text-sm text-[var(--ink-2)] focus:outline-none"
           >
             <option value="all">{t.objects.filters.allStatuses}</option>
             {OBJECT_STATUSES.map((status) => (
@@ -205,9 +205,9 @@ export default function ObjectsPage() {
         </ControlGroup>
       </div>
 
-      <div className="animate-fade-up overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="animate-fade-up overflow-x-auto rounded-lg border border-[var(--border-c)] bg-[var(--surface-1)]">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
+          <thead className="border-b border-[var(--border-c)] text-[var(--ink-4)]">
             <tr>
               <th className="px-4 py-3 font-medium">{t.objects.table.name}</th>
               <th className="px-4 py-3 font-medium">{t.objects.table.address}</th>
@@ -220,14 +220,14 @@ export default function ObjectsPage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.common.loading}
                 </td>
               </tr>
             )}
             {empty && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={6} className="px-4 py-6 text-center text-[var(--ink-5)]">
                   {t.objects.empty}
                 </td>
               </tr>
@@ -235,20 +235,20 @@ export default function ObjectsPage() {
             {filteredBuildings.map((building) => (
               <tr
                 key={`building-${building.id}`}
-                className="cursor-pointer border-b border-slate-100 bg-slate-50/60 transition-colors last:border-0 hover:bg-slate-100"
+                className="cursor-pointer border-b border-[var(--border-c2)] bg-[var(--surface-2)] transition-colors last:border-0 hover:bg-[var(--hover-c2)]"
               >
-                <td className="px-4 py-3 font-medium text-slate-900">
+                <td className="px-4 py-3 font-medium text-[var(--ink-1)]">
                   <Link href={`/buildings/${building.id}`} className="block">
                     {building.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{building.address || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{t.objects.buildingRowType}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">{building.address || "—"}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">{t.objects.buildingRowType}</td>
                 <td className="px-4 py-3">
                   {(() => {
                     const s = buildingStats[building.id];
                     if (!s || s.total === 0)
-                      return <span className="text-slate-600">—</span>;
+                      return <span className="text-[var(--ink-3)]">—</span>;
                     const sold = s.available === 0;
                     return (
                       <span
@@ -263,12 +263,12 @@ export default function ObjectsPage() {
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-[var(--ink-3)]">
                   {buildingStats[building.id]?.availableArea
                     ? formatArea(buildingStats[building.id].availableArea)
                     : "—"}
                 </td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-[var(--ink-3)]">
                   {building.price_per_sqm
                     ? `${formatCurrency(building.price_per_sqm, "TJS")}/м²`
                     : "—"}
@@ -278,15 +278,15 @@ export default function ObjectsPage() {
             {objects.map((obj) => (
               <tr
                 key={obj.id}
-                className="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50"
+                className="cursor-pointer border-b border-[var(--border-c2)] transition-colors last:border-0 hover:bg-[var(--hover-c)]"
               >
-                <td className="px-4 py-3 font-medium text-slate-900">
+                <td className="px-4 py-3 font-medium text-[var(--ink-1)]">
                   <Link href={`/objects/${obj.id}`} className="block">
                     {obj.name}
                   </Link>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{obj.address || "—"}</td>
-                <td className="px-4 py-3 text-slate-600">{t.objects.types[obj.type]}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">{obj.address || "—"}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">{t.objects.types[obj.type]}</td>
                 <td className="px-4 py-3">
                   <span
                     className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLORS[obj.status]}`}
@@ -294,8 +294,8 @@ export default function ObjectsPage() {
                     {t.objects.statuses[obj.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-slate-600">{formatArea(obj.area)}</td>
-                <td className="px-4 py-3 text-slate-600">
+                <td className="px-4 py-3 text-[var(--ink-3)]">{formatArea(obj.area)}</td>
+                <td className="px-4 py-3 text-[var(--ink-3)]">
                   {formatCurrency(obj.price, obj.currency)}
                 </td>
               </tr>

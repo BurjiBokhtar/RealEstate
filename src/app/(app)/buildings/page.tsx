@@ -43,9 +43,9 @@ export default function BuildingsPage() {
       {!configured && <SetupNotice />}
 
       {loading ? (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       ) : buildings.length === 0 ? (
-        <p className="text-slate-400">{t.buildings.empty}</p>
+        <p className="text-[var(--ink-5)]">{t.buildings.empty}</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {buildings.map((building, i) => (
@@ -53,7 +53,7 @@ export default function BuildingsPage() {
               key={building.id}
               href={`/buildings/${building.id}`}
               style={{ animationDelay: `${i * 40}ms` }}
-              className="animate-fade-up group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+              className="animate-fade-up group overflow-hidden rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
               <div className="relative h-40 w-full overflow-hidden">
                 {building.facade_url ? (
@@ -86,12 +86,12 @@ export default function BuildingsPage() {
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="truncate text-[15px] font-semibold text-slate-900">
+                  <p className="truncate text-[15px] font-semibold text-[var(--ink-1)]">
                     {building.name}
                   </p>
                   <ConstructionStatusBadge status={building.construction_status} />
                 </div>
-                <p className="mt-0.5 truncate text-sm text-slate-500">
+                <p className="mt-0.5 truncate text-sm text-[var(--ink-4)]">
                   {building.address || "—"}
                 </p>
               </div>

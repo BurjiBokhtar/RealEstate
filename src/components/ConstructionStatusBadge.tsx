@@ -7,9 +7,9 @@ import type { ConstructionStatus } from "@/lib/buildings/types";
 // the dashboard filter -- so a "completed" ЖК always reads the same shade of
 // grey wherever it shows up.
 const COLORS: Record<ConstructionStatus, string> = {
-  planning: "bg-sky-100 text-sky-700",
-  in_progress: "bg-amber-100 text-amber-700",
-  completed: "bg-slate-200 text-slate-600",
+  planning: "bg-[var(--wash-sky)] text-[var(--wash-sky-ink)]",
+  in_progress: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
+  completed: "bg-[var(--wash-slate)] text-[var(--wash-slate-ink)]",
 };
 
 export function ConstructionStatusBadge({

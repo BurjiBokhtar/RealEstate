@@ -12,11 +12,11 @@ export function formatArea(area: number | null) {
 }
 
 export const STATUS_COLORS: Record<ObjectStatus, string> = {
-  available: "bg-emerald-100 text-emerald-700",
-  reserved: "bg-amber-100 text-amber-700",
-  sold: "bg-rose-100 text-rose-700",
-  rented: "bg-sky-100 text-sky-700",
-  in_progress: "bg-violet-100 text-violet-700",
+  available: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  reserved: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
+  sold: "bg-[var(--wash-rose)] text-[var(--wash-rose-ink)]",
+  rented: "bg-[var(--wash-sky)] text-[var(--wash-sky-ink)]",
+  in_progress: "bg-[var(--wash-violet)] text-[var(--wash-violet-ink)]",
 };
 
 // The payment bar drawn along the bottom of a shakhmatka cell, in that cell's
