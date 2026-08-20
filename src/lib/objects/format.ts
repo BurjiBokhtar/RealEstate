@@ -28,11 +28,11 @@ export const STATUS_COLORS: Record<ObjectStatus, string> = {
 // hue added to one and forgotten in the other is exactly how a status ends up
 // with a bar that clashes with its own background.
 export const STATUS_PROGRESS_COLORS: Record<ObjectStatus, { track: string; fill: string }> = {
-  available: { track: "bg-emerald-200", fill: "bg-emerald-500" },
-  reserved: { track: "bg-amber-200", fill: "bg-amber-500" },
-  sold: { track: "bg-rose-200", fill: "bg-rose-500" },
-  rented: { track: "bg-sky-200", fill: "bg-sky-500" },
-  in_progress: { track: "bg-violet-200", fill: "bg-violet-500" },
+  available: { track: "bg-[var(--wash-emerald)]", fill: "bg-[var(--wash-emerald-ink)]" },
+  reserved: { track: "bg-[var(--wash-amber)]", fill: "bg-[var(--wash-amber-ink)]" },
+  sold: { track: "bg-[var(--wash-rose)]", fill: "bg-[var(--wash-rose-ink)]" },
+  rented: { track: "bg-[var(--wash-sky)]", fill: "bg-[var(--wash-sky-ink)]" },
+  in_progress: { track: "bg-[var(--wash-violet)]", fill: "bg-[var(--wash-violet-ink)]" },
 };
 
 // How a unit is named to a person, as opposed to how it is stored.

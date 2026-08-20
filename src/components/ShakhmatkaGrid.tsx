@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
+import { STATUS_HUES } from "@/components/charts/palette";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import { ControlGroup, GroupDivider, PillButton } from "@/components/ActionBar";
@@ -293,13 +294,13 @@ function UnitCell({
       {/* Anchored to the cell's LEFT edge, opening rightward -- so the card
           for a leftmost cell never extends left under the sidebar (where it
           used to get clipped and "disappear"). */}
-      <div className="pointer-events-none invisible absolute left-0 top-full z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200 bg-white text-xs shadow-xl group-hover:visible">
+      <div className="pointer-events-none invisible absolute left-0 top-full z-40 mt-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] text-xs shadow-xl group-hover:visible">
         <div className="flex items-start justify-between gap-2 px-3.5 pb-1.5 pt-3">
           <div>
-            <p className="text-[15px] font-bold leading-tight text-slate-900">
+            <p className="text-[15px] font-bold leading-tight text-[var(--ink-1)]">
               {apartmentNumber != null ? `№${apartmentNumber}` : unit.name}
             </p>
-            <p className="mt-0.5 text-[10.5px] text-slate-500">
+            <p className="mt-0.5 text-[10.5px] text-[var(--ink-4)]">
               {[
                 unit.floor != null ? `${unit.floor} ${t.buildings.hover.floorShort}` : null,
                 unit.block,
@@ -317,11 +318,11 @@ function UnitCell({
           </span>
         </div>
 
-        <div className="flex items-baseline justify-between border-t border-slate-100 px-3.5 py-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        <div className="flex items-baseline justify-between border-t border-[var(--border-c2)] px-3.5 py-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-5)]">
             {t.buildings.hover.price}
           </span>
-          <span className="text-[13px] font-bold text-slate-900">
+          <span className="text-[13px] font-bold text-[var(--ink-1)]">
             {/* Once a contract exists, its negotiated amount IS the deal's
                 real price (may differ from the catalog price via a discount
                 or a hand-agreed rate) -- show that, not the listing price. */}
@@ -332,9 +333,9 @@ function UnitCell({
         </div>
 
         {contractInfo && (
-          <div className="border-t border-slate-100 px-3.5 py-2">
+          <div className="border-t border-[var(--border-c2)] px-3.5 py-2">
             <div className="flex items-baseline justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-5)]">
                 {t.buildings.hover.paid}
               </span>
               <span className="text-[13px] font-bold text-emerald-600">
@@ -343,7 +344,7 @@ function UnitCell({
             </div>
             {contractInfo.amount > 0 && (
               <>
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--track-c)]">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400"
                     style={{
@@ -352,7 +353,7 @@ function UnitCell({
                   />
                 </div>
                 <div className="mt-1 flex items-baseline justify-between">
-                  <span className="text-[10px] text-slate-400">
+                  <span className="text-[10px] text-[var(--ink-5)]">
                     {Math.min(100, Math.round((contractInfo.paid / contractInfo.amount) * 100))}%
                   </span>
                   {contractInfo.remaining > 0 && (
@@ -364,35 +365,35 @@ function UnitCell({
               </>
             )}
             <div className="mt-1.5 flex items-baseline justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-5)]">
                 {t.buildings.hover.owner}
               </span>
-              <span className="truncate font-semibold text-slate-800">
+              <span className="truncate font-semibold text-[var(--ink-2)]">
                 {contractInfo.clientName}
               </span>
             </div>
             {contractInfo.clientPhone && (
               <div className="mt-0.5 flex items-baseline justify-between gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-5)]">
                   {t.buildings.hover.phone}
                 </span>
-                <span className="text-slate-700">{contractInfo.clientPhone}</span>
+                <span className="text-[var(--ink-2)]">{contractInfo.clientPhone}</span>
               </div>
             )}
           </div>
         )}
 
         {!contractInfo && unit.manual_reserved && (
-          <div className="border-t border-slate-100 px-3.5 py-1.5">
-            <p className="flex justify-between text-slate-500">
+          <div className="border-t border-[var(--border-c2)] px-3.5 py-1.5">
+            <p className="flex justify-between text-[var(--ink-4)]">
               <span>{t.buildings.hover.owner}</span>
-              <span className="text-slate-700">{t.buildings.hover.reservedNoClient}</span>
+              <span className="text-[var(--ink-2)]">{t.buildings.hover.reservedNoClient}</span>
             </p>
           </div>
         )}
 
         {!readOnly && (
-          <p className="border-t border-slate-100 bg-slate-50 px-3.5 py-1.5 text-center text-[10px] text-slate-400">
+          <p className="border-t border-[var(--border-c2)] bg-[var(--surface-2)] px-3.5 py-1.5 text-center text-[10px] text-[var(--ink-5)]">
             {unit.status === "available"
               ? t.buildings.hover.clickHint
               : contractInfo
@@ -449,7 +450,7 @@ export function ShakhmatkaGrid({
   const { t } = useLocale();
 
   if (units.length === 0) {
-    return <p className="text-slate-400">{t.buildings.noUnits}</p>;
+    return <p className="text-[var(--ink-5)]">{t.buildings.noUnits}</p>;
   }
 
   // Split the main residential grid from everything else. The main grid's
@@ -553,7 +554,7 @@ export function ShakhmatkaGrid({
                   <p
                     key={block}
                     style={{ width: blockWidths.get(block) }}
-                    className="shrink-0 text-sm font-semibold text-slate-700"
+                    className="shrink-0 text-sm font-semibold text-[var(--ink-2)]"
                   >
                     {block || t.buildings.noBlock}
                   </p>
@@ -564,7 +565,7 @@ export function ShakhmatkaGrid({
 
           {floors.map((floor) => (
             <div key={floor} className="flex items-center gap-3">
-              <span className="w-16 shrink-0 text-xs font-medium text-slate-500">
+              <span className="w-16 shrink-0 text-xs font-medium text-[var(--ink-4)]">
                 {t.buildings.floorLabel} {floor}
               </span>
               <div className="flex gap-4">
@@ -608,14 +609,14 @@ export function ShakhmatkaGrid({
                             type="button"
                             title={t.buildings.addUnitHere}
                             onClick={() => onAddUnit(floor, block, slot.position)}
-                            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-slate-200 text-slate-300 transition-all hover:border-slate-400 hover:bg-slate-50 hover:text-slate-500 active:scale-95"
+                            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
                           >
                             +
                           </button>
                         ) : (
                           <div
                             key={`ghost-${block}-${floor}-${slot.position}`}
-                            className="h-14 w-16 shrink-0 rounded-md border-2 border-dashed border-slate-100"
+                            className="h-14 w-16 shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
                           />
                         )
                       )}
@@ -634,7 +635,7 @@ export function ShakhmatkaGrid({
           40 parking bays just flows onto more rows instead of widening a
           column. */}
       {otherUnits.length > 0 && (
-        <div className="flex flex-col gap-4 border-t border-slate-200 pt-4">
+        <div className="flex flex-col gap-4 border-t border-[var(--border-c)] pt-4">
           {NON_RES_ORDER.map((type) => {
             const group = otherUnits
               .filter((u) => (u.type ?? "apartment") === type)
@@ -663,7 +664,7 @@ export function ShakhmatkaGrid({
             );
             return (
               <div key={type} className="flex flex-col gap-2.5">
-                <p className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                <p className="flex items-center gap-2 text-sm font-semibold text-[var(--ink-2)]">
                   {meta && (
                     <span
                       className={`inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-[11px] ${meta.ring} ring-offset-1`}
@@ -672,7 +673,7 @@ export function ShakhmatkaGrid({
                     </span>
                   )}
                   {t.objects.types[type as keyof typeof t.objects.types] ?? type}
-                  <span className="text-xs font-normal text-slate-400">
+                  <span className="text-xs font-normal text-[var(--ink-5)]">
                     ({group.length})
                   </span>
                 </p>
@@ -681,8 +682,8 @@ export function ShakhmatkaGrid({
                   return (
                     <div key={block} className="flex flex-col gap-1.5">
                       {block && (
-                        <p className="text-xs font-medium text-slate-500">
-                          {block} <span className="text-slate-400">({cells.length})</span>
+                        <p className="text-xs font-medium text-[var(--ink-4)]">
+                          {block} <span className="text-[var(--ink-5)]">({cells.length})</span>
                         </p>
                       )}
                       {/* A real grid (fixed CELL-wide columns) so the cells line
@@ -734,7 +735,7 @@ export function ShakhmatkaGrid({
           row long enough to read as a wall of chips and buried the two actual
           filters in it. It belongs under the grid: you look it up after
           seeing a cell you don't recognise, not before. */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+      <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--ink-5)]">
         <span className="flex items-center gap-1.5">
           {/* Shown in the "продано" hue: that is the status people are
               actually chasing a balance on, and the bar takes its colour
@@ -833,12 +834,13 @@ export function ShakhmatkaFilters({
             label={
               <span className="flex items-center gap-1.5">
                 <span
-                  className={`h-2 w-2 shrink-0 rounded-full ${STATUS_COLORS[status].split(" ")[0]} ${
+                  className={`h-2 w-2 shrink-0 rounded-full ${
                     // On the brand fill the green "available" dot all but
                     // vanishes on the emerald theme; a hairline ring keeps
                     // every dot legible whatever colour sits behind it.
-                    active ? "ring-1 ring-white/80" : ""
+                    active ? "ring-1 ring-[var(--on-brand)]/80" : ""
                   }`}
+                  style={{ background: STATUS_HUES[status].solid }}
                 />
                 {t.buildings.legend[status]}
               </span>
@@ -861,7 +863,7 @@ export function ShakhmatkaFilters({
                 label={
                   <span className="flex items-center gap-1">
                     {rooms} {t.buildings.roomsFilterShort}
-                    <span className={active ? "text-white/70" : "text-slate-400"}>
+                    <span className={active ? "text-[var(--on-brand)]/70" : "text-[var(--ink-5)]"}>
                       {roomCounts.get(rooms)}
                     </span>
                   </span>
@@ -883,7 +885,7 @@ export function ShakhmatkaFilters({
               label={
                 <span className="flex items-center gap-1">
                   {t.buildings.noPriceFilter}
-                  <span className={gapFilter === "no_price" ? "text-white/70" : "text-slate-400"}>
+                  <span className={gapFilter === "no_price" ? "text-[var(--on-brand)]/70" : "text-[var(--ink-5)]"}>
                     {noPriceCount}
                   </span>
                 </span>
@@ -898,7 +900,7 @@ export function ShakhmatkaFilters({
               label={
                 <span className="flex items-center gap-1">
                   {t.buildings.noAreaFilter}
-                  <span className={gapFilter === "no_area" ? "text-white/70" : "text-slate-400"}>
+                  <span className={gapFilter === "no_area" ? "text-[var(--on-brand)]/70" : "text-[var(--ink-5)]"}>
                     {noAreaCount}
                   </span>
                 </span>

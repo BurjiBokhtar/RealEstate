@@ -5,6 +5,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { FileUploadField } from "@/components/FileUploadField";
 import { CURRENCIES } from "@/lib/currency";
 import { STATUS_COLORS } from "@/lib/objects/format";
+import { STATUS_HUES } from "@/components/charts/palette";
 import { OBJECT_TYPES, type PropertyObjectInput } from "@/lib/objects/types";
 
 const emptyInput: PropertyObjectInput = {
@@ -96,7 +97,8 @@ export function ObjectForm({
           <span className="font-medium text-[var(--ink-2)]">{t.objects.form.status}</span>
           <div className="flex items-center gap-2 rounded-md border border-[var(--border-c)] bg-[var(--surface-2)] px-3 py-2 text-[var(--ink-3)]">
             <span
-              className={`h-2.5 w-2.5 shrink-0 rounded-full ${STATUS_COLORS[values.status].split(" ")[0]}`}
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ background: STATUS_HUES[values.status].solid }}
             />
             {t.objects.statuses[values.status]}
           </div>

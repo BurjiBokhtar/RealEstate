@@ -63,6 +63,11 @@
   --field-focus-border: #94a3b8;
   --field-focus-ring: rgb(15 23 42 / 0.1);
   --modal-scrim: rgb(15 23 42 / 0.5);
+  /* Matches whatever .bg-brand's dark-mode override (further down) sets
+     `color` to -- for a child span that sits INSIDE a bg-brand button but
+     isn't bg-brand itself, so it can't inherit that override's win over a
+     literal text-white the way the button's own text does. */
+  --on-brand: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -114,6 +119,7 @@
   --field-focus-border: #facc15;
   --field-focus-ring: rgb(250 204 21 / 0.3);
   --modal-scrim: rgb(0 0 0 / 0.6);
+  --on-brand: #18181b;
   /* The one fixed accent dark mode adds on top of the company's own theme.
      Used directly for the sidebar/nav highlight, and indirectly -- via the
      .bg-brand/.btn-brand overrides further down -- for every primary
