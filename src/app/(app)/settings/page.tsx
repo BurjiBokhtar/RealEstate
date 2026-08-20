@@ -319,7 +319,18 @@ export default function SettingsPage() {
       {configured && <ChangePasswordCard />}
 
       <div className="flex flex-col gap-3">
-        <Accordion title={t.settings.company.title} defaultOpen>
+        <Accordion
+          title={t.settings.company.title}
+          defaultOpen
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+              <path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16" />
+              <path d="M14 9h5a1 1 0 0 1 1 1v11" />
+              <path d="M2 21h20" />
+              <path d="M7 8h2M7 12h2M7 16h2M17 13h1M17 17h1" />
+            </svg>
+          }
+        >
           <span className="-mt-2 text-xs text-[var(--ink-5)]">{t.settings.company.hint}</span>
           <FileUploadField
             label={t.settings.company.logo}
@@ -367,7 +378,15 @@ export default function SettingsPage() {
           </label>
         </Accordion>
 
-        <Accordion title={t.settings.sms.title}>
+        <Accordion
+          title={t.settings.sms.title}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+              <rect x="3" y="5" width="18" height="14" rx="2" />
+              <path d="m4 6.5 8 6 8-6" />
+            </svg>
+          }
+        >
           <span className="-mt-2 text-xs text-[var(--ink-5)]">{t.settings.sms.hint}</span>
 
           <SectionLabel>{t.settings.sms.connectionSection}</SectionLabel>
