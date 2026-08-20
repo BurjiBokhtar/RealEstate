@@ -14,17 +14,17 @@ const PLUM = "#5b3468";
 // Preview badge colour per unit type, so a shop/office floor is visibly
 // different from a residential one at a glance.
 const TYPE_TINT: Record<string, string> = {
-  apartment: "bg-emerald-200 text-emerald-800",
-  house: "bg-emerald-200 text-emerald-800",
-  commercial: "bg-amber-200 text-amber-800",
-  office: "bg-sky-200 text-sky-800",
-  parking: "bg-slate-300 text-slate-700",
-  land: "bg-lime-200 text-lime-800",
-  construction_site: "bg-orange-200 text-orange-800",
+  apartment: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  house: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  commercial: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
+  office: "bg-[var(--wash-sky)] text-[var(--wash-sky-ink)]",
+  parking: "bg-[var(--wash-slate)] text-[var(--wash-slate-ink)]",
+  land: "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]",
+  construction_site: "bg-[var(--wash-amber)] text-[var(--wash-amber-ink)]",
 };
 
 const FIELD =
-  "h-9 rounded-lg border border-slate-300 px-2.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+  "h-9 rounded-lg border border-[var(--field-border)] px-2.5 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
 
 // One stretch of identical floors inside a block: "floors 2..9, four
 // 2-room apartments of 53.5 m² each". A block is described by a few of
@@ -199,25 +199,25 @@ export function FloorUnitsBuilder({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col gap-4 rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-5 shadow-sm">
       <div>
-        <p className="text-[15px] font-semibold text-slate-800">
+        <p className="text-[15px] font-semibold text-[var(--ink-2)]">
           {t.buildings.floorBuilder.title}
         </p>
-        <p className="mt-0.5 text-sm text-slate-500">{t.buildings.floorBuilder.hint}</p>
+        <p className="mt-0.5 text-sm text-[var(--ink-4)]">{t.buildings.floorBuilder.hint}</p>
       </div>
 
       {existingBlocks.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-5)]">
             {t.buildings.floorBuilder.existing}
           </span>
           {existingBlocks.map((b) => (
             <span
               key={b.name || "__none"}
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-c)] bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--ink-3)]"
             >
-              <span className="font-semibold text-slate-800">
+              <span className="font-semibold text-[var(--ink-2)]">
                 {b.name || t.buildings.floorBuilder.noBlockName}
               </span>
               {b.floors} {t.buildings.floorBuilder.floorsShort} · {b.count}{" "}
@@ -234,7 +234,7 @@ export function FloorUnitsBuilder({
             <div
               key={i}
               style={{ borderColor: `${PLUM}55` }}
-              className="flex flex-col gap-3 rounded-xl border bg-slate-50/60 p-4"
+              className="flex flex-col gap-3 rounded-xl border bg-[var(--surface-2)]/60 p-4"
             >
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <label className="flex min-w-56 flex-1 flex-col gap-1 text-xs">
@@ -246,10 +246,10 @@ export function FloorUnitsBuilder({
                     onChange={(e) => patchBlock(i, { name: e.target.value })}
                     placeholder={t.buildings.floorBuilder.blockPlaceholder}
                     list="existing-blocks"
-                    className={`${FIELD} bg-white font-medium`}
+                    className={`${FIELD} bg-[var(--field-bg)] font-medium`}
                   />
                   {joinsExisting && (
-                    <span className="text-[11px] text-emerald-600">
+                    <span className="text-[11px] text-[var(--wash-emerald-ink)]">
                       ✓ {t.buildings.floorBuilder.existingBlockHint}
                     </span>
                   )}
@@ -258,7 +258,7 @@ export function FloorUnitsBuilder({
                   <button
                     type="button"
                     onClick={() => setBlocks((bs) => bs.filter((_, j) => j !== i))}
-                    className="rounded-lg border border-red-200 px-2.5 py-1.5 text-xs text-red-500 transition-colors hover:bg-red-50"
+                    className="rounded-lg border border-[var(--wash-rose-border)] px-2.5 py-1.5 text-xs text-[var(--wash-rose-ink)] transition-colors hover:bg-[var(--wash-rose)]"
                   >
                     {t.buildings.floorBuilder.removeBlock}
                   </button>
@@ -268,7 +268,7 @@ export function FloorUnitsBuilder({
               {/* Column labels once per block (desktop); on mobile each field
                   carries its own small label instead. */}
               <div
-                className="hidden gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 sm:grid sm:grid-cols-[70px_70px_1fr_0.9fr_1.4fr_1fr_34px]"
+                className="hidden gap-2 px-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-5)] sm:grid sm:grid-cols-[70px_70px_1fr_0.9fr_1.4fr_1fr_34px]"
               >
                 <span>{t.buildings.floorBuilder.floorsFrom}</span>
                 <span>{t.buildings.floorBuilder.floorsTo}</span>
@@ -282,7 +282,7 @@ export function FloorUnitsBuilder({
               {block.ranges.map((r, k) => (
                 <div key={k} className="grid grid-cols-2 gap-x-2 gap-y-1 sm:grid-cols-[70px_70px_1fr_0.9fr_1.4fr_1fr_34px] sm:items-center">
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.floorsFrom}
                     </span>
                     <input
@@ -290,11 +290,11 @@ export function FloorUnitsBuilder({
                       value={r.from}
                       onChange={(e) => patchRange(i, k, { from: e.target.value })}
                       placeholder="1"
-                      className={`${FIELD} w-full bg-white text-center`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)] text-center`}
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.floorsTo}
                     </span>
                     <input
@@ -302,11 +302,11 @@ export function FloorUnitsBuilder({
                       value={r.to}
                       onChange={(e) => patchRange(i, k, { to: e.target.value })}
                       placeholder={r.from || "9"}
-                      className={`${FIELD} w-full bg-white text-center`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)] text-center`}
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.perFloor}
                     </span>
                     <input
@@ -314,11 +314,11 @@ export function FloorUnitsBuilder({
                       min="1"
                       value={r.count}
                       onChange={(e) => patchRange(i, k, { count: e.target.value })}
-                      className={`${FIELD} w-full bg-white`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)]`}
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.rooms}
                     </span>
                     <input
@@ -326,17 +326,17 @@ export function FloorUnitsBuilder({
                       min="0"
                       value={r.rooms}
                       onChange={(e) => patchRange(i, k, { rooms: e.target.value })}
-                      className={`${FIELD} w-full bg-white`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)]`}
                     />
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.type}
                     </span>
                     <select
                       value={r.type}
                       onChange={(e) => patchRange(i, k, { type: e.target.value as ObjectType })}
-                      className={`${FIELD} w-full bg-white`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)]`}
                     >
                       {OBJECT_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -346,7 +346,7 @@ export function FloorUnitsBuilder({
                     </select>
                   </label>
                   <label className="flex flex-col gap-0.5">
-                    <span className="text-[10px] font-medium text-slate-500 sm:hidden">
+                    <span className="text-[10px] font-medium text-[var(--ink-4)] sm:hidden">
                       {t.buildings.floorBuilder.area}
                     </span>
                     <input
@@ -355,7 +355,7 @@ export function FloorUnitsBuilder({
                       step="0.01"
                       value={r.area}
                       onChange={(e) => patchRange(i, k, { area: e.target.value })}
-                      className={`${FIELD} w-full bg-white`}
+                      className={`${FIELD} w-full bg-[var(--field-bg)]`}
                     />
                   </label>
                   <div className="col-span-2 flex justify-end sm:col-span-1 sm:justify-center">
@@ -366,7 +366,7 @@ export function FloorUnitsBuilder({
                           patchBlock(i, { ranges: block.ranges.filter((_, m) => m !== k) })
                         }
                         title={t.buildings.floorBuilder.removeRange}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-sm text-red-500 transition-colors hover:bg-red-50"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--wash-rose-border)] text-sm text-[var(--wash-rose-ink)] transition-colors hover:bg-[var(--wash-rose)]"
                       >
                         ✕
                       </button>
@@ -378,7 +378,7 @@ export function FloorUnitsBuilder({
               <button
                 type="button"
                 onClick={() => patchBlock(i, { ranges: [...block.ranges, emptyRange()] })}
-                className="w-fit rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-white"
+                className="w-fit rounded-lg border border-[var(--field-border)] px-3 py-1.5 text-xs font-medium text-[var(--ink-3)] transition-colors hover:bg-[var(--field-bg)]"
               >
                 {t.buildings.floorBuilder.addRange}
               </button>
@@ -396,18 +396,18 @@ export function FloorUnitsBuilder({
       </datalist>
 
       {previewGrid.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+        <div className="rounded-xl border border-[var(--border-c)] bg-[var(--surface-2)]/50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[13px] font-semibold text-slate-700">
+            <p className="text-[13px] font-semibold text-[var(--ink-2)]">
               {t.buildings.floorBuilder.preview}
             </p>
-            <div className="flex items-center gap-3 text-[10.5px] text-slate-500">
+            <div className="flex items-center gap-3 text-[10.5px] text-[var(--ink-4)]">
               <span className="inline-flex items-center gap-1">
-                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-200" />
+                <span className="h-2.5 w-2.5 rounded-sm bg-[var(--wash-emerald)]" />
                 {t.buildings.floorBuilder.newMarker}
               </span>
               <span className="inline-flex items-center gap-1">
-                <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" />
+                <span className="h-2.5 w-2.5 rounded-sm bg-[var(--track-c)]" />
                 {t.buildings.floorBuilder.existingMarker}
               </span>
             </div>
@@ -416,24 +416,24 @@ export function FloorUnitsBuilder({
           <div className="mt-3 flex gap-5 overflow-x-auto pb-1">
             {previewGrid.map((b) => (
               <div key={b.name || "__none"} className="shrink-0">
-                <p className="mb-1.5 text-[11px] font-semibold text-slate-600">
+                <p className="mb-1.5 text-[11px] font-semibold text-[var(--ink-3)]">
                   {b.name || t.buildings.floorBuilder.noBlockName}
                 </p>
                 <div className="flex flex-col gap-[3px]">
                   {b.floors.map((f) => (
                     <div key={f.floor} className="flex items-center gap-1.5">
-                      <span className="w-6 shrink-0 text-right text-[10px] tabular-nums text-slate-400">
+                      <span className="w-6 shrink-0 text-right text-[10px] tabular-nums text-[var(--ink-5)]">
                         {f.floor}
                       </span>
                       {f.existing > 0 && (
-                        <span className="flex h-5 min-w-10 items-center justify-center rounded bg-slate-200 px-1.5 text-[10px] font-semibold text-slate-600">
+                        <span className="flex h-5 min-w-10 items-center justify-center rounded bg-[var(--track-c)] px-1.5 text-[10px] font-semibold text-[var(--ink-3)]">
                           {f.existing}x
                         </span>
                       )}
                       {f.added > 0 && (
                         <span
                           className={`flex h-5 min-w-10 items-center justify-center rounded px-1.5 text-[10px] font-semibold ${
-                            f.addedType ? TYPE_TINT[f.addedType] ?? "bg-emerald-200 text-emerald-800" : "bg-emerald-200 text-emerald-800"
+                            f.addedType ? TYPE_TINT[f.addedType] ?? "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]" : "bg-[var(--wash-emerald)] text-[var(--wash-emerald-ink)]"
                           }`}
                         >
                           +{f.added}
@@ -443,7 +443,7 @@ export function FloorUnitsBuilder({
                         f.addedType &&
                         f.addedType !== "apartment" &&
                         f.addedType !== "house" && (
-                          <span className="text-[9px] text-slate-400">
+                          <span className="text-[9px] text-[var(--ink-5)]">
                             {t.objects.types[f.addedType]}
                           </span>
                         )}
@@ -455,23 +455,23 @@ export function FloorUnitsBuilder({
           </div>
 
           {previewCount > 0 && (
-            <div className="mt-3 border-t border-slate-200 pt-2.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+            <div className="mt-3 border-t border-[var(--border-c)] pt-2.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-5)]">
                 {t.buildings.floorBuilder.estTitle}
               </p>
               <div className="mt-1 flex flex-col gap-0.5 text-[12.5px]">
                 <p className="flex justify-between">
-                  <span className="text-slate-500">
+                  <span className="text-[var(--ink-4)]">
                     {t.buildings.floorBuilder.estUnits}
                   </span>
-                  <span className="font-bold text-slate-800">{previewCount}</span>
+                  <span className="font-bold text-[var(--ink-2)]">{previewCount}</span>
                 </p>
                 {previewPrice > 0 && (
                   <p className="flex justify-between">
-                    <span className="text-slate-500">
+                    <span className="text-[var(--ink-4)]">
                       {t.buildings.floorBuilder.estPrice}
                     </span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-[var(--ink-2)]">
                       {formatCurrency(previewPrice, "TJS")}
                     </span>
                   </p>
@@ -487,7 +487,7 @@ export function FloorUnitsBuilder({
           type="button"
           onClick={() => setBlocks((bs) => [...bs, emptyBlock()])}
           style={{ borderColor: PLUM, color: PLUM }}
-          className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-all hover:bg-purple-50 active:scale-[0.98]"
+          className="rounded-lg border px-3.5 py-2 text-sm font-medium transition-all hover:bg-[var(--wash-plum)] active:scale-[0.98]"
         >
           {t.buildings.floorBuilder.addBlock}
         </button>
@@ -500,13 +500,13 @@ export function FloorUnitsBuilder({
           {generating ? t.common.loading : t.buildings.floorBuilder.generate}
         </button>
         {previewCount > 0 && !done && (
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-[var(--ink-4)]">
             {t.buildings.floorBuilder.willCreate}{" "}
-            <span className="font-bold text-slate-800">{previewCount}</span>
+            <span className="font-bold text-[var(--ink-2)]">{previewCount}</span>
           </span>
         )}
         {done && (
-          <span className="text-sm font-medium text-emerald-600">
+          <span className="text-sm font-medium text-[var(--wash-emerald-ink)]">
             ✓ {t.buildings.floorBuilder.created}
           </span>
         )}

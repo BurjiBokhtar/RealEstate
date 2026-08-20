@@ -48,7 +48,7 @@ export default function NewObjectPage() {
     return (
       <div className="flex flex-col gap-3">
         <BackLink href="/objects">{t.objects.backToList}</BackLink>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
       </div>
     );
   }

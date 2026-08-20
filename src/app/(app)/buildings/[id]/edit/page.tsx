@@ -243,11 +243,11 @@ export default function EditBuildingPage() {
       <div className="flex flex-col gap-3">
         <Link
           href={`/buildings/${params.id}`}
-          className="w-fit text-sm text-slate-500 hover:text-slate-900"
+          className="w-fit text-sm text-[var(--ink-4)] hover:text-[var(--ink-1)]"
         >
           ← {t.buildings.backToList}
         </Link>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
       </div>
     );
   }
@@ -256,7 +256,7 @@ export default function EditBuildingPage() {
     <div className="flex flex-col gap-5">
       <Link
         href={`/buildings/${params.id}`}
-        className="w-fit text-sm text-slate-500 hover:text-slate-900"
+        className="w-fit text-sm text-[var(--ink-4)] hover:text-[var(--ink-1)]"
       >
         ← {t.buildings.backToList}
       </Link>
@@ -264,10 +264,10 @@ export default function EditBuildingPage() {
       {!configured && <SetupNotice />}
 
       {configured && building === undefined && (
-        <p className="text-slate-400">{t.common.loading}</p>
+        <p className="text-[var(--ink-5)]">{t.common.loading}</p>
       )}
       {configured && building === null && (
-        <p className="text-slate-400">{t.buildings.notFound}</p>
+        <p className="text-[var(--ink-5)]">{t.buildings.notFound}</p>
       )}
 
       {building && (
@@ -289,13 +289,13 @@ export default function EditBuildingPage() {
             {/* Saving only re-prices when the rate changed. This applies
                 whatever rate is saved right now, to everything unsold -- the
                 way to reach flats booked or added since the last run. */}
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+            <div className="rounded-xl border border-[var(--border-c)] bg-[var(--surface-2)] p-3.5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-700">
+                  <p className="text-sm font-semibold text-[var(--ink-2)]">
                     {t.buildings.form.applyRate}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-[var(--ink-4)]">
                     {t.buildings.form.applyRateHint}
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export default function EditBuildingPage() {
               {applyResult && (
                 <p
                   className={`mt-2.5 text-xs ${
-                    applyResult.ok ? "text-emerald-600" : "text-amber-600"
+                    applyResult.ok ? "text-[var(--wash-emerald-ink)]" : "text-[var(--wash-amber-ink)]"
                   }`}
                 >
                   {applyResult.text}
@@ -319,7 +319,7 @@ export default function EditBuildingPage() {
               )}
             </div>
           </BuildingForm>
-          {saveError && <p className="text-sm text-red-600">{saveError}</p>}
+          {saveError && <p className="text-sm text-[var(--wash-rose-ink)]">{saveError}</p>}
 
           <FloorUnitsBuilder
             buildingId={building.id}

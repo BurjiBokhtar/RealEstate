@@ -59,7 +59,7 @@ export default function NewBuildingPage() {
     return (
       <div className="flex flex-col gap-3">
         <BackLink href="/objects">{t.objects.title}</BackLink>
-        <p className="text-slate-500">{t.users.accessDenied}</p>
+        <p className="text-[var(--ink-4)]">{t.users.accessDenied}</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export default function NewBuildingPage() {
       <BackLink href="/objects">{t.objects.title}</BackLink>
       <div>
         <h1 className="text-2xl font-semibold">{t.buildings.newBuilding}</h1>
-        <p className="mt-1 text-sm text-slate-500">{t.buildings.newBuildingHint}</p>
+        <p className="mt-1 text-sm text-[var(--ink-4)]">{t.buildings.newBuildingHint}</p>
       </div>
       {!configured && <SetupNotice />}
 
@@ -81,7 +81,7 @@ export default function NewBuildingPage() {
         hideFloorsCount
         hideUnitsPerFloor
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-[var(--wash-rose-ink)]">{error}</p>}
     </div>
   );
 }
