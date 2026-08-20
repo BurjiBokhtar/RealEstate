@@ -13,11 +13,11 @@ import type { Client, ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
 const FIELD_CLASS =
-  "h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
+  "h-10 rounded-lg border border-slate-300 px-3 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
 const FIELD_CLASS_SM =
-  "h-9 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-2.5 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
+  "h-9 rounded-lg border border-slate-300 px-2.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
 const TEXTAREA_CLASS =
-  "rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 py-2 text-sm text-[var(--ink-1)] transition-colors focus:border-[var(--field-focus-border)] focus:outline-none focus:ring-2 focus:ring-[var(--field-focus-ring)]";
+  "rounded-lg border border-slate-300 px-3 py-2 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
 
 type ObjectWithBuilding = PropertyObject & { building: { name: string } | null };
 
@@ -305,13 +305,13 @@ export function ContractForm({
   return (
     <form onSubmit={handleFormSubmit} className={`flex flex-col gap-4 ${lockedObject ? "w-full" : "max-w-xl"}`}>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.number}</span>
+        <span className="font-medium text-slate-700">{t.contracts.form.number}</span>
         <input
           value={values.number}
           onChange={(e) => update("number", e.target.value)}
           readOnly={!isExistingContract}
           placeholder={isExistingContract ? "" : t.contracts.form.numberAuto}
-          className={`${FIELD_CLASS} ${isExistingContract ? "" : "bg-[var(--surface-2)] text-[var(--ink-4)]"}`}
+          className={`${FIELD_CLASS} ${isExistingContract ? "" : "bg-slate-50 text-slate-500"}`}
         />
       </label>
 
@@ -325,21 +325,21 @@ export function ContractForm({
         />
         {lockedObject ? (
           <div className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.object}</span>
-            <div className="flex h-10 items-center gap-2 rounded-lg border border-[var(--border-c)] bg-[var(--surface-2)] px-3">
-              <span className="font-semibold text-[var(--ink-1)]">{lockedObject.label}</span>
+            <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
+            <div className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
+              <span className="font-semibold text-slate-900">{lockedObject.label}</span>
               {lockedObject.secondaryLabel && (
-                <span className="truncate text-xs text-[var(--ink-5)]">
+                <span className="truncate text-xs text-slate-400">
                   · {lockedObject.secondaryLabel}
                 </span>
               )}
               {lockedObject.buildingName && (
-                <span className="truncate text-xs text-[var(--ink-5)]">
+                <span className="truncate text-xs text-slate-400">
                   · {lockedObject.buildingName}
                 </span>
               )}
               {objectArea != null && (
-                <span className="shrink-0 text-xs font-medium text-[var(--ink-4)]">
+                <span className="shrink-0 text-xs font-medium text-slate-500">
                   · {formatArea(objectArea)}
                 </span>
               )}
@@ -347,7 +347,7 @@ export function ContractForm({
           </div>
         ) : (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.object}</span>
+            <span className="font-medium text-slate-700">{t.contracts.form.object}</span>
             <select
               required
               value={values.object_id}
@@ -387,9 +387,9 @@ export function ContractForm({
       </div>
 
       {areaForRate && areaForRate > 0 && (
-        <div className="grid grid-cols-[2fr_1fr] items-end gap-4 rounded-lg bg-[var(--surface-2)] p-3">
+        <div className="grid grid-cols-[2fr_1fr] items-end gap-4 rounded-lg bg-slate-50 p-3">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.pricePerSqm}</span>
+            <span className="font-medium text-slate-700">{t.contracts.form.pricePerSqm}</span>
             <input
               type="number"
               min="0"
@@ -399,10 +399,10 @@ export function ContractForm({
               className={FIELD_CLASS}
             />
           </label>
-          <p className="pb-2.5 text-xs text-[var(--ink-4)]">
+          <p className="pb-2.5 text-xs text-slate-500">
             {new Intl.NumberFormat("ru-RU").format(areaForRate)} м² ×{" "}
             {pricePerSqm ? new Intl.NumberFormat("ru-RU").format(Number(pricePerSqm)) : "—"} ={" "}
-            <span className="font-semibold text-[var(--ink-2)]">
+            <span className="font-semibold text-slate-800">
               {formatCurrency(amountNum || null, values.currency)}
             </span>
           </p>
@@ -411,7 +411,7 @@ export function ContractForm({
 
       <div className="grid grid-cols-[2fr_2fr_1fr] gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.amount}</span>
+          <span className="font-medium text-slate-700">{t.contracts.form.amount}</span>
           <input
             type="number"
             min="0"
@@ -427,16 +427,16 @@ export function ContractForm({
             new contract, where it means the down payment and gets written as
             a real payment row. */}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.paidAmount}</span>
+          <span className="font-medium text-slate-700">{t.contracts.form.paidAmount}</span>
           {isExistingContract ? (
             <>
               <div
-                className={`${FIELD_CLASS} flex items-center bg-[var(--surface-2)] text-[var(--ink-4)]`}
+                className={`${FIELD_CLASS} flex items-center bg-slate-50 text-slate-500`}
                 aria-readonly="true"
               >
                 {values.paid_amount || "0"}
               </div>
-              <span className="text-[11px] text-[var(--ink-5)]">
+              <span className="text-[11px] text-slate-400">
                 {t.contracts.form.paidFromHistory}
               </span>
             </>
@@ -452,7 +452,7 @@ export function ContractForm({
           )}
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.currency}</span>
+          <span className="font-medium text-slate-700">{t.contracts.form.currency}</span>
           <select
             value={values.currency}
             onChange={(e) => update("currency", e.target.value as ContractInput["currency"])}
@@ -469,7 +469,7 @@ export function ContractForm({
 
       {amountNum > 0 && (
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-[var(--ink-4)]">
+          <span className="text-slate-500">
             {pct.toFixed(1)}% {t.contracts.form.percentOfAmount} ·{" "}
             {formatCurrency(paidNum, values.currency)}
           </span>
@@ -479,7 +479,7 @@ export function ContractForm({
               reported. */}
           {!isExistingContract && (
             <label className="flex items-center gap-2">
-              <span className="text-xs text-[var(--ink-4)]">{t.contracts.form.enterPercent}</span>
+              <span className="text-xs text-slate-500">{t.contracts.form.enterPercent}</span>
               <input
                 type="number"
                 min="0"
@@ -497,7 +497,7 @@ export function ContractForm({
       <div className={`grid gap-4 ${lockedObject ? "grid-cols-1" : "grid-cols-2"}`}>
         {!lockedObject && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.status}</span>
+            <span className="font-medium text-slate-700">{t.contracts.form.status}</span>
             <select
               value={values.status}
               onChange={(e) => update("status", e.target.value as ContractInput["status"])}
@@ -512,17 +512,17 @@ export function ContractForm({
           </label>
         )}
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.signedDate}</span>
+          <span className="font-medium text-slate-700">{t.contracts.form.signedDate}</span>
           <input
             type="date"
             value={values.signed_date}
             min={signedBounds.min}
             max={signedBounds.max}
             onChange={(e) => update("signed_date", e.target.value)}
-            className={`${FIELD_CLASS} ${signedInvalid ? "border-[var(--wash-rose-ink)]" : ""}`}
+            className={`${FIELD_CLASS} ${signedInvalid ? "border-red-400" : ""}`}
           />
           {signedInvalid && (
-            <span className="text-xs font-medium text-[var(--wash-rose-ink)]">
+            <span className="text-xs font-medium text-red-600">
               {t.common.dateOutOfRange
                 .replace("{min}", signedBounds.min)
                 .replace("{max}", signedBounds.max)}
@@ -533,7 +533,7 @@ export function ContractForm({
 
       <div className="grid grid-cols-2 gap-4">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.paymentType}</span>
+          <span className="font-medium text-slate-700">{t.contracts.form.paymentType}</span>
           <select
             value={values.payment_type}
             onChange={(e) =>
@@ -550,7 +550,7 @@ export function ContractForm({
         </label>
         {values.payment_type === "installment" && (
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-[var(--ink-2)]">
+            <span className="font-medium text-slate-700">
               {t.contracts.form.installmentMonths}
             </span>
             <input
@@ -565,25 +565,25 @@ export function ContractForm({
       </div>
 
       {values.payment_type === "installment" && installmentMonthsNum > 0 && (
-        <div className="flex flex-col gap-1.5 rounded-lg bg-[var(--surface-2)] p-3 text-sm">
+        <div className="flex flex-col gap-1.5 rounded-lg bg-slate-50 p-3 text-sm">
           <div className="flex justify-between">
-            <span className="text-[var(--ink-4)]">{t.contracts.form.downPayment}</span>
-            <span className="font-medium text-[var(--ink-1)]">
+            <span className="text-slate-500">{t.contracts.form.downPayment}</span>
+            <span className="font-medium text-slate-900">
               {formatCurrency(paidNum, values.currency)}
             </span>
           </div>
           <div className="flex justify-between">
-            <span className="text-[var(--ink-4)]">{t.contracts.form.installmentRemaining}</span>
-            <span className="font-medium text-[var(--ink-1)]">
+            <span className="text-slate-500">{t.contracts.form.installmentRemaining}</span>
+            <span className="font-medium text-slate-900">
               {formatCurrency(installmentRemaining, values.currency)}
             </span>
           </div>
-          <div className="flex justify-between border-t border-[var(--border-c)] pt-1.5">
-            <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.monthlyPayment}</span>
-            <span className="font-semibold text-[var(--ink-1)]">
+          <div className="flex justify-between border-t border-slate-200 pt-1.5">
+            <span className="font-medium text-slate-700">{t.contracts.form.monthlyPayment}</span>
+            <span className="font-semibold text-slate-900">
               {formatCurrency(monthlyBase, values.currency)} × {installmentMonthsNum}
               {monthlyLast !== monthlyBase && (
-                <span className="ml-1 font-normal text-[var(--ink-5)]">
+                <span className="ml-1 font-normal text-slate-400">
                   ({formatCurrency(monthlyLast, values.currency)} {t.contracts.form.lastMonth})
                 </span>
               )}
@@ -594,7 +594,7 @@ export function ContractForm({
 
       {values.payment_type === "barter" && (
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-[var(--ink-2)]">
+          <span className="font-medium text-slate-700">
             {t.contracts.form.barterDetails}
           </span>
           <textarea
@@ -607,7 +607,7 @@ export function ContractForm({
       )}
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.amountWords}</span>
+        <span className="font-medium text-slate-700">{t.contracts.form.amountWords}</span>
         <input
           value={values.amount_words}
           onChange={(e) => update("amount_words", e.target.value)}
@@ -617,7 +617,7 @@ export function ContractForm({
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-[var(--ink-2)]">{t.contracts.form.notes}</span>
+        <span className="font-medium text-slate-700">{t.contracts.form.notes}</span>
         <textarea
           value={values.notes}
           onChange={(e) => update("notes", e.target.value)}
@@ -626,7 +626,7 @@ export function ContractForm({
         />
       </label>
 
-      {clientError && <p className="text-sm text-[var(--wash-rose-ink)]">{clientError}</p>}
+      {clientError && <p className="text-sm text-red-600">{clientError}</p>}
 
       <div className="flex items-center gap-3 pt-2">
         <button
@@ -640,7 +640,7 @@ export function ContractForm({
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-lg border border-[var(--wash-rose-border)] px-4 py-2.5 text-sm font-medium text-[var(--wash-rose-ink)] transition-all hover:border-[var(--wash-rose-ink)] hover:bg-[var(--wash-rose)] active:scale-[0.98]"
+            className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 transition-all hover:border-red-400 hover:bg-red-50 active:scale-[0.98]"
           >
             {t.contracts.form.delete}
           </button>
