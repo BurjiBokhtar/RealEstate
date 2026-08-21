@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
+import { PassportScanner } from "@/components/PassportScanner";
 import type { ClientInput } from "@/lib/clients/types";
 import type { PropertyObject } from "@/lib/objects/types";
 
@@ -70,6 +71,24 @@ export function ClientForm({
       }}
       className="flex max-w-xl flex-col gap-4 rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-5 shadow-sm"
     >
+      <PassportScanner
+        onExtract={(fields) => {
+          // Only the fields the scan actually found -- never blanks out
+          // something already typed just because that one field didn't
+          // recognise this time.
+          setValues((v) => ({
+            ...v,
+            ...(fields.name ? { name: fields.name } : {}),
+            ...(fields.passport ? { passport: fields.passport } : {}),
+            ...(fields.passport_issued_by
+              ? { passport_issued_by: fields.passport_issued_by }
+              : {}),
+            ...(fields.birth_date ? { birth_date: fields.birth_date } : {}),
+            ...(fields.address ? { address: fields.address } : {}),
+          }));
+        }}
+      />
+
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-[var(--ink-2)]">{t.clients.form.name}</span>
         <input
