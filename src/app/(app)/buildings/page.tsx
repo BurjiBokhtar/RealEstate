@@ -25,15 +25,27 @@ export default function BuildingsPage() {
   useEffect(() => {
     if (!configured) return;
     const supabase = createClient();
-    supabase
-      .schema("crm")
-      .from("buildings")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setBuildings((data ?? []) as Building[]);
-        setLoading(false);
-      });
+    Promise.all([
+      supabase.schema("crm").from("buildings").select("*"),
+      // Same RPC the objects list uses for its "В продаже · N" roll-up --
+      // counted in SQL rather than paging through every unit here too.
+      supabase.schema("crm").rpc("building_unit_stats"),
+    ]).then(([buildingsRes, statsRes]) => {
+      const rows = (buildingsRes.data ?? []) as Building[];
+      const available = new Map<string, number>();
+      for (const row of (statsRes.data ?? []) as Array<{
+        building_id: string;
+        available: number;
+      }>) {
+        available.set(row.building_id, row.available);
+      }
+      // Most free units first, down to the most sold-out -- the question
+      // this page answers is "where is there still something to sell",
+      // not "what was added most recently".
+      rows.sort((a, b) => (available.get(b.id) ?? 0) - (available.get(a.id) ?? 0));
+      setBuildings(rows);
+      setLoading(false);
+    });
   }, [configured]);
 
   return (
