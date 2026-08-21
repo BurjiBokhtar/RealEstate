@@ -12,9 +12,14 @@
 //   Рақами шиносномаи миллӣ/National ID No.  3500018381042
 //   (document number, top right near the photo, e.g. A00820822)
 //
-// No issuing-authority or address field appears on the front at all -- if a
-// later sample (the back of the card, or a different document) has them,
-// add their labels below the same way. Every guess is meant to be reviewed,
+// No issuing-authority or address field appears on the front at all -- the
+// holder confirms the back has an address (and reportedly a taxpayer
+// number, which isn't a client field at all yet -- see PassportScanner's
+// caller). PassportScanner can scan both sides and concatenates their text
+// before this runs, so ADDRESS_LABEL below already has a chance to match
+// once the back is included; its exact wording is still a guess until a
+// real back-of-card sample confirms it, same as the front's labels were
+// before one existed. Every guess is meant to be reviewed,
 // not trusted blindly: PassportScanner always shows the raw recognised text
 // next to them, because OCR on a security-patterned card is never going to
 // be perfect and the value that matters is the one that ends up on the
@@ -52,6 +57,10 @@ const BIRTH_LABEL = /санаи\s*таваллуд|date\s*of\s*birth/i;
 // reasonable fill for "passport series and number"; the label match is
 // tried first since it's the more explicitly identified of the two.
 const NATIONAL_ID_LABEL = /рақами\s*шиносномаи\s*миллӣ|national\s*id/i;
+// The back of the card (not sampled yet -- these are the ordinary Tajik/
+// English words for it, tighten once a real back-of-card photo is seen the
+// way the front's labels were).
+const ADDRESS_LABEL = /суроға|ҷои\s*истиқомат|address/i;
 
 // dd.mm.yyyy / dd-mm-yyyy / dd/mm/yyyy, tolerant of OCR swapping the
 // separator or dropping a leading zero.
@@ -144,9 +153,12 @@ export function extractFields(rawText: string): ExtractedFields {
     if (idMatch) out.passport = idMatch[1];
   }
 
-  // Neither an issuing authority nor a home address appears on the front
-  // of this card -- left unset rather than guessed at, same reasoning as
-  // name: no anchor means no fill, not a wrong one.
+  // Address (and, on some cards, an issuing authority) live on the BACK --
+  // absent from the front sample this was tuned against. Only fills in
+  // when the back was actually scanned too and a label was found on it;
+  // no anchor still means no guess, same as name.
+  const address = valueAfterLabel(lines, ADDRESS_LABEL);
+  if (address) out.address = address;
 
   return out;
 }
