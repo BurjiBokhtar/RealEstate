@@ -13,17 +13,24 @@
 //   (document number, top right near the photo, e.g. A00820822)
 //
 // No issuing-authority or address field appears on the front at all -- the
-// holder confirms the back has an address (and reportedly a taxpayer
-// number, which isn't a client field at all yet -- see PassportScanner's
-// caller). PassportScanner can scan both sides and concatenates their text
-// before this runs, so ADDRESS_LABEL below already has a chance to match
-// once the back is included; its exact wording is still a guess until a
-// real back-of-card sample confirms it, same as the front's labels were
-// before one existed. Every guess is meant to be reviewed,
-// not trusted blindly: PassportScanner always shows the raw recognised text
-// next to them, because OCR on a security-patterned card is never going to
-// be perfect and the value that matters is the one that ends up on the
-// contract, not the one the regex was confident about.
+// holder confirms the back has both (and reportedly a taxpayer number,
+// which isn't a client field at all yet -- see PassportScanner's caller).
+// PassportScanner can scan both sides and concatenates their text before
+// this runs, so ADDRESS_LABEL below already has a chance to match once the
+// back is included -- its exact wording is still a guess until a real
+// back-of-card sample confirms it, same as the front's labels were before
+// one existed, so it's kept deliberately narrow (see the comment on
+// ADDRESS_LABEL) rather than widened to catch more and risk a wrong match.
+// passport_issued_by has no matching label at all yet for the same reason
+// -- guessing the issuing-authority wording without having seen it printed
+// would just repeat the address label's first, too-loose attempt, so this
+// leaves that field for the person reviewing the raw text to type in by
+// hand until a real sample settles it, the same way the front's labels
+// went from guesses to confirmed once one existed. Every guess is meant to
+// be reviewed, not trusted blindly: PassportScanner always shows the raw
+// recognised text next to them, because OCR on a security-patterned card
+// is never going to be perfect and the value that matters is the one that
+// ends up on the contract, not the one the regex was confident about.
 
 export type ExtractedFields = {
   name?: string;
@@ -57,10 +64,15 @@ const BIRTH_LABEL = /санаи\s*таваллуд|date\s*of\s*birth/i;
 // reasonable fill for "passport series and number"; the label match is
 // tried first since it's the more explicitly identified of the two.
 const NATIONAL_ID_LABEL = /рақами\s*шиносномаи\s*миллӣ|national\s*id/i;
-// The back of the card (not sampled yet -- these are the ordinary Tajik/
-// English words for it, tighten once a real back-of-card photo is seen the
-// way the front's labels were).
-const ADDRESS_LABEL = /суроға|ҷои\s*истиқомат|address/i;
+// The back of the card is not sampled yet -- these are the ordinary Tajik
+// words for "address", tighten once a real back-of-card photo is seen the
+// way the front's labels were. Deliberately NOT matching a bare English
+// "address" here: that was loose enough to latch onto unrelated text
+// elsewhere on a back side that (per the person actually holding one)
+// carries plenty of other fields, and a wrong match there is worse than
+// no match -- an empty field gets noticed and typed in by hand; a
+// wrong one might not be.
+const ADDRESS_LABEL = /суроға|ҷои\s*истиқомат/i;
 
 // dd.mm.yyyy / dd-mm-yyyy / dd/mm/yyyy, tolerant of OCR swapping the
 // separator or dropping a leading zero.
@@ -216,8 +228,20 @@ export function extractFields(rawText: string): ExtractedFields {
   const out: ExtractedFields = {};
 
   const surname = valueAfterLabel(lines, SURNAME_LABEL);
-  const given = valueAfterLine(lines, isGivenNameLabel);
+  const rawGiven = valueAfterLine(lines, isGivenNameLabel);
   const patronymic = valueAfterLabel(lines, PATRONYMIC_LABEL);
+  // Seen for real: on a card whose security-pattern background confuses
+  // rotateAuto/OCR, the surname sometimes gets recognised a second time
+  // right where the given name should be, producing "ОРИПОВ ОРИПОВ
+  // САФАРАЛИЕВИЧ" -- a given name is never literally the same word as the
+  // surname or patronymic next to it, so a candidate that matches either
+  // is treated the same as not having found one at all.
+  const given =
+    rawGiven &&
+    rawGiven.toLowerCase() !== surname?.toLowerCase() &&
+    rawGiven.toLowerCase() !== patronymic?.toLowerCase()
+      ? rawGiven
+      : null;
   const name = stripLatinWords(
     [surname, given, patronymic].filter(Boolean).join(" ").trim(),
   );
