@@ -81,6 +81,41 @@ function toIsoDate(d: string, m: string, y: string): string | null {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
+// Table borders on the card photograph as stray "|" characters, and OCR
+// noise tends to cluster at the start/end of a line as odd punctuation --
+// neither belongs in a value that ends up on a contract.
+function cleanValue(raw: string): string {
+  return raw
+    .replace(/\|/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim()
+    .replace(/^[,;:.\-\s]+/, "")
+    .replace(/[,;:.\-\s]+$/, "");
+}
+
+// Every label on this card is printed bilingual, "Тоҷикӣ/English" -- a
+// slash is the one thing that's reliably true of a label line and never
+// true of a value line, which makes it a good backstop even when OCR
+// garbles a label's wording too badly for the specific *_LABEL patterns
+// to catch it. That happened for real: a label reading "Насаб/Surname"
+// came back mis-recognised as something like "Насаб/ Сигпате", didn't
+// match SURNAME_LABEL on that line, and the OLD valueAfterLine (which
+// trusted whatever line came right after a matched label) happily
+// returned that garbled label text as if it were the given name. This
+// also skips PAST such a line instead of stopping at it, so the real
+// value one line further down still gets found.
+function isLikelyLabelLine(line: string): boolean {
+  if (line.includes("/")) return true;
+  return (
+    SURNAME_LABEL.test(line) ||
+    PATRONYMIC_LABEL.test(line) ||
+    NAME_WORD.test(line) ||
+    BIRTH_LABEL.test(line) ||
+    NATIONAL_ID_LABEL.test(line) ||
+    ADDRESS_LABEL.test(line)
+  );
+}
+
 // The value for a label is the first real line AFTER the line the label
 // itself is on -- confirmed against the real card: "Насаб/Surname" and
 // "Ном/Name" are each their own line, with nothing but the two label words
@@ -88,13 +123,16 @@ function toIsoDate(d: string, m: string, y: string): string | null {
 // never tries to pull a value off the tail of the label's own line (that
 // was the bug the first version had: a line reading just "Ном/Name" left
 // "Name" behind as leftover text, which then got returned as if it were
-// the actual first name).
+// the actual first name). It also keeps looking past a line that turns
+// out to be another (garbled) label instead of accepting it as data --
+// widened to a 3-line lookahead to leave room for that.
 function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): string | null {
   for (let i = 0; i < lines.length; i++) {
     if (!isLabel(lines[i])) continue;
-    for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+    for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
       const next = lines[j]?.trim();
-      if (next && next.length > 1) return next;
+      if (!next || next.length <= 1 || isLikelyLabelLine(next)) continue;
+      return cleanValue(next);
     }
   }
   return null;
@@ -157,8 +195,15 @@ export function extractFields(rawText: string): ExtractedFields {
   // absent from the front sample this was tuned against. Only fills in
   // when the back was actually scanned too and a label was found on it;
   // no anchor still means no guess, same as name.
+  // Seen for real: the line landing under the address label sometimes
+  // carries a stray date fragment glued to the front of it (two card
+  // fields the OCR line-splitter merged into one) -- e.g.
+  // "16.0111991 ВИЛОЯТИ ХАТЛОН, БОХТ". The place name after it is real
+  // data worth keeping; the date prefix in front of it isn't.
   const address = valueAfterLabel(lines, ADDRESS_LABEL);
-  if (address) out.address = address;
+  if (address) {
+    out.address = address.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || address;
+  }
 
   return out;
 }
