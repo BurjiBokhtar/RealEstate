@@ -12,25 +12,31 @@
 //   Рақами шиносномаи миллӣ/National ID No.  3500018381042
 //   (document number, top right near the photo, e.g. A00820822)
 //
-// No issuing-authority or address field appears on the front at all -- the
-// holder confirms the back has both (and reportedly a taxpayer number,
-// which isn't a client field at all yet -- see PassportScanner's caller).
-// PassportScanner can scan both sides and concatenates their text before
-// this runs, so ADDRESS_LABEL below already has a chance to match once the
-// back is included -- its exact wording is still a guess until a real
-// back-of-card sample confirms it, same as the front's labels were before
-// one existed, so it's kept deliberately narrow (see the comment on
-// ADDRESS_LABEL) rather than widened to catch more and risk a wrong match.
-// passport_issued_by has no matching label at all yet for the same reason
-// -- guessing the issuing-authority wording without having seen it printed
-// would just repeat the address label's first, too-loose attempt, so this
-// leaves that field for the person reviewing the raw text to type in by
-// hand until a real sample settles it, the same way the front's labels
-// went from guesses to confirmed once one existed. Every guess is meant to
-// be reviewed, not trusted blindly: PassportScanner always shows the raw
-// recognised text next to them, because OCR on a security-patterned card
-// is never going to be perfect and the value that matters is the one that
-// ends up on the contract, not the one the regex was confident about.
+// No issuing-authority or address field appears on the front at all. Now
+// confirmed against a real (fairly rough) back-of-card OCR sample too --
+// most of the back read as noise, but two labels came through legible
+// enough to anchor on:
+//
+//   Суроға/ Address
+//   16.01.1991 ВИЛОЯТИ ХАТЛОН, БОХТАР      <- region, glued to a stray date
+//   ҶШ. БОХТАРИЁН, ШАҲ. ФИРДАВСӢ            <- district/street, next line
+//   Мартал ҳолат/ Marital status
+//   МУҶАРРАД/SINGLE
+//   Мақоми шиносномадиҳанда/ Issuing Authority
+//   ШВКД ДАР НОҲИЯИ БОХТАР
+//
+// Two things that sample changed here: the address runs across TWO lines
+// (region, then district/street) before marital status starts, not one --
+// see addressAfterLabel. And the plain English word "Address" turned out
+// to be the one part of that label tesseract read correctly when the
+// Tajik half didn't, so ADDRESS_LABEL matches it after all (an earlier
+// version of this file dropped that match as "too loose" before seeing a
+// real back sample to test that worry against). passport_issued_by uses
+// its own label now too. Every guess is meant to be reviewed, not trusted
+// blindly: PassportScanner always shows the raw recognised text next to
+// them, because OCR on a security-patterned card is never going to be
+// perfect and the value that matters is the one that ends up on the
+// contract, not the one the regex was confident about.
 
 export type ExtractedFields = {
   name?: string;
@@ -64,15 +70,14 @@ const BIRTH_LABEL = /санаи\s*таваллуд|date\s*of\s*birth/i;
 // reasonable fill for "passport series and number"; the label match is
 // tried first since it's the more explicitly identified of the two.
 const NATIONAL_ID_LABEL = /рақами\s*шиносномаи\s*миллӣ|national\s*id/i;
-// The back of the card is not sampled yet -- these are the ordinary Tajik
-// words for "address", tighten once a real back-of-card photo is seen the
-// way the front's labels were. Deliberately NOT matching a bare English
-// "address" here: that was loose enough to latch onto unrelated text
-// elsewhere on a back side that (per the person actually holding one)
-// carries plenty of other fields, and a wrong match there is worse than
-// no match -- an empty field gets noticed and typed in by hand; a
-// wrong one might not be.
-const ADDRESS_LABEL = /суроға|ҷои\s*истиқомат/i;
+// Confirmed against a real back-of-card sample: the Tajik half of this
+// label ("Суроға") didn't come through recognisable at all, but the
+// English half ("Address") did -- \b keeps it from matching mid-word
+// (an "addressee" or similar wouldn't count).
+const ADDRESS_LABEL = /суроға|ҷои\s*истиқомат|\baddress\b/i;
+// Also confirmed against that same sample -- this one came through fully
+// legible on both halves, unlike everything else on the back.
+const ISSUED_BY_LABEL = /мақоми\s*шиносномадиҳанда|issuing\s*authority/i;
 
 // dd.mm.yyyy / dd-mm-yyyy / dd/mm/yyyy, tolerant of OCR swapping the
 // separator or dropping a leading zero.
@@ -94,15 +99,21 @@ function toIsoDate(d: string, m: string, y: string): string | null {
 }
 
 // Table borders on the card photograph as stray "|" characters, and OCR
-// noise tends to cluster at the start/end of a line as odd punctuation --
-// neither belongs in a value that ends up on a contract.
+// noise tends to cluster at the start/end of a line as odd symbols -- seen
+// for real as everything from stray punctuation to "~~ " sitting in front
+// of an otherwise-correct name. Neither belongs in a value that ends up on
+// a contract, so this strips ANY run of non-letter, non-digit characters
+// off both ends (\p{L}/\p{N} rather than a hand-picked punctuation list,
+// since the next stray symbol OCR invents won't be on that list either) --
+// it only trims the edges, never touches a symbol sitting between two real
+// words.
 function cleanValue(raw: string): string {
   return raw
     .replace(/\|/g, " ")
     .replace(/\s{2,}/g, " ")
     .trim()
-    .replace(/^[,;:.\-\s]+/, "")
-    .replace(/[,;:.\-\s]+$/, "");
+    .replace(/^[^\p{L}\p{N}]+/u, "")
+    .replace(/[^\p{L}\p{N}]+$/u, "");
 }
 
 // Every name/address field is printed twice -- once in Tajik Cyrillic, once
@@ -121,10 +132,15 @@ function hasCyrillic(s: string): boolean {
 // BERDIEVA") while leaving a token that mixes scripts untouched -- there's
 // no reliable way to tell which half of a glued-together mixed token is the
 // OCR error, so that's left for the raw-text panel to reveal instead of
-// silently deleting part of a word and hiding that anything was cut.
+// silently deleting part of a word and hiding that anything was cut. Also
+// drops a token with no letters in it at all -- cleanValue only trims
+// symbol noise off the two ends of a whole value, so a symbol-only token
+// sitting between two real words (an OCR-invented "~~" or "--") still needs
+// removing here once the value's been split apart.
 function stripLatinWords(value: string): string {
   const tokens = value.split(/\s+/).filter(Boolean);
   const kept = tokens.filter((tok) => {
+    if (!/\p{L}/u.test(tok)) return false;
     const letters = tok.replace(/[^A-Za-z]/g, "");
     return hasCyrillic(tok) || letters.length < 2;
   });
@@ -151,7 +167,8 @@ function isLikelyLabelLine(line: string): boolean {
     NAME_WORD.test(line) ||
     BIRTH_LABEL.test(line) ||
     NATIONAL_ID_LABEL.test(line) ||
-    ADDRESS_LABEL.test(line)
+    ADDRESS_LABEL.test(line) ||
+    ISSUED_BY_LABEL.test(line)
   );
 }
 
@@ -211,6 +228,34 @@ function valueAfterLine(
 
 function valueAfterLabel(lines: string[], pattern: RegExp, requirePlausible = true): string | null {
   return valueAfterLine(lines, (line) => pattern.test(line), requirePlausible);
+}
+
+// The address is the one field here that runs across more than one
+// physical line -- confirmed against a real back-of-card sample: a region
+// line, then a district/street line right under it, before the next
+// field (marital status) starts. Every other label on this card is
+// answered by a single line, which is why this is its own function
+// instead of a mode on valueAfterLine: it collects up to two lines after
+// the label and stops the moment it hits anything that looks like another
+// field's label, rather than picking the single best candidate out of a
+// lookahead window the way valueAfterLine does. It doesn't require the
+// looksLikeRealValue shape either -- the region line on the real sample
+// had a stray date glued to its front (digits), and a house number in a
+// street line is normal, not noise.
+function addressAfterLabel(lines: string[], pattern: RegExp, maxLines = 2): string | null {
+  for (let i = 0; i < lines.length; i++) {
+    if (!pattern.test(lines[i])) continue;
+    const parts: string[] = [];
+    for (let j = i + 1; j < lines.length && parts.length < maxLines; j++) {
+      const next = lines[j]?.trim();
+      if (!next || next.length <= 1) continue;
+      if (isLikelyLabelLine(next)) break;
+      const cleaned = cleanValue(next);
+      if (cleaned) parts.push(cleaned);
+    }
+    if (parts.length) return parts.join(" ").replace(/\s{2,}/g, " ").trim();
+  }
+  return null;
 }
 
 // "Ном/Name" without also being "Насаб/Surname" (which contains "name" as
@@ -276,28 +321,28 @@ export function extractFields(rawText: string): ExtractedFields {
     if (idMatch) out.passport = idMatch[1];
   }
 
-  // Address (and, on some cards, an issuing authority) live on the BACK --
-  // absent from the front sample this was tuned against. Only fills in
-  // when the back was actually scanned too and a label was found on it;
-  // no anchor still means no guess, same as name. Read with
-  // requirePlausible off (unlike name) since a real street address can
-  // legitimately contain a house number -- looksLikeRealValue's blanket
-  // "no digits" rule is right for a name and wrong here.
+  // Address and issuing authority live on the BACK -- absent from the
+  // front sample this was originally tuned against. Only fills in when
+  // the back was actually scanned too and its label was found; no anchor
+  // still means no guess, same as name.
   //
-  // Seen for real: the line landing under the address label sometimes
-  // carries a stray date fragment glued to the front of it (two card
-  // fields the OCR line-splitter merged into one) -- e.g.
-  // "16.0111991 ВИЛОЯТИ ХАТЛОН, БОХТ". The place name after it is real
-  // data worth keeping; the date prefix in front of it isn't. Once that's
-  // stripped, still require enough actual letters to be left over --
-  // otherwise a line that was nothing but that date fragment would leave
-  // an address field holding whatever punctuation survived it.
-  const address = valueAfterLabel(lines, ADDRESS_LABEL, false);
-  if (address) {
-    const withoutDate = address.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || address;
+  // Seen for real: the first line of the address carries a stray date
+  // fragment glued to its front (two card fields the OCR line-splitter
+  // merged into one) -- e.g. "16.0111991 ВИЛОЯТИ ХАТЛОН, БОХТАР". The
+  // region name after it is real data worth keeping; the date prefix in
+  // front of it isn't.
+  const rawAddress = addressAfterLabel(lines, ADDRESS_LABEL);
+  if (rawAddress) {
+    const withoutDate = rawAddress.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || rawAddress;
     const cleanedAddress = stripLatinWords(withoutDate);
     const letters = (cleanedAddress.match(/[Ѐ-ӿA-Za-z]/g) || []).length;
     if (letters >= 3) out.address = cleanedAddress;
+  }
+
+  const issuedBy = valueAfterLabel(lines, ISSUED_BY_LABEL);
+  if (issuedBy) {
+    const cleanedIssuedBy = stripLatinWords(issuedBy);
+    if (cleanedIssuedBy) out.passport_issued_by = cleanedIssuedBy;
   }
 
   return out;
