@@ -93,6 +93,33 @@ function cleanValue(raw: string): string {
     .replace(/[,;:.\-\s]+$/, "");
 }
 
+// Every name/address field is printed twice -- once in Tajik Cyrillic, once
+// transliterated into Latin underneath or beside it -- and only the Cyrillic
+// one belongs in the client record. \b in a plain (non-unicode) JS regex is
+// an ASCII notion: Cyrillic letters count as "not a word character" the same
+// as a space does, so a script change (…ЛОН|BOKH…) already reads as a word
+// boundary without any extra flag.
+const CYRILLIC_RE = /[Ѐ-ӿ]/;
+function hasCyrillic(s: string): boolean {
+  return CYRILLIC_RE.test(s);
+}
+
+// Drops whole tokens that are pure Latin letters (the transliterated
+// duplicate riding on the same OCR line as the real value, e.g. "БЕРДИЕВА
+// BERDIEVA") while leaving a token that mixes scripts untouched -- there's
+// no reliable way to tell which half of a glued-together mixed token is the
+// OCR error, so that's left for the raw-text panel to reveal instead of
+// silently deleting part of a word and hiding that anything was cut.
+function stripLatinWords(value: string): string {
+  const tokens = value.split(/\s+/).filter(Boolean);
+  const kept = tokens.filter((tok) => {
+    const letters = tok.replace(/[^A-Za-z]/g, "");
+    return hasCyrillic(tok) || letters.length < 2;
+  });
+  const result = kept.join(" ").trim();
+  return result || value;
+}
+
 // Every label on this card is printed bilingual, "Тоҷикӣ/English" -- a
 // slash is the one thing that's reliably true of a label line and never
 // true of a value line, which makes it a good backstop even when OCR
@@ -126,14 +153,26 @@ function isLikelyLabelLine(line: string): boolean {
 // the actual first name). It also keeps looking past a line that turns
 // out to be another (garbled) label instead of accepting it as data --
 // widened to a 3-line lookahead to leave room for that.
+//
+// Within that window there are normally two real candidates in a row: the
+// Cyrillic value, then its Latin transliteration underneath. This always
+// takes the Cyrillic one when both are there, and only falls back to a
+// Latin-only candidate if no Cyrillic line turned up at all -- a guess
+// beats a blank field, but a Tajik value beats an English one every time
+// there's a choice.
 function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): string | null {
   for (let i = 0; i < lines.length; i++) {
     if (!isLabel(lines[i])) continue;
+    let fallback: string | null = null;
     for (let j = i + 1; j < Math.min(i + 4, lines.length); j++) {
       const next = lines[j]?.trim();
       if (!next || next.length <= 1 || isLikelyLabelLine(next)) continue;
-      return cleanValue(next);
+      const cleaned = cleanValue(next);
+      if (!cleaned) continue;
+      if (hasCyrillic(cleaned)) return cleaned;
+      if (!fallback) fallback = cleaned;
     }
+    if (fallback) return fallback;
   }
   return null;
 }
@@ -159,7 +198,9 @@ export function extractFields(rawText: string): ExtractedFields {
   const surname = valueAfterLabel(lines, SURNAME_LABEL);
   const given = valueAfterLine(lines, isGivenNameLabel);
   const patronymic = valueAfterLabel(lines, PATRONYMIC_LABEL);
-  const name = [surname, given, patronymic].filter(Boolean).join(" ").trim();
+  const name = stripLatinWords(
+    [surname, given, patronymic].filter(Boolean).join(" ").trim(),
+  );
   if (name) out.name = name.replace(/[.,;:]+$/, "");
 
   // Birth date: the label's own value, re-checked against the date shape
@@ -202,7 +243,8 @@ export function extractFields(rawText: string): ExtractedFields {
   // data worth keeping; the date prefix in front of it isn't.
   const address = valueAfterLabel(lines, ADDRESS_LABEL);
   if (address) {
-    out.address = address.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || address;
+    const withoutDate = address.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || address;
+    out.address = stripLatinWords(withoutDate);
   }
 
   return out;

@@ -344,14 +344,31 @@ export function PassportScanner({
             )}
 
             {(images.front || images.back) && !cameraOn && (
-              <button
-                type="button"
-                onClick={runOcr}
-                disabled={running}
-                className="w-fit rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
-              >
-                {running ? `${t.clients.form.scanRunning} ${progress}%` : t.clients.form.scanRecognize}
-              </button>
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={runOcr}
+                  disabled={running}
+                  className="w-fit rounded-lg bg-brand px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+                >
+                  {running ? `${t.clients.form.scanRunning} ${progress}%` : t.clients.form.scanRecognize}
+                </button>
+                {/* One button, one recognize() call -- whichever sides have a
+                    photo right now get read together in that single pass and
+                    their text is combined before fields are guessed, not
+                    scanned as two separate guesses. Spelling that out here
+                    since it isn't obvious from the tabs alone. */}
+                {!running && (
+                  <p className="text-[11px] text-[var(--ink-4)]">
+                    {images.front && images.back
+                      ? t.clients.form.scanRecognizeBothSides
+                      : t.clients.form.scanRecognizeOneSide.replace(
+                          "{side}",
+                          images.back ? t.clients.form.scanSideBack : t.clients.form.scanSideFront,
+                        )}
+                  </p>
+                )}
+              </div>
             )}
 
             {rawText && (
