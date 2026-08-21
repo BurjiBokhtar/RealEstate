@@ -143,6 +143,18 @@ function isLikelyLabelLine(line: string): boolean {
   );
 }
 
+// A blank field the user notices and fills in by hand beats a field
+// silently holding two stray characters left over from a table border --
+// so a candidate line also has to look enough like real text to be worth
+// returning at all: mostly letters, and more than a couple of them. Digits
+// slipping through here means it's a stray fragment of some other field
+// (a date, a document number), not a name or an address.
+function looksLikeRealValue(s: string): boolean {
+  if (/\d/.test(s)) return false;
+  const letters = (s.match(/[Ѐ-ӿA-Za-z]/g) || []).length;
+  return letters >= 3 && letters / s.length >= 0.7;
+}
+
 // The value for a label is the first real line AFTER the line the label
 // itself is on -- confirmed against the real card: "Насаб/Surname" and
 // "Ном/Name" are each their own line, with nothing but the two label words
@@ -151,16 +163,23 @@ function isLikelyLabelLine(line: string): boolean {
 // was the bug the first version had: a line reading just "Ном/Name" left
 // "Name" behind as leftover text, which then got returned as if it were
 // the actual first name). It also keeps looking past a line that turns
-// out to be another (garbled) label instead of accepting it as data --
-// widened to a 3-line lookahead to leave room for that.
+// out to be another (garbled) label, or that doesn't look like a plausible
+// value at all, instead of accepting the first thing it finds -- widened
+// to a 3-line lookahead to leave room for that.
 //
 // Within that window there are normally two real candidates in a row: the
 // Cyrillic value, then its Latin transliteration underneath. This always
 // takes the Cyrillic one when both are there, and only falls back to a
 // Latin-only candidate if no Cyrillic line turned up at all -- a guess
 // beats a blank field, but a Tajik value beats an English one every time
-// there's a choice.
-function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): string | null {
+// there's a choice. requirePlausible skips the looksLikeRealValue check
+// entirely for callers reading a digit line (birth date, national ID) --
+// there, digits are exactly what's wanted.
+function valueAfterLine(
+  lines: string[],
+  isLabel: (line: string) => boolean,
+  requirePlausible = true,
+): string | null {
   for (let i = 0; i < lines.length; i++) {
     if (!isLabel(lines[i])) continue;
     let fallback: string | null = null;
@@ -169,6 +188,7 @@ function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): st
       if (!next || next.length <= 1 || isLikelyLabelLine(next)) continue;
       const cleaned = cleanValue(next);
       if (!cleaned) continue;
+      if (requirePlausible && !looksLikeRealValue(cleaned)) continue;
       if (hasCyrillic(cleaned)) return cleaned;
       if (!fallback) fallback = cleaned;
     }
@@ -177,8 +197,8 @@ function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): st
   return null;
 }
 
-function valueAfterLabel(lines: string[], pattern: RegExp): string | null {
-  return valueAfterLine(lines, (line) => pattern.test(line));
+function valueAfterLabel(lines: string[], pattern: RegExp, requirePlausible = true): string | null {
+  return valueAfterLine(lines, (line) => pattern.test(line), requirePlausible);
 }
 
 // "Ном/Name" without also being "Насаб/Surname" (which contains "name" as
@@ -209,7 +229,7 @@ export function extractFields(rawText: string): ExtractedFields {
   // the earliest date found anywhere in the document if the label match
   // didn't turn up a real date: issue/expiry dates are recent by
   // definition, birth date normally is not.
-  const birthLine = valueAfterLabel(lines, BIRTH_LABEL);
+  const birthLine = valueAfterLabel(lines, BIRTH_LABEL, false);
   const fromLabel = birthLine ? [...birthLine.matchAll(DATE_RE)][0] : null;
   if (fromLabel) {
     out.birth_date = toIsoDate(fromLabel[1], fromLabel[2], fromLabel[3]) ?? undefined;
@@ -227,7 +247,7 @@ export function extractFields(rawText: string): ExtractedFields {
   if (docMatch) {
     out.passport = docMatch[1].replace(/\s+/, " ").trim();
   } else {
-    const idLine = valueAfterLabel(lines, NATIONAL_ID_LABEL);
+    const idLine = valueAfterLabel(lines, NATIONAL_ID_LABEL, false);
     const idMatch = idLine?.match(DIGIT_RUN_RE) ?? rawText.match(DIGIT_RUN_RE);
     if (idMatch) out.passport = idMatch[1];
   }
@@ -235,16 +255,25 @@ export function extractFields(rawText: string): ExtractedFields {
   // Address (and, on some cards, an issuing authority) live on the BACK --
   // absent from the front sample this was tuned against. Only fills in
   // when the back was actually scanned too and a label was found on it;
-  // no anchor still means no guess, same as name.
+  // no anchor still means no guess, same as name. Read with
+  // requirePlausible off (unlike name) since a real street address can
+  // legitimately contain a house number -- looksLikeRealValue's blanket
+  // "no digits" rule is right for a name and wrong here.
+  //
   // Seen for real: the line landing under the address label sometimes
   // carries a stray date fragment glued to the front of it (two card
   // fields the OCR line-splitter merged into one) -- e.g.
   // "16.0111991 ВИЛОЯТИ ХАТЛОН, БОХТ". The place name after it is real
-  // data worth keeping; the date prefix in front of it isn't.
-  const address = valueAfterLabel(lines, ADDRESS_LABEL);
+  // data worth keeping; the date prefix in front of it isn't. Once that's
+  // stripped, still require enough actual letters to be left over --
+  // otherwise a line that was nothing but that date fragment would leave
+  // an address field holding whatever punctuation survived it.
+  const address = valueAfterLabel(lines, ADDRESS_LABEL, false);
   if (address) {
     const withoutDate = address.replace(/^\d[\d.\-/]{2,10}\s+/, "").trim() || address;
-    out.address = stripLatinWords(withoutDate);
+    const cleanedAddress = stripLatinWords(withoutDate);
+    const letters = (cleanedAddress.match(/[Ѐ-ӿA-Za-z]/g) || []).length;
+    if (letters >= 3) out.address = cleanedAddress;
   }
 
   return out;
