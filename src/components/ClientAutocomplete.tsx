@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { DATE_BOUNDS, isDateInRange } from "@/lib/dates";
+import { PassportScanner } from "@/components/PassportScanner";
 import type { Client, ClientInput } from "@/lib/clients/types";
 
 const FIELD_CLASS =
@@ -85,6 +86,24 @@ export function ClientAutocomplete({
             {t.clients.form.backToSearch}
           </button>
         </div>
+
+        {/* Booking a unit from the shakhmatka is exactly the moment a
+            client's ID is in hand at the desk -- same scanner as the full
+            client form, wired to this quick-add draft instead. */}
+        <PassportScanner
+          onExtract={(fields) => {
+            onNewClientChange({
+              ...newClient,
+              ...(fields.name ? { name: fields.name } : {}),
+              ...(fields.passport ? { passport: fields.passport } : {}),
+              ...(fields.passport_issued_by
+                ? { passport_issued_by: fields.passport_issued_by }
+                : {}),
+              ...(fields.birth_date ? { birth_date: fields.birth_date } : {}),
+              ...(fields.address ? { address: fields.address } : {}),
+            });
+          }}
+        />
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-[var(--ink-2)]">{t.clients.form.name}</span>

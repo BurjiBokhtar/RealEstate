@@ -1,17 +1,24 @@
-// Turns whatever Tesseract recognised off a photographed ID into a best-guess
-// at the client fields it might fill -- name, document number, issuing
-// authority, birth date, address.
+// Turns whatever Tesseract recognised off a photographed Tajik biometric ID
+// into a best-guess at the client fields it might fill -- name, document
+// number, birth date. Tuned against a real sample of the front of the card:
 //
-// There is no confirmed layout to match against: Tajikistan's new
-// biometric ID card's exact field positions and labels aren't something
-// this codebase has a verified sample of. So this is deliberately loose --
-// label keywords in both Tajik and Russian (most Tajik ID documents print
-// both), a couple of regexes for shapes that are true regardless of layout
-// (a date looks like a date, a document number is letters+digits) -- and
-// every guess is meant to be reviewed, not trusted blindly. PassportScanner
-// always shows the raw recognised text next to the guesses for exactly that
-// reason. When a real document layout is known, tighten the patterns here;
-// nothing else needs to change.
+//   Ҷумҳурии Тоҷикистон / Republic of Tajikistan
+//   Шиносномаи / Identity Card
+//   Насаб/Surname            БЕРДИЕВА / BERDIEVA
+//   Ном/Name                 ДИЛАФРӮЗ / DILAFRUZ
+//   Номи падар/Father's name ИБОДУЛЛОЕВНА / IBODULLOEVNA
+//   Ҷинс/Sex ...   Санаи таваллуд/Date of birth  02.02.1999
+//   Санаи содиршавӣ/Date of issue ...  Санаи анҷоми муҳлат/Date of expiry ...
+//   Рақами шиносномаи миллӣ/National ID No.  3500018381042
+//   (document number, top right near the photo, e.g. A00820822)
+//
+// No issuing-authority or address field appears on the front at all -- if a
+// later sample (the back of the card, or a different document) has them,
+// add their labels below the same way. Every guess is meant to be reviewed,
+// not trusted blindly: PassportScanner always shows the raw recognised text
+// next to them, because OCR on a security-patterned card is never going to
+// be perfect and the value that matters is the one that ends up on the
+// contract, not the one the regex was confident about.
 
 export type ExtractedFields = {
   name?: string;
@@ -21,26 +28,39 @@ export type ExtractedFields = {
   address?: string;
 };
 
-// Label words that might introduce a field, tried in order until one
-// matches a line. Tajik first (the primary language of the document),
-// Russian second (most Tajik ID documents print both).
-const LABELS: Record<keyof ExtractedFields, RegExp[]> = {
-  name: [/ному\s*насаб/i, /насаб.{0,3}ном/i, /ф\.?и\.?о\.?/i, /фамилия/i],
-  passport: [/рақами\s*ҳуҷҷат/i, /серия/i, /№/],
-  passport_issued_by: [/аз\s*ҷониби/i, /кем\s*выдан/i, /бо\s*кӣ\s*дода/i],
-  birth_date: [/санаи\s*таваллуд/i, /дата\s*рождения/i],
-  address: [/суроға/i, /ҷои\s*истиқомат/i, /адрес/i, /прописка/i],
-};
+// Tajik and English are printed as one "Label/Label" line followed by the
+// value in Tajik Cyrillic, then the value again transliterated into Latin
+// -- valueAfterLine grabs the FIRST of those (the Cyrillic one), since it
+// consistently came through cleaner than the Latin line even before the
+// language pack was fixed: recognising the ~40-odd Cyrillic letters this
+// font uses is an easier job than recognising Latin letters with the wrong
+// model loaded under them.
+const SURNAME_LABEL = /насаб|surname/i;
+const PATRONYMIC_LABEL = /номи\s*падар|father.?s?\s*name/i;
+// A plain /ном|name/ would also match "Номи падар/Father's name" -- that
+// label starts with the same "Ном"/"...name" token the given-name label
+// does. Checked as "mentions ном/name AND isn't the patronymic line" in
+// code (see isGivenNameLabel) rather than as one regex: a lookahead can
+// only rule out "падар" appearing AFTER the match, and here it can just as
+// easily appear before ("Father's name" has "father" before "name"), which
+// a forward-only lookahead can't see.
+const NAME_WORD = /ном|name/i;
+const BIRTH_LABEL = /санаи\s*таваллуд|date\s*of\s*birth/i;
+// The 13-digit national ID number has its own label; the shorter
+// letter+digits number stamped near the photo (e.g. "A00820822") doesn't --
+// it's read off its shape instead, see DOC_NO_RE below. Either is a
+// reasonable fill for "passport series and number"; the label match is
+// tried first since it's the more explicitly identified of the two.
+const NATIONAL_ID_LABEL = /рақами\s*шиносномаи\s*миллӣ|national\s*id/i;
 
 // dd.mm.yyyy / dd-mm-yyyy / dd/mm/yyyy, tolerant of OCR swapping the
 // separator or dropping a leading zero.
 const DATE_RE = /\b(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})\b/g;
 
-// A document number shaped like most CIS-region ID/passport numbers:
-// 1-3 letters (Cyrillic or Latin -- OCR mixes them up) then 6-9 digits,
-// with or without a space between. Falls back to a bare 7+ digit run.
-const DOC_NO_RE = /\b([A-ZА-Я]{1,3}\s?\d{6,9})\b/;
-const DIGIT_RUN_RE = /\b(\d{7,9})\b/;
+// The document number stamped near the photo: 1-2 letters (Latin or
+// Cyrillic -- OCR mixes them up) then 6-9 digits, with or without a space.
+const DOC_NO_RE = /\b([A-ZА-Я]{1,2}\s?\d{6,9})\b/;
+const DIGIT_RUN_RE = /\b(\d{9,13})\b/;
 
 function toIsoDate(d: string, m: string, y: string): string | null {
   const day = Number(d);
@@ -52,21 +72,34 @@ function toIsoDate(d: string, m: string, y: string): string | null {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-// The line right after a label line is usually the value on an ID card
-// (label and value are rarely on the same OCR line once the layout has
-// any width to it) -- fall back to text after the label on the SAME line
-// for the cases where they are.
-function valueAfterLabel(lines: string[], pattern: RegExp): string | null {
+// The value for a label is the first real line AFTER the line the label
+// itself is on -- confirmed against the real card: "Насаб/Surname" and
+// "Ном/Name" are each their own line, with nothing but the two label words
+// on them, and the Cyrillic value only starts on the line below. So this
+// never tries to pull a value off the tail of the label's own line (that
+// was the bug the first version had: a line reading just "Ном/Name" left
+// "Name" behind as leftover text, which then got returned as if it were
+// the actual first name).
+function valueAfterLine(lines: string[], isLabel: (line: string) => boolean): string | null {
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const m = line.match(pattern);
-    if (!m) continue;
-    const rest = line.slice((m.index ?? 0) + m[0].length).replace(/^[\s:.\-–]+/, "").trim();
-    if (rest.length > 1) return rest;
-    const next = lines[i + 1]?.trim();
-    if (next) return next;
+    if (!isLabel(lines[i])) continue;
+    for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+      const next = lines[j]?.trim();
+      if (next && next.length > 1) return next;
+    }
   }
   return null;
+}
+
+function valueAfterLabel(lines: string[], pattern: RegExp): string | null {
+  return valueAfterLine(lines, (line) => pattern.test(line));
+}
+
+// "Ном/Name" without also being "Насаб/Surname" (which contains "name" as
+// a substring of "Surname") or "Номи падар/Father's name" -- see the note
+// on NAME_WORD above for why this can't just be one regex.
+function isGivenNameLabel(line: string): boolean {
+  return NAME_WORD.test(line) && !SURNAME_LABEL.test(line) && !PATRONYMIC_LABEL.test(line);
 }
 
 export function extractFields(rawText: string): ExtractedFields {
@@ -76,23 +109,20 @@ export function extractFields(rawText: string): ExtractedFields {
     .filter(Boolean);
   const out: ExtractedFields = {};
 
-  for (const key of Object.keys(LABELS) as Array<keyof ExtractedFields>) {
-    for (const pattern of LABELS[key]) {
-      const value = valueAfterLabel(lines, pattern);
-      if (value) {
-        out[key] = value;
-        break;
-      }
-    }
-  }
+  const surname = valueAfterLabel(lines, SURNAME_LABEL);
+  const given = valueAfterLine(lines, isGivenNameLabel);
+  const patronymic = valueAfterLabel(lines, PATRONYMIC_LABEL);
+  const name = [surname, given, patronymic].filter(Boolean).join(" ").trim();
+  if (name) out.name = name.replace(/[.,;:]+$/, "");
 
-  // Birth date: prefer whatever a "санаи таваллуд" label pointed at, but
-  // that's free text at this point -- re-run the date shape over it, and
-  // if the label match wasn't a real date, fall back to the EARLIEST date
-  // found anywhere in the document. An ID card's other dates (issue,
-  // expiry) are recent by definition; birth date is normally the odd one
-  // out and the furthest in the past.
-  const fromLabel = out.birth_date ? [...out.birth_date.matchAll(DATE_RE)][0] : null;
+  // Birth date: the label's own value, re-checked against the date shape
+  // (OCR noise around it is common -- a stray character before/after the
+  // digits shouldn't disqualify an otherwise-good match). Falls back to
+  // the earliest date found anywhere in the document if the label match
+  // didn't turn up a real date: issue/expiry dates are recent by
+  // definition, birth date normally is not.
+  const birthLine = valueAfterLabel(lines, BIRTH_LABEL);
+  const fromLabel = birthLine ? [...birthLine.matchAll(DATE_RE)][0] : null;
   if (fromLabel) {
     out.birth_date = toIsoDate(fromLabel[1], fromLabel[2], fromLabel[3]) ?? undefined;
   } else {
@@ -103,22 +133,20 @@ export function extractFields(rawText: string): ExtractedFields {
     out.birth_date = allDates[0];
   }
 
-  // Document number: only trust the label match if it actually looks like
-  // one; otherwise scan the whole text for the letters+digits shape, then
-  // a bare digit run as a last resort.
-  if (out.passport && !DOC_NO_RE.test(out.passport) && !DIGIT_RUN_RE.test(out.passport)) {
-    out.passport = undefined;
-  }
-  if (!out.passport) {
-    const m = rawText.match(DOC_NO_RE) ?? rawText.match(DIGIT_RUN_RE);
-    if (m) out.passport = m[1].replace(/\s+/, " ").trim();
+  // Document number: the letter+digits shape near the photo, or the
+  // labelled 13-digit national ID number as a fallback.
+  const docMatch = rawText.match(DOC_NO_RE);
+  if (docMatch) {
+    out.passport = docMatch[1].replace(/\s+/, " ").trim();
+  } else {
+    const idLine = valueAfterLabel(lines, NATIONAL_ID_LABEL);
+    const idMatch = idLine?.match(DIGIT_RUN_RE) ?? rawText.match(DIGIT_RUN_RE);
+    if (idMatch) out.passport = idMatch[1];
   }
 
-  // Name: never guessed without a label match -- free-form Cyrillic text
-  // with no anchor is as likely to be the issuing authority or an address
-  // line as an actual name, and a wrong name is worse on a contract than
-  // a blank one asking to be typed.
-  if (out.name) out.name = out.name.replace(/[.,;:]+$/, "");
+  // Neither an issuing authority nor a home address appears on the front
+  // of this card -- left unset rather than guessed at, same reasoning as
+  // name: no anchor means no fill, not a wrong one.
 
   return out;
 }
