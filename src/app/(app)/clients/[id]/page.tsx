@@ -111,6 +111,23 @@ export default function ClientDetailPage() {
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showMerge, setShowMerge] = useState(false);
+  // Edit/Merge/Delete used to sit as three separate outlined buttons in a
+  // row -- fine for one admin action, cluttered for three that are mostly
+  // used one at a time. Folded into one menu, same "⋯ opens a small panel"
+  // shape AddMenu.tsx already uses elsewhere.
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+        setActionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [actionsOpen]);
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
@@ -438,37 +455,63 @@ export default function ClientDetailPage() {
               size="lg"
               actions={
                 !readOnly && (
-                  <div className="flex items-center gap-2">
+                  <div ref={actionsRef} className="relative">
                     <button
                       type="button"
-                      onClick={() => setEditing((v) => !v)}
-                      className="rounded-lg border border-slate-300 px-3.5 py-2 text-sm font-medium text-slate-700 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                      onClick={() => setActionsOpen((v) => !v)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 transition-all hover:bg-slate-50 active:scale-[0.98]"
+                      title={t.clients.profile.actions}
+                      aria-label={t.clients.profile.actions}
                     >
-                      {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                        <circle cx="12" cy="5" r="1.8" />
+                        <circle cx="12" cy="12" r="1.8" />
+                        <circle cx="12" cy="19" r="1.8" />
+                      </svg>
                     </button>
-                    {/* A manager typed the same person in twice -- almost
-                        always a name off by one letter. Admin-only, same as
-                        delete: it permanently removes the duplicate row. */}
-                    {role === "admin" && (
-                      <button
-                        type="button"
-                        onClick={() => setShowMerge(true)}
-                        className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
-                      >
-                        {t.clients.merge.button}
-                      </button>
-                    )}
-                    {/* Prominent delete for admins -- the cascade-delete modal
-                        (client + contracts + payments) was previously buried
-                        inside the edit form. */}
-                    {role === "admin" && (
-                      <button
-                        type="button"
-                        onClick={handleDelete}
-                        className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-red-300 hover:bg-red-50 hover:text-red-600 active:scale-[0.98]"
-                      >
-                        {t.clients.form.delete}
-                      </button>
+                    {actionsOpen && (
+                      <div className="animate-modal-panel absolute right-0 top-full z-20 mt-1 w-52 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditing((v) => !v);
+                            setActionsOpen(false);
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                        >
+                          {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
+                        </button>
+                        {/* A manager typed the same person in twice -- almost
+                            always a name off by one letter. Admin-only, same
+                            as delete: it permanently removes the duplicate
+                            row. */}
+                        {role === "admin" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowMerge(true);
+                              setActionsOpen(false);
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                          >
+                            {t.clients.merge.button}
+                          </button>
+                        )}
+                        {/* The cascade-delete modal (client + contracts +
+                            payments) opens from here, same as before. */}
+                        {role === "admin" && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setActionsOpen(false);
+                              handleDelete();
+                            }}
+                            className="block w-full px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            {t.clients.form.delete}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                 )

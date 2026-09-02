@@ -250,6 +250,7 @@ export const dictionaries = {
         edit: "Изменить данные",
         hideForm: "Скрыть форму",
         saved: "Данные клиента сохранены",
+        actions: "Действия",
       },
       merge: {
         button: "Объединить с другим",
@@ -1262,6 +1263,7 @@ export const dictionaries = {
         edit: "Тағир додани маълумот",
         hideForm: "Пинҳон кардани форма",
         saved: "Маълумоти мизоҷ захира шуд",
+        actions: "Амалҳо",
       },
       merge: {
         button: "Бо дигаре як кардан",
