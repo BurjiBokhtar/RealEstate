@@ -6071,3 +6071,85 @@ as $$
 $$;
 
 grant execute on function crm.sms_broadcast_recipients(text, uuid) to authenticated;
+
+-- ### 064_merge_clients.sql
+
+-- ============================================================
+-- 064: crm.merge_clients() -- a manager typed the same person in twice
+-- (a name off by one letter is the usual way it happens), and the fix
+-- has to move every contract and task off the duplicate before it can
+-- be deleted at all -- crm.contracts.client_id is "on delete restrict",
+-- so Supabase's own "delete this client" already refuses outright while
+-- contracts point at it, with no path forward from the UI.
+--
+-- p_keep_id survives, p_remove_id is folded into it and deleted:
+--   - every crm.contracts/crm.tasks row pointing at p_remove_id is
+--     repointed to p_keep_id first (this is what actually unblocks the
+--     delete);
+--   - any field blank on the kept client (phone, email, passport...) is
+--     filled in from the removed one instead of just being dropped --
+--     the two records almost never have identical gaps, and losing a
+--     phone number the duplicate happened to have on file would make
+--     the merge itself the reason a client becomes unreachable;
+--   - notes from both are concatenated, not overwritten -- an admin's
+--     note on the duplicate is real history, not noise to discard.
+--
+-- Admin-only, checked here (not just in the UI): this reassigns a
+-- client's whole paper trail and permanently deletes a row, which is a
+-- different order of consequence than the ordinary crm.can_write()
+-- (admin OR manager) gate the rest of the app's writes use.
+--
+-- Идемпотентно в том смысле, что важен: вызов с уже удалённым
+-- p_remove_id просто завершится ошибкой "Duplicate client not found",
+-- а не удалит что-то не то.
+-- ============================================================
+
+create or replace function crm.merge_clients(p_keep_id uuid, p_remove_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_keep crm.clients;
+  v_remove crm.clients;
+begin
+  if crm.my_role() <> 'admin' then
+    raise exception 'Only an admin can merge clients';
+  end if;
+  if p_keep_id = p_remove_id then
+    raise exception 'Cannot merge a client with itself';
+  end if;
+
+  select * into v_keep from crm.clients where id = p_keep_id;
+  if not found then
+    raise exception 'Client to keep not found';
+  end if;
+  select * into v_remove from crm.clients where id = p_remove_id;
+  if not found then
+    raise exception 'Duplicate client not found';
+  end if;
+
+  update crm.clients
+  set phone = coalesce(nullif(v_keep.phone, ''), v_remove.phone),
+      phone2 = coalesce(nullif(v_keep.phone2, ''), v_remove.phone2),
+      email = coalesce(nullif(v_keep.email, ''), v_remove.email),
+      passport = coalesce(nullif(v_keep.passport, ''), v_remove.passport),
+      passport_issued_by = coalesce(nullif(v_keep.passport_issued_by, ''), v_remove.passport_issued_by),
+      birth_date = coalesce(v_keep.birth_date, v_remove.birth_date),
+      address = coalesce(nullif(v_keep.address, ''), v_remove.address),
+      interested_object_id = coalesce(v_keep.interested_object_id, v_remove.interested_object_id),
+      notes = nullif(
+        trim(both E'\n' from concat_ws(E'\n', nullif(v_keep.notes, ''), nullif(v_remove.notes, ''))),
+        ''
+      )
+  where id = p_keep_id;
+
+  update crm.contracts set client_id = p_keep_id where client_id = p_remove_id;
+  update crm.tasks set client_id = p_keep_id where client_id = p_remove_id;
+
+  delete from crm.clients where id = p_remove_id;
+end;
+$$;
+
+grant execute on function crm.merge_clients(uuid, uuid) to authenticated;

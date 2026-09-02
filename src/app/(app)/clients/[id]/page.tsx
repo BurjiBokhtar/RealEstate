@@ -9,6 +9,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ClientForm } from "@/components/ClientForm";
+import { MergeClientModal } from "@/components/MergeClientModal";
 import { ClientIdentity } from "@/components/ClientIdentity";
 import { StatTileRow } from "@/components/StatTile";
 import { SendActions } from "@/components/SendActions";
@@ -109,6 +110,7 @@ export default function ClientDetailPage() {
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [editing, setEditing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showMerge, setShowMerge] = useState(false);
   const [toast, setToast] = useState<{ message: string | null; type: ToastType }>({
     message: null,
     type: "success",
@@ -444,6 +446,18 @@ export default function ClientDetailPage() {
                     >
                       {editing ? t.clients.profile.hideForm : t.clients.profile.edit}
                     </button>
+                    {/* A manager typed the same person in twice -- almost
+                        always a name off by one letter. Admin-only, same as
+                        delete: it permanently removes the duplicate row. */}
+                    {role === "admin" && (
+                      <button
+                        type="button"
+                        onClick={() => setShowMerge(true)}
+                        className="rounded-lg border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-500 transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+                      >
+                        {t.clients.merge.button}
+                      </button>
+                    )}
                     {/* Prominent delete for admins -- the cascade-delete modal
                         (client + contracts + payments) was previously buried
                         inside the edit form. */}
@@ -796,6 +810,22 @@ export default function ClientDetailPage() {
           onClose={() => setPricingContract(null)}
           onSaved={() => {
             setToast({ message: t.buildings.unitEdit.saved, type: "success" });
+            void reloadAfterPayment();
+          }}
+        />
+      )}
+
+      {showMerge && client && (
+        <MergeClientModal
+          keepClient={client}
+          onClose={() => setShowMerge(false)}
+          onMerged={(mergedName) => {
+            setShowMerge(false);
+            setToast({
+              message: t.clients.merge.done.replace("{name}", mergedName),
+              type: "success",
+            });
+            void loadClient();
             void reloadAfterPayment();
           }}
         />
