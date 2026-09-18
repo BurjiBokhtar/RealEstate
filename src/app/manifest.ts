@@ -4,8 +4,9 @@ import { getBranding, logoMime } from "@/lib/branding";
 // Makes the CRM installable ("Add to home screen" / "Install app"). The icon
 // and name follow the COMPANY the admin configured, so the installed app on a
 // phone/desktop shows the firm's own logo -- not a generic placeholder.
-// Non-square logos are given `purpose: "any"` (never "maskable"), so the OS
-// places them on a generated background instead of cropping/stretching them.
+// The raw (possibly non-square) logo is only ever given `purpose: "any"`, so
+// nothing crops or stretches it -- the maskable entry below is a SEPARATE,
+// generated image built specifically to survive an OS's mask shape.
 //
 // force-dynamic: without it, a metadata route with no dynamic API in play
 // (no cookies/headers/searchParams -- getBranding is a plain fetch) can get
@@ -25,9 +26,14 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     ? [
         { src: logo, sizes: "192x192", type: logoMime(logo), purpose: "any" },
         { src: logo, sizes: "512x512", type: logoMime(logo), purpose: "any" },
-        // Keep a padded maskable fallback so Android's adaptive icon still has
-        // a safe-zone image if it prefers one.
-        { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        // Android (and other adaptive-icon OSes) prefer a "maskable" icon
+        // over an "any" one whenever both are present -- so this can't be a
+        // generic stand-in image like the one below, or most Android phones
+        // show that placeholder on the home screen instead of the company's
+        // logo, never even considering the "any" entries above. /icon-maskable
+        // renders the SAME logo padded into the safe zone on a solid
+        // background instead.
+        { src: "/icon-maskable", sizes: "512x512", type: "image/png", purpose: "maskable" },
       ]
     : [
         { src: "/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
