@@ -5540,6 +5540,12 @@ as $$
       select 1 from crm.contracts c
       where c.object_id = p_object_id and c.status <> 'cancelled'
     ) then 'reserved'
+    -- Lost when this definition was added for the rent feature (it
+    -- reverted to the two-branch shape from before manual_reserved
+    -- existed): a hand reservation with no contract at all fell through
+    -- to 'available', so a right-click quick-booking on the shakhmatka
+    -- flipped the flag but the status snapped straight back.
+    when manual_reserved then 'reserved'
     else 'available'
   end::crm.object_status
   where id = p_object_id;
