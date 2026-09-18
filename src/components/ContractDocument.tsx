@@ -316,29 +316,27 @@ export function ContractDocument({
   // background -- browsers skip background graphics when printing unless
   // the user ticks that box, but real images always print.
   //
-  // Rendered once per PAGE-SIZED block (main body, ЗАМИМА, payment
-  // schedule) below rather than once for the whole document, each
-  // centred on that block's own height -- not because it looks nicer, but
-  // because a single instance centred on the combined height of all three
-  // blocks together only ever lands correctly on whichever one physical
-  // page happens to fall at that combined midpoint, leaving it missing or
-  // off-centre everywhere else. position:fixed would repeat it per page
-  // instead, but #contract-print-area's own print rules (globals.css)
-  // already tried and dropped that: Chrome doesn't paginate a fixed
-  // element, it just clips the same single viewport-height slice onto
-  // every page, which cuts the document off outright. A tiled set of
-  // absolute copies at fixed mm offsets was tried after that (to also
-  // cover a multi-page main body) and made things WORSE, not better: an
-  // actual print preview showed several extra blank sheets appended after
-  // the real content, one per unused tile -- Chrome's pagination counts
-  // that absolutely-positioned reach even though nothing else is there
-  // and even under overflow-hidden. Per-block, percentage-based centring
-  // is the version that's actually been confirmed not to do that: ЗАМИМА
-  // and the schedule table each force their own fresh page and are sized
-  // to fit one, so a watermark centred on either lands correctly; the
-  // main body is the one block that can still run to a second page on its
-  // own, where the watermark still won't be perfectly centred -- a real
-  // but far smaller problem than phantom blank pages.
+  // Rendered only on ЗАМИМА and the payment schedule -- NOT the main body.
+  // Both of those force their own fresh printed page (print:break-before-
+  // page) and are padded to fill it (print:min-h-screen on their wrapper),
+  // so a mark centred on either lands dead-centre of that one physical
+  // page. The main body has no such guarantee: it's the one block that can
+  // run past a single page on its own (all 9 sections + signatures), and a
+  // mark centred on its whole height then lands correctly on only whichever
+  // ONE physical page happens to contain that combined midpoint -- visibly
+  // off-centre (or missing) on every other page the body spans.
+  //
+  // Tried and rejected fixes for the main body specifically: position:fixed
+  // repeats per page but clips the document to one viewport-height slice
+  // instead of paginating it (#contract-print-area's own print rules in
+  // globals.css already tried and dropped that); a tiled set of absolute
+  // copies at fixed mm offsets does cover a multi-page body, but made
+  // things WORSE -- an actual print preview showed several extra blank
+  // sheets appended after the real content, one per unused tile, because
+  // Chrome's pagination counts that absolutely-positioned reach even under
+  // overflow-hidden. Leaving the main body unmarked is the version that's
+  // actually reliable: never off-centre anywhere, at the cost of the bulk
+  // of the legal text not carrying the watermark.
   const watermark = settings.company_logo_url && (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -355,7 +353,6 @@ export function ContractDocument({
       className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white text-[11px] leading-[1.4] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none"
     >
       <div className="relative">
-        {watermark}
       <div className="relative">
         {copyLabel && (
           <p className="px-6 py-1 text-center text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
@@ -852,7 +849,7 @@ export function ContractDocument({
             (14-item list + two signature blocks), and a flex container
             doesn't paginate that overflow onto the next page cleanly. */}
         {!isRent && (
-        <div className="relative">
+        <div className="relative print:min-h-screen">
           {watermark}
         <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
           <div className="flex items-center gap-3">
@@ -973,7 +970,7 @@ export function ContractDocument({
             what lets it spill onto a FOLLOWING page cleanly if it runs
             past one on its own. */}
         {(contract.payment_type === "installment" || isRent) && payments.length > 0 && (
-        <div className="relative">
+        <div className="relative print:min-h-screen">
           {watermark}
           <div className="flex flex-col gap-1.5 px-10 pb-8 pt-7 print:break-before-page print:block">
             <div className="flex items-center gap-3">
