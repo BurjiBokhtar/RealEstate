@@ -4,9 +4,9 @@ import { COPY_FOR_CLIENT, COPY_FOR_COMPANY } from "@/lib/contracts/copyLabels";
 import { printDocument } from "@/lib/print";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { BackLink } from "@/components/BackLink";
 import { ContractDocument } from "@/components/ContractDocument";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { PropertyObject } from "@/lib/objects/types";
@@ -90,12 +90,7 @@ export default function ContractPrintPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         {/* Back to the one place that holds everything about this deal --
             there is no separate contract screen to tab between any more. */}
-        <Link
-          href={`/contracts/${params.id}`}
-          className="w-fit text-sm text-slate-500 transition-colors hover:text-slate-900"
-        >
-          ← {t.contracts.backToClient}
-        </Link>
+        <BackLink href={`/contracts/${params.id}`}>{t.contracts.backToClient}</BackLink>
         <button
           type="button"
           onClick={() => printDocument()}

@@ -36,29 +36,6 @@ export type ContractDocumentData = {
 
 const SERIF = { fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif" };
 
-// Tajik month names -- the paper contract dates in words, not 2026-03-14.
-const TJ_MONTHS = [
-  "январ",
-  "феврал",
-  "март",
-  "апрел",
-  "май",
-  "июн",
-  "июл",
-  "август",
-  "сентябр",
-  "октябр",
-  "ноябр",
-  "декабр",
-];
-
-function tjLongDate(iso: string | null): string {
-  if (!iso) return "____________";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return `${d.getDate()} ${TJ_MONTHS[d.getMonth()]} ${d.getFullYear()} с.`;
-}
-
 // The paper contract writes sums as "340000 сомонӣ" / "6355,14 сомонӣ" --
 // the Tajik currency word, not the TJS ticker that formatCurrency emits for
 // the screen, and a decimal comma with no thousands spaces.
@@ -445,10 +422,7 @@ export function ContractDocument({
           </div>
 
           <div className="flex items-baseline justify-between text-[12.5px] print:mt-1">
-            <span>
-              <Var>{shortDate(contract.signed_date)}</Var>{" "}
-              <span className="text-slate-500">({tjLongDate(contract.signed_date)})</span>
-            </span>
+            <Var>{shortDate(contract.signed_date)}</Var>
             <span className="font-bold">ш. Бохтар</span>
           </div>
 

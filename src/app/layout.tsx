@@ -103,7 +103,17 @@ export default async function RootLayout({
             immediately. Without this the page would paint light every time,
             then jump to dark a frame after hydration -- the same flash
             getBranding() above exists to avoid for the hero theme, just for a
-            value only the browser (not this server render) knows. */}
+            value only the browser (not this server render) knows.
+            React 19 logs "Encountered a script tag while rendering React
+            component" for this in dev -- a known, open, dev-only false
+            positive shared by next-themes and shadcn/ui (same pattern), with
+            no effect on production: the script still runs correctly via SSR
+            before hydration. Confirmed NOT the cause of the watermark
+            drifting on the printed contract (see the note on `watermark` in
+            ContractDocument.tsx) -- swapping this for next/script's
+            beforeInteractive strategy hits the identical warning, so there's
+            nothing to actually fix here yet; noted rather than "solved" so
+            the next person doesn't re-diagnose it from scratch. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
