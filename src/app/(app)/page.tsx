@@ -70,6 +70,16 @@ type DashboardSummary = {
 
 const ZERO: MoneyPair = { tjs: 0, usd: 0 };
 
+// What the payment schedule still expects from clients before this month ends,
+// per currency (crm.due_this_month_totals, migration 064). Kept apart from
+// dashboard_summary on purpose: that function is re-created wholesale by every
+// migration that touches it, and a small separate call cannot break the rest
+// of the page if the database has not been updated yet -- this one card says
+// so, the others carry on.
+type DueMonth =
+  | { key: string; pair: MoneyPair; unpaidContracts: number; contracts: number }
+  | { key: string; error: string };
+
 // What the page renders before the first response lands, and if the request
 // fails -- so every reader below can stay unconditional.
 const EMPTY_SUMMARY: DashboardSummary = {
@@ -138,6 +148,7 @@ export default function DashboardPage() {
   // configured means nothing will ever load, so it is not loading either.
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [dueMonth, setDueMonth] = useState<DueMonth | null>(null);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -205,6 +216,50 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [configured, selectedBuildingId, periodBounds, queryKey]);
+
+  // The same building scope as the rest of the page, and not the period: like
+  // debt, this is a snapshot of the current state, not a flow over the picked
+  // period. With "all" selected a finished ЖК stays out, as everywhere else
+  // on this page (p_active_only); picking it explicitly shows it.
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    const key = selectedBuildingId;
+    createClient()
+      .schema("crm")
+      .rpc("due_this_month_totals", {
+        p_building_id: selectedBuildingId === "all" ? null : selectedBuildingId,
+        p_active_only: selectedBuildingId === "all",
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("due_this_month_totals failed:", error.message);
+          setDueMonth({ key, error: error.message });
+          return;
+        }
+        const pair: MoneyPair = { tjs: 0, usd: 0 };
+        let unpaidContracts = 0;
+        let contracts = 0;
+        for (const r of (data ?? []) as Array<{
+          currency: Currency;
+          contracts: number;
+          unpaid_contracts: number;
+          unpaid_total: number | null;
+        }>) {
+          // Same rule as the summary: anything that is not USD counts as TJS.
+          if (r.currency === "USD") pair.usd += Number(r.unpaid_total ?? 0);
+          else pair.tjs += Number(r.unpaid_total ?? 0);
+          unpaidContracts += r.unpaid_contracts;
+          contracts += r.contracts;
+        }
+        setDueMonth({ key, pair, unpaidContracts, contracts });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, selectedBuildingId]);
+  const dueLoading = configured && dueMonth?.key !== selectedBuildingId;
 
   const counts = summary.counts;
   const area = summary.area;
@@ -365,7 +420,7 @@ export default function DashboardPage() {
           three numbers that don't. */}
       {/* Overdue is gone from here: it now has a chart of its own on the
           debtors page, where the follow-up actually happens. */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
           label={t.dashboard.totalIncome}
           value={<MoneyPairValue value={paidRevenue} animate />}
@@ -381,6 +436,34 @@ export default function DashboardPage() {
           tone="rose"
           delay={120}
           loading={loading}
+        />
+        {/* Both currencies at once, like every other money card here. Jumps to
+            Debtors, where the same figure is broken down per ЖК and per client. */}
+        <StatCard
+          label={t.dashboard.dueThisMonth}
+          value={
+            dueMonth && "pair" in dueMonth ? (
+              <MoneyPairValue value={dueMonth.pair} animate />
+            ) : (
+              "—"
+            )
+          }
+          sub={
+            !dueMonth
+              ? undefined
+              : "error" in dueMonth
+                ? t.dashboard.dueThisMonthFailed
+                : dueMonth.pair.tjs > 0 || dueMonth.pair.usd > 0
+                  ? t.dashboard.dueThisMonthSub.replace("{n}", String(dueMonth.unpaidContracts))
+                  : dueMonth.contracts > 0
+                    ? t.dashboard.dueThisMonthAllPaid
+                    : t.dashboard.dueThisMonthNone
+          }
+          icon={StatIcons.calendar}
+          tone="amber"
+          href="/debtors"
+          delay={160}
+          loading={dueLoading}
         />
         <StatCard
           label={t.dashboard.potentialRevenue}

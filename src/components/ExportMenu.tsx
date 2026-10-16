@@ -41,14 +41,23 @@ export function ExportMenu({
   const run = async (format: "excel" | "pdf") => {
     setBusy(true);
     setOpen(false);
-    const rows = await getData();
-    const { exportExcel, exportPdf, todayStamp } = await import("@/lib/export/exportTable");
-    if (format === "excel") {
-      await exportExcel(`${filenameBase}-${todayStamp()}`, headers, rows, title);
-    } else {
-      exportPdf(title, headers, rows);
+    // try/finally: if loading the rows fails the button used to stay disabled
+    // ("busy") until the page was reloaded. On failure no file is produced --
+    // a half-loaded export that looks complete is worse than none.
+    try {
+      const rows = await getData();
+      const { exportExcel, exportPdf, todayStamp } = await import("@/lib/export/exportTable");
+      if (format === "excel") {
+        await exportExcel(`${filenameBase}-${todayStamp()}`, headers, rows, title);
+      } else {
+        exportPdf(title, headers, rows);
+      }
+    } catch (e) {
+      console.error("export failed:", e);
+      window.alert(`${t.common.error}: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   };
 
   return (

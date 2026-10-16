@@ -6159,3 +6159,229 @@ end;
 $$;
 
 grant execute on function crm.merge_clients(uuid, uuid) to authenticated;
+
+-- ############################################################
+-- ### 064_debtors_rework.sql
+-- ############################################################
+
+-- ============================================================
+-- 064: «Должники» -- где квартира, когда платил в последний раз,
+--      сколько платит в месяц; и «К оплате в этом месяце».
+--
+-- 1. crm.overdue_contracts() отдаёт ещё и:
+--      * object_id / object_block / object_floor -- по ним интерфейс
+--        собирает «подъезд, этаж, квартира» (номер квартиры нигде не
+--        хранится, он считается по сетке дома -- см. apartmentNumbers.ts);
+--      * last_payment_date -- дата последнего РЕАЛЬНОГО поступления
+--        (строка contract_payments с paid = true). Это «сколько времени
+--        клиент не платит» в целом, а не возраст отдельной просроченной
+--        строки графика: тот скачет каждый месяц и ничего не говорит о
+--        том, давно ли человек вообще платил. Если платежей не было
+--        совсем -- NULL;
+--      * monthly_payment -- обычный ежемесячный платёж по графику. Берётся
+--        медиана сумм строк графика, а не «последняя» или «средняя»: у
+--        графика последняя строка отличается на копейки (остаток
+--        округления), а вручную добавленная разовая строка не должна
+--        сдвигать «обычный» платёж.
+--    У функции меняется состав колонок, поэтому она пересоздаётся через
+--    drop (create or replace тут вернул бы «cannot change return type»).
+--
+-- 2. crm.due_this_month_contracts() -- по каждому договору: сколько
+--    запланировано на текущий календарный месяц и сколько из этого ещё не
+--    закрыто деньгами. Раскладка поступлений -- та же, что у просрочки
+--    (представление crm.overdue_installments): деньги закрывают самые
+--    старые строки первыми, поэтому долг прошлых месяцев не «съедает»
+--    платёж этого месяца -- он учитывается в просрочке, а здесь только то,
+--    что клиент должен внести именно в этом месяце.
+--
+-- 3. crm.due_this_month_totals() -- то же, но итогом по валютам: карточка
+--    на дашборде. p_active_only повторяет правило дашборда: без выбранного
+--    ЖК достроенные дома в сводку не входят.
+--
+-- Файл идемпотентный -- можно запускать повторно.
+-- ============================================================
+
+-- ---- 1. Должники ----
+
+drop function if exists crm.overdue_contracts(uuid);
+create function crm.overdue_contracts(p_building_id uuid default null)
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  client_phone text,
+  object_id uuid,
+  object_name text,
+  object_block text,
+  object_floor integer,
+  building_id uuid,
+  building_name text,
+  currency text,
+  missed_count int,
+  total_overdue numeric,
+  remaining_total numeric,
+  earliest_due date,
+  latest_due date,
+  last_payment_date date,
+  monthly_payment numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  select
+    c.id,
+    c.number,
+    cl.id,
+    coalesce(cl.name, '—'),
+    cl.phone,
+    o.id,
+    o.name,
+    o.block,
+    o.floor,
+    o.building_id,
+    b.name,
+    c.currency::text,
+    (count(*))::int,
+    sum(oi.unpaid_amount),
+    greatest(c.amount - c.paid_amount, 0),
+    min(oi.due_date),
+    max(oi.due_date),
+    (select max(coalesce(p.paid_date, p.due_date))
+       from crm.contract_payments p
+      where p.contract_id = c.id and p.paid),
+    (select percentile_disc(0.5) within group (order by p.amount)
+       from crm.contract_payments p
+      where p.contract_id = c.id and not p.paid)
+  from crm.overdue_installments oi
+  join crm.contracts c on c.id = oi.contract_id
+  left join crm.clients   cl on cl.id = c.client_id
+  left join crm.objects   o  on o.id = c.object_id
+  left join crm.buildings b  on b.id = o.building_id
+  where oi.due_date < current_date
+    and oi.unpaid_amount > 0.005
+    and (p_building_id is null or o.building_id = p_building_id)
+  group by c.id, c.number, cl.id, cl.name, cl.phone,
+           o.id, o.name, o.block, o.floor, o.building_id, b.name,
+           c.currency, c.amount, c.paid_amount
+  order by sum(oi.unpaid_amount) desc, c.id;
+$$;
+
+grant execute on function crm.overdue_contracts(uuid) to authenticated;
+
+
+-- ---- 2. К оплате в этом месяце: по договорам ----
+
+drop function if exists crm.due_this_month_contracts(uuid);
+create function crm.due_this_month_contracts(p_building_id uuid default null)
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  client_phone text,
+  object_id uuid,
+  object_name text,
+  object_block text,
+  object_floor integer,
+  building_id uuid,
+  building_name text,
+  currency text,
+  scheduled_amount numeric,
+  unpaid_amount numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  select
+    c.id,
+    c.number,
+    cl.id,
+    coalesce(cl.name, '—'),
+    cl.phone,
+    o.id,
+    o.name,
+    o.block,
+    o.floor,
+    o.building_id,
+    coalesce(b.name, '—'),
+    c.currency::text,
+    sum(oi.scheduled_amount),
+    sum(oi.unpaid_amount)
+  from crm.overdue_installments oi
+  join crm.contracts c on c.id = oi.contract_id
+  left join crm.clients   cl on cl.id = c.client_id
+  left join crm.objects   o  on o.id = c.object_id
+  left join crm.buildings b  on b.id = o.building_id
+  where oi.due_date >= date_trunc('month', current_date)::date
+    and oi.due_date <  (date_trunc('month', current_date) + interval '1 month')::date
+    and (p_building_id is null or o.building_id = p_building_id)
+  group by c.id, c.number, cl.id, cl.name, cl.phone,
+           o.id, o.name, o.block, o.floor, o.building_id, b.name,
+           c.currency
+  order by sum(oi.unpaid_amount) desc, c.id;
+$$;
+
+grant execute on function crm.due_this_month_contracts(uuid) to authenticated;
+
+
+-- ---- 3. К оплате в этом месяце: итог по валютам (дашборд) ----
+
+drop function if exists crm.due_this_month_totals(uuid, boolean);
+create function crm.due_this_month_totals(
+  p_building_id uuid default null,
+  p_active_only boolean default false
+)
+returns table (
+  currency text,
+  contracts int,
+  unpaid_contracts int,
+  scheduled_total numeric,
+  unpaid_total numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with per_contract as (
+    select
+      c.id,
+      c.currency::text          as currency,
+      sum(oi.scheduled_amount)  as scheduled,
+      sum(oi.unpaid_amount)     as unpaid
+    from crm.overdue_installments oi
+    join crm.contracts c on c.id = oi.contract_id
+    left join crm.objects   o on o.id = c.object_id
+    left join crm.buildings b on b.id = o.building_id
+    where oi.due_date >= date_trunc('month', current_date)::date
+      and oi.due_date <  (date_trunc('month', current_date) + interval '1 month')::date
+      and (p_building_id is null or o.building_id = p_building_id)
+      -- Как на дашборде: в общей сводке достроенный ЖК не участвует,
+      -- а если выбран конкретный дом -- показывается как есть.
+      and (
+        p_building_id is not null
+        or not p_active_only
+        or coalesce(b.construction_status, 'in_progress') <> 'completed'
+      )
+    group by c.id, c.currency
+  )
+  select
+    pc.currency,
+    (count(*))::int,
+    (count(*) filter (where pc.unpaid > 0.005))::int,
+    sum(pc.scheduled),
+    sum(pc.unpaid)
+  from per_contract pc
+  group by pc.currency
+  order by sum(pc.unpaid) desc;
+$$;
+
+grant execute on function crm.due_this_month_totals(uuid, boolean) to authenticated;
+
+-- PostgREST узнаёт о новых колонках/функциях по сигналу.
+notify pgrst, 'reload schema';
