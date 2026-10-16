@@ -49,7 +49,11 @@ export function ContractBookingModal({
         client_id: values.client_id,
         object_id: values.object_id,
         amount: values.amount ? Number(values.amount) : 0,
-        paid_amount: values.paid_amount ? Number(values.paid_amount) : 0,
+        // Not the typed figure: the initial payment is recorded as a payment row
+        // just below and a trigger sums the rows into paid_amount. If that insert
+        // ever failed, the contract would otherwise claim money that no receipt
+        // backs.
+        paid_amount: 0,
         currency: values.currency,
         amount_words: values.amount_words || null,
         status: values.status,

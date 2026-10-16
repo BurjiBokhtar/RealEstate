@@ -174,28 +174,21 @@ export function ContractPayments({
     onPaymentAdded?.();
   };
 
-  // crm.regenerate_schedule exists in the database precisely for this --
-  // recompute the unpaid rows from the CURRENT remaining balance, leaving
-  // receipts untouched -- but nothing in the app ever called it. Editing a
-  // contract's amount (a discount, a correction) writes only to
-  // crm.contracts; the schedule rows it should also move are a separate
-  // table, never revisited. A printed schedule this drifted from was the
-  // symptom that surfaced it: paid correctly matched real receipts, but the
-  // unpaid rows still summed to the OLD total, so "boqimonda" on the paper
-  // read far higher than amount - paid_amount actually is.
-  const scheduleTotal = payments.reduce((sum, p) => sum + p.amount, 0);
+  // The schedule is out of step with the contract when the unpaid rows add up
+  // to LESS than what is still owed: part of the debt then has no due date at
+  // all. (It used to compare "paid + plan" with the contract amount -- but a
+  // payment lands as its own row beside the untouched plan, so that sum grows
+  // with every payment and the warning showed up after the first one. Only an
+  // under-filled plan is a real mismatch; a plan that is too big simply gets
+  // covered by the money received.) A changed contract amount re-spreads the
+  // plan by itself (crm.auto_regenerate_schedule); this catches what is left.
+  const unpaidPlanTotal = payments.filter((p) => !p.paid).reduce((sum, p) => sum + p.amount, 0);
+  const remainingDebt = contract.amount - contract.paid_amount;
   // A closed deal (paid in full, or overpaid) has nothing left to
-  // redistribute -- crm.regenerate_schedule computes remaining as
-  // amount - paid_amount and refuses to run at zero ("Nothing left to
-  // schedule"), so the button below would just error if it were offered
-  // here. The stale row total on an already-settled contract is history,
-  // not something to reconcile: what a client actually owes (remaining)
-  // already reads correctly regardless of it, which is the number that
-  // matters once the deal is done.
+  // distribute -- crm.regenerate_schedule refuses to run at zero ("Nothing left
+  // to schedule") -- so there is nothing to offer there.
   const mismatch =
-    payments.length > 0 &&
-    contract.amount > contract.paid_amount &&
-    Math.abs(scheduleTotal - contract.amount) > 0.5;
+    payments.some((p) => !p.paid) && remainingDebt > 0 && unpaidPlanTotal < remainingDebt - 0.5;
 
   const handleRegenerate = async () => {
     if (!contract.installment_months) return;
@@ -272,10 +265,10 @@ export function ContractPayments({
           </p>
           <p className="mt-1 text-xs text-[var(--wash-amber-ink)]">
             {t.contracts.payments.mismatchHint
-              .replace("{schedule}", formatCurrency(scheduleTotal, contract.currency))
-              .replace("{contract}", formatCurrency(contract.amount, contract.currency))}
+              .replace("{plan}", formatCurrency(unpaidPlanTotal, contract.currency))
+              .replace("{remaining}", formatCurrency(remainingDebt, contract.currency))}
           </p>
-          {role === "admin" && contract.installment_months && (
+          {(role === "admin" || role === "manager") && contract.installment_months && (
             <button
               type="button"
               onClick={handleRegenerate}

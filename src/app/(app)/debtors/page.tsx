@@ -15,6 +15,7 @@ import { SortIcon } from "@/components/icons";
 import { HBarChart } from "@/components/charts/HBarChart";
 import { STATUS_HUES } from "@/components/charts/palette";
 import { DueThisMonthChart } from "@/components/DueThisMonthChart";
+import { ShiftedSchedules } from "@/components/ShiftedSchedules";
 import { waLink } from "@/lib/whatsapp";
 import { unitLabel } from "@/lib/objects/format";
 import { apartmentNumbersForBuildings } from "@/lib/buildings/apartmentNumbersFor";
@@ -290,6 +291,8 @@ export default function DebtorsPage() {
   // means nothing will ever load, so it is not loading either.
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  // Bumped after a schedule is restored, so the list and totals are read again.
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   // Paged, 25 at a time. Two ceilings had to go here. First: the page used to
   // pull EVERY unpaid overdue installment and group them in the browser -- and
@@ -299,7 +302,7 @@ export default function DebtorsPage() {
   // thousand contracts in arrears -- and on THIS page a silently truncated
   // list means somebody who owes money never gets called. Hence real paging,
   // with the row count coming from the server rather than from rows.length.
-  const queryKey = [page, sort, ascending, buildingId].join("|");
+  const queryKey = [page, sort, ascending, buildingId, reloadNonce].join("|");
   const loading = configured && loadedKey !== queryKey;
 
   useEffect(() => {
@@ -391,7 +394,7 @@ export default function DebtorsPage() {
     return () => {
       cancelled = true;
     };
-  }, [configured, buildingId]);
+  }, [configured, buildingId, reloadNonce]);
 
   // The chart shows every building regardless of the filter -- narrowing the
   // list to one ЖК shouldn't hide the comparison that tells you which ЖК to
@@ -431,7 +434,7 @@ export default function DebtorsPage() {
     return () => {
       cancelled = true;
     };
-  }, [configured]);
+  }, [configured, reloadNonce]);
 
   // Grouped by currency: one panel and one scale per currency, because TJS and
   // USD on a shared axis compare nothing.
@@ -568,6 +571,9 @@ export default function DebtorsPage() {
           <p className="mt-1 text-xs opacity-80">{failure}</p>
         </div>
       )}
+
+      {/* Administrator only, and only when some schedule looks pushed forward. */}
+      <ShiftedSchedules onRestored={() => setReloadNonce((n) => n + 1)} />
 
       {/* One panel PER CURRENCY, each on its own scale.
           The previous version put every building on a single axis regardless of

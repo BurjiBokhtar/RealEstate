@@ -5366,54 +5366,26 @@ for each row execute function crm.auto_regenerate_schedule();
 -- ноль расхождений и ничего не сделает.
 -- ============================================================
 
-do $$
-declare
-  v_contract record;
-  v_remaining numeric;
-  v_base numeric;
-  v_amount numeric;
-  i integer;
-  v_fixed integer := 0;
-begin
-  for v_contract in
-    select c.id, c.amount, c.paid_amount, c.installment_months
-    from crm.contracts c
-    where c.payment_type = 'installment'
-      and c.installment_months is not null
-      and c.installment_months > 0
-      and c.amount > c.paid_amount
-      and exists (
-        select 1 from crm.contract_payments p
-        where p.contract_id = c.id and p.paid = false
-      )
-      and abs(
-        coalesce((select sum(p.amount) from crm.contract_payments p where p.contract_id = c.id), 0)
-        - c.amount
-      ) > 0.5
-  loop
-    v_remaining := v_contract.amount - v_contract.paid_amount;
-
-    -- Только план; фактические (оплаченные) строки неприкосновенны -- та же
-    -- гарантия, что и в crm.regenerate_schedule.
-    delete from crm.contract_payments
-    where contract_id = v_contract.id and paid = false;
-
-    v_base := floor(v_remaining / v_contract.installment_months * 100) / 100;
-    for i in 1..v_contract.installment_months loop
-      if i = v_contract.installment_months then
-        v_amount := round((v_remaining - v_base * (v_contract.installment_months - 1)) * 100) / 100;
-      else
-        v_amount := v_base;
-      end if;
-      insert into crm.contract_payments (contract_id, due_date, amount, paid, paid_date)
-      values (v_contract.id, (current_date + (i || ' month')::interval)::date, v_amount, false, null);
-    end loop;
-
-    v_fixed := v_fixed + 1;
-  end loop;
-
-  raise notice 'Пересчитано договоров с разошедшимся графиком: %', v_fixed;
-end $$;
+-- ############################################################
+-- ЭТОТ БЛОК ОТКЛЮЧЁН (его код здесь больше не выполняется). НЕ ВОССТАНАВЛИВАТЬ.
+--
+-- Он «чинил» договоры, у которых сумма ВСЕХ строк (оплачено + план) не равна
+-- сумме договора. Но после любого платежа сверх первоначального взноса эта
+-- сумма НЕ равна сумме договора по самому устройству графика: платёж ложится
+-- отдельной строкой «оплачено», а строки плана остаются как были (покрытие
+-- считается по очереди, см. блок 043). То есть блок считал «разошедшимся»
+-- КАЖДЫЙ договор, по которому клиент хоть раз заплатил, -- и при КАЖДОМ запуске
+-- этого файла стирал его график и создавал заново на весь срок от СЕГОДНЯ.
+-- Результат: сроки уезжали в будущее, суммы платежей менялись, а клиенты,
+-- которые просрочили, пропадали из «Должников». Поймано проверкой: график
+-- после повторного запуска файла отличался от графика до него.
+--
+-- Настоящее расхождение (в графике не хватает денег до остатка) теперь ловит
+-- интерфейс договора (предупреждение с кнопкой «Пересчитать график»), а
+-- сдвинутые этим блоком графики находит и возвращает
+-- crm.schedule_shifts() / crm.restore_schedule() (блок 065) -- на странице
+-- «Должники» для администратора есть карточка «Сдвинутые графики».
+-- ############################################################
 
 -- ### 058_due_today_sms_template.sql
 
@@ -6384,4 +6356,364 @@ $$;
 grant execute on function crm.due_this_month_totals(uuid, boolean) to authenticated;
 
 -- PostgREST узнаёт о новых колонках/функциях по сигналу.
+notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 065_schedule_safety.sql
+-- ############################################################
+
+-- ============================================================
+-- 065: график платежей и журнал событий -- три исправления и инструмент
+--      восстановления.
+--
+-- 1. БЛОК 056 ОТКЛЮЧЁН (см. его заголовок выше). Он при КАЖДОМ запуске этого
+--    файла стирал и пересоздавал график любого договора, по которому клиент
+--    хоть раз платил после оформления, -- на весь срок от сегодняшнего дня.
+--    Сроки уезжали вперёд, просроченные платежи пропадали из «Должников».
+--    Если файл запускали после 056, графики части договоров уже сдвинуты --
+--    для этого пункт 3 (находит и возвращает).
+--
+-- 2. ЖУРНАЛ. Пересчёт графика писал в журнал событий по записи на КАЖДУЮ
+--    пересозданную строку (десятки одинаковых «Создан · Платёж» за одну
+--    секунду). Теперь на время пересчёта построчный журнал выключается (только
+--    в этой транзакции, флаг crm.audit_off) и пишется ОДНА запись на договор.
+--
+-- 3. ВОССТАНОВЛЕНИЕ. crm.schedule_shifts() находит договоры, у которых по датам
+--    самого договора просрочка была бы больше, чем сейчас (график уехал вперёд),
+--    а crm.restore_schedule(id) пересобирает неоплаченный план от даты договора
+--    (только администратор). Прежний план сохраняется в crm.schedule_backup.
+--    Оплаченные строки не трогаются никогда.
+--
+-- 4. crm.regenerate_schedule(): договор должен быть из ЖК, который открыт
+--    пользователю (как при приёме платежа); кнопка «Пересчитать график» теперь
+--    доступна и менеджеру, а не только администратору.
+--
+-- Идемпотентно -- повторный запуск ничего не меняет в данных.
+-- ============================================================
+
+-- ---------- журнал: служебный пересчёт выключает построчную запись ----------
+create or replace function crm.log_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_diff jsonb;
+  v_context jsonb;
+begin
+  -- Служебный пересчёт (график платежей) выключает журнал построчно и пишет
+  -- одну сводную запись -- см. regenerate_schedule().
+  if current_setting('crm.audit_off', true) = 'on' then
+    return NEW;
+  end if;
+
+  v_context := crm.audit_context(TG_ARGV[0], NEW.id);
+
+  if TG_OP = 'INSERT' then
+    insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+    values (
+      auth.uid(), 'create', TG_ARGV[0], NEW.id,
+      to_jsonb(NEW) || jsonb_build_object('_context', v_context)
+    );
+    return NEW;
+  end if;
+
+  -- UPDATE: only the fields that actually changed, old -> new, so the log
+  -- reads as "what happened" instead of two full row dumps.
+  select coalesce(
+    jsonb_object_agg(n.key, jsonb_build_object('old', o.value, 'new', n.value)),
+    '{}'::jsonb
+  )
+  into v_diff
+  from jsonb_each(to_jsonb(NEW)) n
+  join jsonb_each(to_jsonb(OLD)) o using (key)
+  where n.value is distinct from o.value
+    and n.key not in ('updated_at');
+
+  if v_diff <> '{}'::jsonb then
+    insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+    values (
+      auth.uid(), 'update', TG_ARGV[0], NEW.id,
+      v_diff || jsonb_build_object('_context', v_context)
+    );
+  end if;
+  return NEW;
+end;
+$$;
+
+create or replace function crm.log_delete()
+returns trigger
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_context jsonb;
+begin
+  if current_setting('crm.audit_off', true) = 'on' then
+    return OLD;
+  end if;
+
+  -- BEFORE DELETE: OLD still exists, and so does everything audit_context
+  -- looks up through it (only OLD itself is about to go away).
+  v_context := crm.audit_context(TG_ARGV[0], OLD.id);
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'delete', TG_ARGV[0], OLD.id,
+    to_jsonb(OLD) || jsonb_build_object('_context', v_context)
+  );
+  return OLD;
+end;
+$$;
+
+-- ---------- запас: что было в плане до восстановления ----------
+create table if not exists crm.schedule_backup (
+  id uuid primary key default gen_random_uuid(),
+  contract_id uuid not null,
+  due_date date not null,
+  amount numeric not null,
+  reason text not null,
+  saved_at timestamptz not null default now()
+);
+create index if not exists schedule_backup_contract_idx on crm.schedule_backup (contract_id, saved_at desc);
+
+alter table crm.schedule_backup enable row level security;
+drop policy if exists "schedule_backup_select" on crm.schedule_backup;
+create policy "schedule_backup_select" on crm.schedule_backup
+  for select to authenticated using (crm.is_admin());
+revoke all on crm.schedule_backup from anon;
+grant select on crm.schedule_backup to authenticated;
+grant all on crm.schedule_backup to service_role;
+
+-- ---------- первоначальный график договора ----------
+-- Каким он был при оформлении: n равных частей (последняя добирает копейки)
+-- от даты договора, на сумму договора за вычетом первоначального взноса
+-- (платежи, внесённые в день оформления или раньше). Ровно так его строит
+-- форма бронирования. down возвращается в каждой строке -- для раскладки
+-- поступлений по очереди (pool = оплачено - down).
+create or replace function crm.contract_baseline_plan(p_contract_id uuid)
+returns table (seq integer, due_date date, amount numeric, cum numeric, down numeric)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with c as (
+    select id, amount, installment_months as n,
+           coalesce(signed_date, created_at::date) as d0
+    from crm.contracts where id = p_contract_id and installment_months > 0
+  ),
+  dn as (
+    select c.id, c.n, c.d0,
+           least(coalesce(sum(p.amount), 0), c.amount) as down,
+           c.amount - least(coalesce(sum(p.amount), 0), c.amount) as total
+    from c
+    left join crm.contract_payments p
+      on p.contract_id = c.id and p.paid and coalesce(p.paid_date, p.due_date) <= c.d0
+    group by c.id, c.n, c.d0, c.amount
+  )
+  select g.i,
+         (dn.d0 + (g.i || ' month')::interval)::date,
+         case when g.i < dn.n then floor(dn.total / dn.n * 100) / 100
+              else round((dn.total - floor(dn.total / dn.n * 100) / 100 * (dn.n - 1)) * 100) / 100 end,
+         case when g.i < dn.n then floor(dn.total / dn.n * 100) / 100 * g.i else dn.total end,
+         dn.down
+  from dn, generate_series(1, dn.n) g(i);
+$$;
+
+grant execute on function crm.contract_baseline_plan(uuid) to authenticated;
+
+-- ---------- договоры, у которых график уехал вперёд ----------
+create or replace function crm.schedule_shifts()
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_name text,
+  currency text,
+  overdue_now numeric,
+  overdue_by_contract_date numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with cand as (
+    select c.id, c.number, c.currency::text as cur, c.paid_amount,
+           coalesce(cl.name, '—') as client_name
+    from crm.contracts c
+    left join crm.clients cl on cl.id = c.client_id
+    where c.payment_type in ('installment', 'rent')
+      and c.status <> 'cancelled'
+      and c.installment_months > 0
+      and c.amount > c.paid_amount
+      and exists (select 1 from crm.contract_payments p where p.contract_id = c.id and not p.paid)
+  ),
+  restored as (
+    select cd.id,
+           coalesce(sum(
+             least(b.amount, greatest(b.cum - greatest(cd.paid_amount - b.down, 0), 0))
+           ) filter (where b.due_date < current_date), 0) as overdue
+    from cand cd
+    cross join lateral crm.contract_baseline_plan(cd.id) b
+    group by cd.id
+  ),
+  now_ as (
+    select oi.contract_id as id, sum(oi.unpaid_amount) as overdue
+    from crm.overdue_installments oi
+    where oi.due_date < current_date and oi.unpaid_amount > 0.005
+    group by oi.contract_id
+  )
+  select cd.id, cd.number, cd.client_name, cd.cur,
+         coalesce(n.overdue, 0), r.overdue
+  from cand cd
+  join restored r on r.id = cd.id
+  left join now_ n on n.id = cd.id
+  where r.overdue > coalesce(n.overdue, 0) + 0.5
+  order by r.overdue - coalesce(n.overdue, 0) desc, cd.id;
+$$;
+
+grant execute on function crm.schedule_shifts() to authenticated;
+
+create or replace function crm.restore_schedule(p_contract_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  c crm.contracts;
+  v_rows integer;
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может восстановить график';
+  end if;
+  select * into c from crm.contracts where id = p_contract_id;
+  if not found then
+    raise exception 'Contract not found';
+  end if;
+  if c.payment_type not in ('installment', 'rent') or coalesce(c.installment_months, 0) < 1 then
+    raise exception 'У договора нет графика рассрочки';
+  end if;
+  if c.amount <= c.paid_amount then
+    raise exception 'Nothing left to schedule';
+  end if;
+
+  perform set_config('crm.audit_off', 'on', true);
+
+  insert into crm.schedule_backup (contract_id, due_date, amount, reason)
+  select contract_id, due_date, amount, 'restore_schedule'
+  from crm.contract_payments where contract_id = p_contract_id and not paid;
+
+  delete from crm.contract_payments where contract_id = p_contract_id and not paid;
+
+  insert into crm.contract_payments (contract_id, due_date, amount, paid, paid_date)
+  select p_contract_id, b.due_date, b.amount, false, null
+  from crm.contract_baseline_plan(p_contract_id) b;
+  get diagnostics v_rows = row_count;
+
+  perform set_config('crm.audit_off', 'off', true);
+
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'update', 'contract', p_contract_id,
+    jsonb_build_object(
+      'schedule_restored', true,
+      'schedule_payments', v_rows,
+      '_context', crm.audit_context('contract', p_contract_id)
+    )
+  );
+  return v_rows;
+end;
+$$;
+
+grant execute on function crm.restore_schedule(uuid) to authenticated;
+
+-- ---------- ручной пересчёт: тот же замок по зданию, что у приёма платежа ----------
+-- Кнопка «Пересчитать график» теперь доступна и менеджеру. Право на запись
+-- проверялось и раньше, но не то, что договор -- из ЖК, который менеджеру открыт.
+create or replace function crm.regenerate_schedule(
+  p_contract_id uuid,
+  p_months integer
+)
+returns integer
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_contract crm.contracts;
+  v_remaining numeric;
+  v_base numeric;
+  v_amount numeric;
+  i integer;
+begin
+  if not crm.can_write() then
+    raise exception 'Read-only role';
+  end if;
+  if p_months is null or p_months < 1 then
+    raise exception 'Months must be at least 1';
+  end if;
+
+  select * into v_contract from crm.contracts where id = p_contract_id;
+  if not found then
+    raise exception 'Contract not found';
+  end if;
+  if not exists (
+    select 1 from crm.objects o
+    where o.id = v_contract.object_id
+      and (o.building_id is null or crm.can_view_building(o.building_id))
+  ) then
+    raise exception 'Contract not allowed for this user';
+  end if;
+
+  v_remaining := greatest(v_contract.amount - v_contract.paid_amount, 0);
+  if v_remaining <= 0 then
+    raise exception 'Nothing left to schedule';
+  end if;
+
+  -- Пересборка графика -- это одно действие, а не 2N записей в журнале.
+  perform set_config('crm.audit_off', 'on', true);
+
+  -- Только план; фактические (оплаченные) строки неприкосновенны.
+  delete from crm.contract_payments
+  where contract_id = p_contract_id and paid = false;
+
+  v_base := floor(v_remaining / p_months * 100) / 100;
+  for i in 1..p_months loop
+    if i = p_months then
+      v_amount := round((v_remaining - v_base * (p_months - 1)) * 100) / 100;
+    else
+      v_amount := v_base;
+    end if;
+    insert into crm.contract_payments (contract_id, due_date, amount, paid, paid_date)
+    values (p_contract_id, (current_date + (i || ' month')::interval)::date, v_amount, false, null);
+  end loop;
+
+  perform set_config('crm.audit_off', 'off', true);
+
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'update', 'contract', p_contract_id,
+    jsonb_build_object(
+      'schedule_payments', p_months,
+      'schedule_remaining', v_remaining,
+      '_context', crm.audit_context('contract', p_contract_id)
+    )
+  );
+
+  -- payment_type is deliberately NOT touched here -- see block 060.
+  -- installment_months is the only thing this function's caller expects it to
+  -- keep in sync.
+  update crm.contracts
+  set installment_months = p_months
+  where id = p_contract_id;
+
+  return p_months;
+end;
+$$;
+
+grant execute on function crm.regenerate_schedule(uuid, integer) to authenticated;
+
 notify pgrst, 'reload schema';
