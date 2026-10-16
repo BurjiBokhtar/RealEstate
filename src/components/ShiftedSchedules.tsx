@@ -44,7 +44,7 @@ const BTN_SECONDARY =
 // restores the schedule per contract (or all at once); the plan that is replaced
 // is kept in crm.schedule_backup. Not shown to anyone else, and not at all when
 // there is nothing to restore (or the database has not been updated yet).
-export function ShiftedSchedules({ onRestored }: { onRestored: () => void }) {
+export function ShiftedSchedules({ ready, onRestored }: { ready: boolean; onRestored: () => void }) {
   const { t } = useLocale();
   const { role } = useRole();
   const confirm = useConfirm();
@@ -56,7 +56,9 @@ export function ShiftedSchedules({ onRestored }: { onRestored: () => void }) {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!configured || role !== "admin") return;
+    // Heavy for a big database, so it starts only after the debtors list itself
+    // has loaded instead of competing with it.
+    if (!configured || role !== "admin" || !ready) return;
     let cancelled = false;
     void fetchShifts().then((list) => {
       if (!cancelled) setRows(list);
@@ -64,7 +66,7 @@ export function ShiftedSchedules({ onRestored }: { onRestored: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [configured, role]);
+  }, [configured, role, ready]);
 
   if (role !== "admin" || rows.length === 0) return null;
 

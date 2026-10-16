@@ -7130,3 +7130,272 @@ $$;
 grant execute on function crm.list_sessions() to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 081_faster_access_checks.sql
+-- ############################################################
+
+-- ============================================================
+-- 081: «Должники» и отчёты по просрочке снова укладываются в лимит времени
+--      («canceling statement due to statement timeout»).
+--
+-- ЧТО БЫЛО НЕ ТАК. Просрочка читает ВСЕ строки графика, а каждая строка
+-- проходила проверку прав (RLS) отдельным вызовом нескольких функций:
+-- «есть ли у человека роль», «из его ли ЖК эта квартира». После блока 070
+-- (уровни доступа) каждая такая проверка стала ещё и многоступенчатой
+-- (уровень -> роль -> профиль). На десятках тысяч строк графика это давало
+-- десятки секунд против разрешённых нескольких, и страница «Должники» писала
+-- «не удалось загрузить список».
+--
+-- ЧТО ИЗМЕНЕНО (права доступа те же, меняется только способ проверки):
+--  1. my_sales_level() / my_finance_level() -- один запрос к профилю вместо
+--     цепочки вложенных вызовов;
+--  2. my_building_scope() -- ЧТО видит человек, считается ОДИН РАЗ на запрос:
+--     'all' (админ; директор и бухгалтер с открытым разделом), 'assigned'
+--     (остальные -- только назначенные ЖК), 'none';
+--  3. политики чтения клиентов, квартир, договоров и платежей используют это
+--     значение как константу запроса (select ...), а не считают его заново для
+--     каждой строки. Кто что видит -- прежнее (проверено по ролям и
+--     индивидуальным уровням);
+--  4. crm.overdue_contracts(): «дата последнего платежа» и «обычный платёж»
+--     считаются одним проходом по платежам должников, а не двумя подзапросами
+--     на каждого должника;
+--  5. crm.contract_baseline_plan() -- без SET, чтобы планировщик мог встроить её
+--     в запрос (на ней стоит проверка «сдвинутых графиков»).
+--
+-- Идемпотентно, данные не трогает.
+-- ============================================================
+
+create or replace function crm.my_sales_level()
+returns text
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select coalesce(
+    (select case p.role
+        when 'admin' then 'write'
+        else coalesce(
+          p.sales_level,
+          case p.role when 'manager' then 'write' when 'director' then 'read' else 'none' end
+        )
+      end
+     from crm.profiles p where p.id = auth.uid()),
+    'none');
+$$;
+
+create or replace function crm.my_finance_level()
+returns text
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select coalesce(
+    (select case p.role
+        when 'admin' then 'write'
+        else coalesce(
+          p.finance_level,
+          case p.role when 'accountant' then 'write' when 'director' then 'read' else 'none' end
+        )
+      end
+     from crm.profiles p where p.id = auth.uid()),
+    'none');
+$$;
+
+-- Какие здания видит человек: 'all' / 'assigned' (назначенные ему ЖК) / 'none'.
+-- То же правило, что в crm.can_view_building(), но для всех зданий сразу.
+create or replace function crm.my_building_scope()
+returns text
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select coalesce(
+    (select case
+        when p.role = 'admin' then 'all'
+        when p.role in ('director', 'accountant') then
+          case when crm.has_role() or crm.can_view_finance() then 'all' else 'none' end
+        else 'assigned'
+      end
+     from crm.profiles p where p.id = auth.uid()),
+    'none');
+$$;
+
+grant execute on function crm.my_building_scope() to authenticated;
+
+-- Политики чтения: константы запроса считаются один раз.
+drop policy if exists "clients_select" on crm.clients;
+create policy "clients_select" on crm.clients
+  for select to authenticated
+  using ((select crm.has_role()));
+
+drop policy if exists "objects_select" on crm.objects;
+create policy "objects_select" on crm.objects
+  for select to authenticated
+  using (
+    (select crm.has_role())
+    and (
+      building_id is null
+      or (select crm.my_building_scope()) = 'all'
+      or ((select crm.my_building_scope()) = 'assigned'
+          and building_id in (select mb.building_id from crm.manager_buildings mb
+                              where mb.user_id = (select auth.uid())))
+    )
+  );
+
+drop policy if exists "contracts_select" on crm.contracts;
+create policy "contracts_select" on crm.contracts
+  for select to authenticated
+  using (
+    (select crm.has_role())
+    and exists (
+      select 1 from crm.objects o
+      where o.id = contracts.object_id
+        and (
+          o.building_id is null
+          or (select crm.my_building_scope()) = 'all'
+          or ((select crm.my_building_scope()) = 'assigned'
+              and o.building_id in (select mb.building_id from crm.manager_buildings mb
+                                    where mb.user_id = (select auth.uid())))
+        )
+    )
+  );
+
+drop policy if exists "contract_payments_select" on crm.contract_payments;
+create policy "contract_payments_select" on crm.contract_payments
+  for select to authenticated
+  using (
+    (select crm.has_role())
+    and exists (
+      select 1
+      from crm.contracts c
+      join crm.objects o on o.id = c.object_id
+      where c.id = contract_payments.contract_id
+        and (
+          o.building_id is null
+          or (select crm.my_building_scope()) = 'all'
+          or ((select crm.my_building_scope()) = 'assigned'
+              and o.building_id in (select mb.building_id from crm.manager_buildings mb
+                                    where mb.user_id = (select auth.uid())))
+        )
+    )
+  );
+
+-- «Должники»: тот же результат, но без двух подзапросов на каждого должника.
+create or replace function crm.overdue_contracts(p_building_id uuid default null)
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  client_phone text,
+  object_id uuid,
+  object_name text,
+  object_block text,
+  object_floor integer,
+  building_id uuid,
+  building_name text,
+  currency text,
+  missed_count int,
+  total_overdue numeric,
+  remaining_total numeric,
+  earliest_due date,
+  latest_due date,
+  last_payment_date date,
+  monthly_payment numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with od as (
+    select oi.contract_id,
+           (count(*))::int as missed,
+           sum(oi.unpaid_amount) as overdue,
+           min(oi.due_date) as earliest_due,
+           max(oi.due_date) as latest_due
+    from crm.overdue_installments oi
+    where oi.due_date < current_date
+      and oi.unpaid_amount > 0.005
+    group by oi.contract_id
+  ),
+  pay as (
+    select p.contract_id,
+           -- дата последнего РЕАЛЬНОГО поступления (строка с paid = true)
+           max(coalesce(p.paid_date, p.due_date)) filter (where p.paid) as last_payment_date,
+           -- обычный ежемесячный платёж: медиана неоплаченных строк графика
+           percentile_disc(0.5) within group (order by p.amount) filter (where not p.paid) as monthly_payment
+    from crm.contract_payments p
+    where p.contract_id in (select od.contract_id from od)
+    group by p.contract_id
+  )
+  select
+    c.id,
+    c.number,
+    cl.id,
+    coalesce(cl.name, '—'),
+    cl.phone,
+    o.id,
+    o.name,
+    o.block,
+    o.floor,
+    o.building_id,
+    b.name,
+    c.currency::text,
+    od.missed,
+    od.overdue,
+    greatest(c.amount - c.paid_amount, 0),
+    od.earliest_due,
+    od.latest_due,
+    pay.last_payment_date,
+    pay.monthly_payment
+  from od
+  join crm.contracts c on c.id = od.contract_id
+  left join crm.clients   cl on cl.id = c.client_id
+  left join crm.objects   o  on o.id = c.object_id
+  left join crm.buildings b  on b.id = o.building_id
+  left join pay on pay.contract_id = od.contract_id
+  where p_building_id is null or o.building_id = p_building_id
+  order by od.overdue desc, c.id;
+$$;
+
+grant execute on function crm.overdue_contracts(uuid) to authenticated;
+
+-- Без SET search_path (все имена и так с префиксом crm.), чтобы функцию можно
+-- было встроить в запрос.
+create or replace function crm.contract_baseline_plan(p_contract_id uuid)
+returns table (seq integer, due_date date, amount numeric, cum numeric, down numeric)
+language sql
+stable
+security invoker
+as $$
+  with c as (
+    select id, amount, installment_months as n,
+           coalesce(signed_date, created_at::date) as d0
+    from crm.contracts where id = p_contract_id and installment_months > 0
+  ),
+  dn as (
+    select c.id, c.n, c.d0,
+           least(coalesce(sum(p.amount), 0), c.amount) as down,
+           c.amount - least(coalesce(sum(p.amount), 0), c.amount) as total
+    from c
+    left join crm.contract_payments p
+      on p.contract_id = c.id and p.paid and coalesce(p.paid_date, p.due_date) <= c.d0
+    group by c.id, c.n, c.d0, c.amount
+  )
+  select g.i,
+         (dn.d0 + (g.i || ' month')::interval)::date,
+         case when g.i < dn.n then floor(dn.total / dn.n * 100) / 100
+              else round((dn.total - floor(dn.total / dn.n * 100) / 100 * (dn.n - 1)) * 100) / 100 end,
+         case when g.i < dn.n then floor(dn.total / dn.n * 100) / 100 * g.i else dn.total end,
+         dn.down
+  from dn, generate_series(1, dn.n) g(i);
+$$;
+
+grant execute on function crm.contract_baseline_plan(uuid) to authenticated;
+
+notify pgrst, 'reload schema';

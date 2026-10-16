@@ -567,13 +567,15 @@ export default function DebtorsPage() {
 
       {failure && (
         <div className="rounded-lg border border-[var(--wash-rose-border)] bg-[var(--wash-rose)] px-4 py-3 text-sm text-[var(--wash-rose-ink)]">
-          <p className="font-semibold">{t.debtors.loadFailed}</p>
+          <p className="font-semibold">
+            {/statement timeout|canceling statement/i.test(failure) ? t.debtors.loadTimeout : t.debtors.loadFailed}
+          </p>
           <p className="mt-1 text-xs opacity-80">{failure}</p>
         </div>
       )}
 
       {/* Administrator only, and only when some schedule looks pushed forward. */}
-      <ShiftedSchedules onRestored={() => setReloadNonce((n) => n + 1)} />
+      <ShiftedSchedules ready={configured && !loading} onRestored={() => setReloadNonce((n) => n + 1)} />
 
       {/* One panel PER CURRENCY, each on its own scale.
           The previous version put every building on a single axis regardless of
@@ -589,35 +591,41 @@ export default function DebtorsPage() {
               key={currency}
               className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
             >
-              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <div className="mb-4 flex flex-col gap-0.5">
                 <p className="text-sm font-semibold text-[var(--ink-2)]">
                   {t.debtors.chartTitle} · {currency}
                 </p>
                 {total && (
-                  <span className="text-xs text-[var(--ink-4)]">
+                  <p className="text-xs text-[var(--ink-4)]">
+                    {t.debtors.chartTotalLabel}{" "}
                     <span className="font-semibold text-[var(--wash-rose-ink)]">
                       {formatCurrency(total.overdue, currency)}
-                    </span>{" "}
-                    <span className="text-[var(--ink-5)]">
-                      / {formatCurrency(total.remaining, currency)}
                     </span>
-                  </span>
+                    {total.remaining > 0 && (
+                      <> · {t.debtors.chartOfRemaining.replace("{sum}", formatCurrency(total.remaining, currency))}</>
+                    )}
+                  </p>
                 )}
               </div>
               <HBarChart
                 data={cRows.map((b) => ({
                   label: b.name,
+                  // One bar per ЖК, as long as the money overdue there; the
+                  // share of the remaining balance is said in words under it
+                  // (an earlier two-layer bar -- overdue inside the whole
+                  // balance -- was read as noise).
                   value: b.overdue,
-                  // Track sized to the whole remaining balance, overdue
-                  // filled in as a share of it -- see chartHint below,
-                  // which this now actually matches.
-                  total: b.remaining > 0 ? b.remaining : b.overdue,
                   hue: STATUS_HUES.sold,
-                  hint: t.debtors.contractsCount.replace("{n}", String(b.contracts)),
+                  hint: t.debtors.chartRowHint
+                    .replace("{n}", String(b.contracts))
+                    .replace(
+                      "{pct}",
+                      String(b.remaining > 0 ? Math.min(100, Math.max(1, Math.round((b.overdue / b.remaining) * 100))) : 100)
+                    ),
                 }))}
                 formatValue={(n) => formatCurrency(n, currency)}
               />
-              {total && <p className="mt-3 text-xs text-[var(--ink-5)]">{t.debtors.chartHint}</p>}
+              <p className="mt-3 text-xs text-[var(--ink-5)]">{t.debtors.chartHint}</p>
             </div>
           ))}
         </div>
