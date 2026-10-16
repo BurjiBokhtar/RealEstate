@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { claimSession } from "@/lib/auth/deviceSession";
@@ -17,11 +17,18 @@ const FIELD_CLASS =
 
 // Why the person is back at the sign-in screen (?reason=...): they were signed
 // out because the account was opened on another device, or because the PIN was
-// entered wrong too many times. Its own component inside <Suspense>: reading the
-// query string makes this part client-rendered on an otherwise static page.
+// entered wrong too many times. The page is prerendered, so the server never
+// knows the query string: it renders nothing, and the browser reads it once the
+// page is hydrated (no mismatch, no Suspense boundary needed).
+const noopSubscribe = () => () => {};
+
 function ReasonNotice() {
   const { t } = useLocale();
-  const reason = useSearchParams().get("reason");
+  const reason = useSyncExternalStore(
+    noopSubscribe,
+    () => new URLSearchParams(window.location.search).get("reason"),
+    () => null
+  );
   const text = reason === "other-device" ? t.login.otherDevice : reason === "pin" ? t.login.pinLocked : "";
   if (!text) return null;
   return (
@@ -174,9 +181,7 @@ export default function LoginPage() {
             error. Signing in is impossible either way, but this way the
             reason is on screen. */}
         {!configured && <SetupNotice />}
-        <Suspense fallback={null}>
-          <ReasonNotice />
-        </Suspense>
+        <ReasonNotice />
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.login.email}</span>
