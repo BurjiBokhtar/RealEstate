@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BackLink } from "@/components/BackLink";
 import { createClient } from "@/lib/supabase/client";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -180,6 +180,75 @@ function actionLabel(action: string, t: Dictionary): string {
   }
 }
 
+// One action in the program often writes many rows at once -- generating or
+// recalculating a payment schedule is 24 "Платёж created" rows in the same
+// second. Rows of the SAME kind (create / delete), by the same person, about the
+// same contract and within a few seconds of each other are shown as ONE line;
+// the individual rows stay one click away. Edits (update) are never merged: two
+// edits are two different changes.
+type AuditGroup = { key: string; entries: AuditEntry[] };
+const GROUPABLE = new Set(["create", "insert", "delete"]);
+const GROUP_WINDOW_MS = 10_000;
+
+function groupEntries(list: AuditEntry[]): AuditGroup[] {
+  const groups: AuditGroup[] = [];
+  for (const e of list) {
+    const last = groups[groups.length - 1];
+    const first = last?.entries[0];
+    if (
+      last &&
+      first &&
+      GROUPABLE.has(e.action) &&
+      e.action === first.action &&
+      e.entity_type === first.entity_type &&
+      e.actor_id === first.actor_id &&
+      contextLine(e.details) === contextLine(first.details) &&
+      Math.abs(new Date(first.created_at).getTime() - new Date(e.created_at).getTime()) <= GROUP_WINDOW_MS
+    ) {
+      last.entries.push(e);
+    } else {
+      groups.push({ key: e.id, entries: [e] });
+    }
+  }
+  return groups;
+}
+
+// "Платежей: 24 по 6 500 TJS" / "Сроки: 16.07.2026 — 16.12.2027" for a merged
+// run of payment rows; other kinds just say how many rows there are.
+function groupSummary(entries: AuditEntry[], t: Dictionary): string[] {
+  if (entries[0].entity_type !== "contract_payment") {
+    return [t.auditLog.groupRecords.replace("{n}", String(entries.length))];
+  }
+  const ctx = entries[0].details?._context;
+  const currency = isAuditContext(ctx) ? ctx.currency : undefined;
+  const money = (n: number) => (currency ? formatCurrency(n, currency) : String(n));
+  const amounts = entries
+    .map((e) => Number(e.details?.amount))
+    .filter((n) => Number.isFinite(n));
+  const lines: string[] = [];
+  if (amounts.length > 0) {
+    const same = amounts.every((a) => a === amounts[0]);
+    lines.push(
+      same
+        ? t.auditLog.groupPaymentsSame.replace("{n}", String(entries.length)).replace("{amount}", money(amounts[0]))
+        : t.auditLog.groupPaymentsSum
+            .replace("{n}", String(entries.length))
+            .replace("{sum}", money(amounts.reduce((a, b) => a + b, 0)))
+    );
+  } else {
+    lines.push(t.auditLog.groupRecords.replace("{n}", String(entries.length)));
+  }
+  const dates = entries
+    .map((e) => e.details?.due_date)
+    .filter((d): d is string => typeof d === "string" && d !== "")
+    .sort();
+  if (dates.length > 0) {
+    const show = (d: string) => new Date(d).toLocaleDateString("ru-RU");
+    lines.push(t.auditLog.groupTerms.replace("{from}", show(dates[0])).replace("{to}", show(dates[dates.length - 1])));
+  }
+  return lines;
+}
+
 export default function AuditLogPage() {
   const { t } = useLocale();
   const { role, loading: roleLoading } = useRole();
@@ -187,6 +256,9 @@ export default function AuditLogPage() {
   const [actors, setActors] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const groups = useMemo(() => groupEntries(entries), [entries]);
+  // Merged lines the administrator opened to see every row.
+  const [opened, setOpened] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -265,7 +337,10 @@ export default function AuditLogPage() {
               </tr>
             </thead>
             <tbody>
-              {entries.map((entry) => {
+              {groups.map((group) => {
+                const entry = group.entries[0];
+                const merged = group.entries.length > 1;
+                const isOpen = opened.has(group.key);
                 const entityLabel =
                   t.auditLog.entityTypes[
                     entry.entity_type as keyof typeof t.auditLog.entityTypes
@@ -279,7 +354,7 @@ export default function AuditLogPage() {
                 const lines = fieldLines(entry.details, t);
                 const reason = reasonLine(entry, t);
                 return (
-                  <tr key={entry.id} className="border-b border-[var(--border-c2)] last:border-0 align-top">
+                  <tr key={group.key} className="border-b border-[var(--border-c2)] last:border-0 align-top">
                     <td className="px-4 py-3 whitespace-nowrap text-[var(--ink-3)]">
                       {new Date(entry.created_at).toLocaleString("ru-RU")}
                     </td>
@@ -294,6 +369,11 @@ export default function AuditLogPage() {
                       >
                         {actionLabel(entry.action, t)}
                       </span>
+                      {merged && (
+                        <span className="ml-1.5 rounded-full bg-[var(--surface-2)] px-2 py-1 text-xs font-semibold text-[var(--ink-3)]">
+                          ×{group.entries.length}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-[var(--ink-2)]">{entityLabel}</td>
                     <td className="px-4 py-3">
@@ -307,7 +387,44 @@ export default function AuditLogPage() {
                               {reason}
                             </p>
                           )}
-                          {lines.length > 0 && (
+                          {merged && (
+                            <>
+                              <ul className="flex flex-col gap-0.5">
+                                {groupSummary(group.entries, t).map((l) => (
+                                  <li key={l} className="text-xs text-[var(--ink-4)]">
+                                    {l}
+                                  </li>
+                                ))}
+                              </ul>
+                              <button
+                                type="button"
+                                aria-expanded={isOpen}
+                                onClick={() =>
+                                  setOpened((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(group.key)) next.delete(group.key);
+                                    else next.add(group.key);
+                                    return next;
+                                  })
+                                }
+                                className="self-start text-xs font-medium text-brand underline-offset-2 hover:underline"
+                              >
+                                {isOpen ? t.auditLog.hideAll : t.auditLog.showAll.replace("{n}", String(group.entries.length))}
+                              </button>
+                              {isOpen && (
+                                <ul className="flex flex-col gap-0.5 border-l-2 border-[var(--border-c)] pl-3">
+                                  {group.entries.map((e) => (
+                                    <li key={e.id} className="text-xs text-[var(--ink-4)]">
+                                      {fieldLines(e.details, t)
+                                        .map((l) => `${l.label}: ${l.text}`)
+                                        .join(" · ")}
+                                    </li>
+                                  ))}
+                                </ul>
+                              )}
+                            </>
+                          )}
+                          {!merged && lines.length > 0 && (
                             <ul className="flex flex-col gap-0.5">
                               {lines.map((l) => (
                                 <li key={l.label} className="text-xs text-[var(--ink-4)]">

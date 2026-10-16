@@ -7598,3 +7598,40 @@ $$;
 grant execute on function crm.undo_restore_schedule(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 083_audit_noise_cleanup.sql
+-- ############################################################
+
+-- ============================================================
+-- 083: разовая чистка журнала событий от «шума» пересчёта графика.
+--
+-- До блока 065 любой пересчёт графика платежей (в том числе старый блок 056 при
+-- запуске этого файла) писал в журнал по записи «Создан · Платёж» на КАЖДУЮ
+-- строку графика -- десятки одинаковых строк за одну секунду, автор
+-- «Неизвестно». Из программы платёж всегда пишется с автором, поэтому запись
+-- о платеже БЕЗ автора могла появиться только от запуска SQL. Эти записи
+-- удаляются ОДИН раз (отметка в crm.applied_fixes) -- повторный запуск файла
+-- ничего больше не трогает, и записи, появившиеся позже, остаются.
+--
+-- Журнал действий людей (с автором) и любые правки не затрагиваются.
+-- ============================================================
+
+create table if not exists crm.applied_fixes (
+  name text primary key,
+  applied_at timestamptz not null default now()
+);
+alter table crm.applied_fixes enable row level security;
+revoke all on crm.applied_fixes from anon, authenticated;
+grant all on crm.applied_fixes to service_role;
+
+do $$
+begin
+  if not exists (select 1 from crm.applied_fixes where name = '083_audit_noise_cleanup') then
+    delete from crm.audit_log
+    where actor_id is null
+      and entity_type = 'contract_payment'
+      and action in ('create', 'insert', 'delete');
+    insert into crm.applied_fixes (name) values ('083_audit_noise_cleanup');
+  end if;
+end $$;
