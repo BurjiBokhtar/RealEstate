@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { useRole } from "@/lib/auth/useRole";
+import { useRole, useAccess } from "@/lib/auth/useRole";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { SetupNotice } from "@/components/SetupNotice";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
@@ -31,6 +31,7 @@ const RENTAL_STATUS_FILTERS: Array<ObjectStatus | "all"> = ["all", "available", 
 export default function RentalsPage() {
   const { t } = useLocale();
   const { role } = useRole();
+  const { canWriteSales } = useAccess();
   const confirm = useConfirm();
   const pathname = usePathname();
   const configured = isSupabaseConfigured();
@@ -334,7 +335,7 @@ export default function RentalsPage() {
                         {t.common.confirmDeleteBtn}
                       </button>
                     )}
-                    {role !== "director" && (
+                    {canWriteSales && (
                       <button
                         type="button"
                         onClick={() => setBookingUnit(unit)}

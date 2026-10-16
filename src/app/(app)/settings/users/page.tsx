@@ -1,10 +1,12 @@
 "use client";
 
+import { useSingleFlight } from "@/lib/useSingleFlight";
 import { useCallback, useEffect, useState } from "react";
 import { BackLink } from "@/components/BackLink";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useRole, type Role } from "@/lib/auth/useRole";
+import { defaultAccess, isFinanceLevel, isLevel, type FinanceLevel, type Level } from "@/lib/auth/access";
 import type { Building } from "@/lib/buildings/types";
 
 // A user in the staff list can be role-less ("none") -- that's a person
@@ -16,6 +18,9 @@ type StaffUser = {
   email: string | null;
   role: StaffRole;
   created_at: string;
+  // Individual overrides of what the role allows; null = "by role".
+  sales_level?: Level | null;
+  finance_level?: FinanceLevel | null;
 };
 
 async function authHeaders() {
@@ -31,6 +36,7 @@ async function authHeaders() {
 
 export default function UsersPage() {
   const { t } = useLocale();
+  const once = useSingleFlight();
   const { role, loading: roleLoading } = useRole();
 
   const [users, setUsers] = useState<StaffUser[]>([]);
@@ -120,6 +126,26 @@ export default function UsersPage() {
     }
   };
 
+  // Individual access: an override of what the role allows in sales or in
+  // finance (null = by role). Goes through an admin-guarded RPC.
+  const handleAccessChange = async (
+    userId: string,
+    next: { sales: Level | null; finance: FinanceLevel | null }
+  ) => {
+    setError(null);
+    const prev = users;
+    setUsers((us) =>
+      us.map((u) => (u.id === userId ? { ...u, sales_level: next.sales, finance_level: next.finance } : u))
+    );
+    const { error: rpcError } = await createClient()
+      .schema("crm")
+      .rpc("set_user_access", { p_user: userId, p_sales: next.sales ?? "", p_finance: next.finance ?? "" });
+    if (rpcError) {
+      setError(rpcError.message);
+      setUsers(prev); // revert
+    }
+  };
+
   const toggleAssignment = async (userId: string, buildingId: string) => {
     const supabase = createClient();
     const has = assignments[userId]?.has(buildingId) ?? false;
@@ -161,6 +187,7 @@ export default function UsersPage() {
     { value: "none", label: t.users.roleNone },
     { value: "manager", label: t.users.roleManager },
     { value: "director", label: t.users.roleDirector },
+    { value: "accountant", label: t.users.roleAccountant },
     { value: "admin", label: t.users.roleAdmin },
   ];
 
@@ -219,12 +246,13 @@ export default function UsersPage() {
               >
                 <option value="manager">{t.users.roleManager}</option>
                 <option value="director">{t.users.roleDirector}</option>
+                <option value="accountant">{t.users.roleAccountant}</option>
                 <option value="admin">{t.users.roleAdmin}</option>
               </select>
             </label>
             <button
               type="button"
-              onClick={handleCreate}
+              onClick={once(handleCreate)}
               disabled={creating || !email || password.length < 6}
               className="h-10 rounded-lg btn-brand px-4 text-sm font-semibold text-white shadow-sm transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-40"
             >
@@ -269,6 +297,7 @@ export default function UsersPage() {
                     setExpandedUser((prev) => (prev === u.id ? null : u.id))
                   }
                   onRoleChange={(r) => handleRoleChange(u.id, r)}
+                  onAccessChange={(next) => handleAccessChange(u.id, next)}
                   onToggleBuilding={(bId) => toggleAssignment(u.id, bId)}
                   t={t}
                 />
@@ -289,6 +318,7 @@ function UserRow({
   expanded,
   onToggleExpand,
   onRoleChange,
+  onAccessChange,
   onToggleBuilding,
   t,
 }: {
@@ -299,19 +329,29 @@ function UserRow({
   expanded: boolean;
   onToggleExpand: () => void;
   onRoleChange: (r: StaffRole) => void;
+  onAccessChange: (next: { sales: Level | null; finance: FinanceLevel | null }) => void;
   onToggleBuilding: (buildingId: string) => void;
   t: ReturnType<typeof useLocale>["t"];
 }) {
+  // Everyone with a role except the admin (whose access cannot be reduced)
+  // gets the access panel: the two levels, and for a manager the buildings.
+  const hasPanel = user.role !== "none" && user.role !== "admin";
+  const base = defaultAccess(user.role);
+  const custom = user.sales_level != null || user.finance_level != null;
   const roleTone: Record<StaffRole, string> = {
     none: "border-[var(--field-border)] text-[var(--ink-5)]",
     manager: "border-[var(--wash-sky-ink)] text-[var(--wash-sky-ink)]",
     director: "border-[var(--wash-amber-ink)] text-[var(--wash-amber-ink)]",
+    accountant: "border-[var(--wash-emerald-ink)] text-[var(--wash-emerald-ink)]",
+    procurement: "border-[var(--wash-rose-ink)] text-[var(--wash-rose-ink)]",
     admin: "border-brand-soft text-brand",
   };
   return (
     <>
       <tr className="border-b border-[var(--border-c2)] last:border-0">
-        <td className="px-4 py-2.5">{user.email}</td>
+        <td className="px-4 py-2.5">
+          {user.email}
+        </td>
         <td className="px-4 py-2.5">
           <select
             value={user.role}
@@ -329,22 +369,67 @@ function UserRow({
           {new Date(user.created_at).toLocaleDateString()}
         </td>
         <td className="px-4 py-2.5">
-          {user.role === "manager" && (
+          {hasPanel && (
             <button
               type="button"
               onClick={onToggleExpand}
+              aria-expanded={expanded}
               className="rounded-lg border border-[var(--field-border)] px-2.5 py-1 text-xs font-semibold text-[var(--ink-2)] transition-all hover:bg-[var(--surface-2)] active:scale-95"
             >
-              {t.users.assignBuildings} ({assigned?.size ?? 0})
+              {t.users.accessButton}
+              {custom && (
+                <span className="ml-1 rounded-full bg-brand-soft px-1.5 py-px text-[10px] font-bold text-brand">
+                  {t.users.customAccess}
+                </span>
+              )}
             </button>
           )}
         </td>
       </tr>
-      {expanded && user.role === "manager" && (
+      {expanded && hasPanel && (
         <tr className="border-b border-[var(--border-c2)]">
-          <td colSpan={4} className="bg-[var(--surface-2)] px-4 py-3">
-            <p className="mb-2 text-xs font-medium text-[var(--ink-4)]">{t.users.assignHint}</p>
-            {buildings.length === 0 ? (
+          <td colSpan={4} className="bg-[var(--surface-2)] px-4 py-4">
+            <p className="text-sm font-semibold text-[var(--ink-1)]">{t.users.accessTitle}</p>
+            <p className="mb-3 mt-0.5 max-w-2xl text-xs leading-snug text-[var(--ink-4)]">{t.users.accessHint}</p>
+            <div className="grid max-w-2xl gap-3 sm:grid-cols-2">
+              {(
+                [
+                  ["sales", t.users.salesAccess, t.users.salesAccessHint, user.sales_level, base.sales],
+                  ["finance", t.users.financeAccess, t.users.financeAccessHint, user.finance_level, base.finance],
+                ] as const
+              ).map(([area, label, hint, current, byRole]) => (
+                <label key={area} className="flex flex-col gap-1">
+                  <span className="text-[13px] font-semibold text-[var(--ink-2)]">{label}</span>
+                  <select
+                    value={current ?? ""}
+                    aria-label={label}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      onAccessChange({
+                        sales: area === "sales" ? (isLevel(raw) ? raw : null) : (user.sales_level ?? null),
+                        finance: area === "finance" ? (isFinanceLevel(raw) ? raw : null) : (user.finance_level ?? null),
+                      });
+                    }}
+                    className="h-10 rounded-lg border border-[var(--field-border)] bg-[var(--field-bg)] px-3 text-sm text-[var(--ink-1)]"
+                  >
+                    <option value="">
+                      {t.users.byRole}: {t.users.levels[byRole].toLowerCase()}
+                    </option>
+                    <option value="none">{t.users.levels.none}</option>
+                    <option value="read">{t.users.levels.read}</option>
+                    <option value="write">{t.users.levels.write}</option>
+                    {area === "finance" && <option value="own">{t.users.levels.own}</option>}
+                  </select>
+                  <span className="text-xs leading-snug text-[var(--ink-5)]">{hint}</span>
+                </label>
+              ))}
+            </div>
+            {user.role === "manager" && (
+              <p className="mb-2 mt-4 text-xs font-medium text-[var(--ink-4)]">
+                {t.users.assignBuildings} ({assigned?.size ?? 0}) — {t.users.assignHint}
+              </p>
+            )}
+            {user.role !== "manager" ? null : buildings.length === 0 ? (
               <p className="text-xs text-[var(--ink-5)]">{t.buildings.empty}</p>
             ) : (
               <div className="flex flex-wrap gap-2">

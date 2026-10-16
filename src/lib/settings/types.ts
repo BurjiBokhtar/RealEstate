@@ -28,6 +28,8 @@ export type Settings = {
   // locally; when they haven't, this is what everyone sees.
   hero_theme: string | null;
   hero_pattern: string | null;
+  // Menu sections the admin hid for everyone (see AppShell).
+  hidden_nav: string[];
   updated_at: string;
 };
 

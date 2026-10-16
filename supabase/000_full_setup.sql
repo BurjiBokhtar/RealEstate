@@ -1039,8 +1039,13 @@ select crm.resync_all_object_statuses();
 
 -- ---------- роли ----------
 alter table crm.profiles drop constraint if exists profiles_role_check;
+-- Перечень ролей здесь должен включать ВСЕ роли, которые появились позже
+-- (блоки 070, 074: 'accountant', 'procurement'): ограничение перепроверяет все
+-- строки, и без этого повторный запуск файла падал бы на уже назначенном
+-- бухгалтере или снабженце.
 alter table crm.profiles
-  add constraint profiles_role_check check (role in ('admin', 'manager', 'director'));
+  add constraint profiles_role_check
+  check (role in ('admin', 'manager', 'director', 'accountant', 'procurement'));
 
 create or replace function crm.my_role()
 returns text
@@ -1989,6 +1994,11 @@ end $$;
 -- Список всех пользователей с их ролью (роль 'none' — если ещё не
 -- назначена). Только для админа. Функция выполняется от владельца БД,
 -- поэтому может читать auth.users, недоступную обычному ключу.
+--
+-- Возвращаемый тип этой функции менялся (блок 070 добавил уровни доступа), а
+-- create or replace не умеет менять тип -- поэтому перед каждым созданием она
+-- удаляется, иначе повторный запуск файла падал бы.
+drop function if exists crm.list_staff();
 create or replace function crm.list_staff()
 returns table (id uuid, email text, role text, created_at timestamptz)
 language plpgsql
@@ -6735,5 +6745,272 @@ notify pgrst, 'reload schema';
 -- ============================================================
 
 alter table crm.settings add column if not exists company_city text;
+
+notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 070_access_levels_hidden_menu.sql
+-- ############################################################
+
+-- 070: права доступа по разделам и скрытие пунктов меню.
+--
+-- ЗАЧЕМ. Роль (менеджер, бухгалтер, директор) раньше жёстко решала, что
+-- человек видит: бухгалтер -- только финансы, менеджер -- только продажи.
+-- Но бывает иначе: бухгалтеру нужно видеть продажи квартир, а
+-- менеджеру по продажам -- финансы. Теперь у каждого сотрудника два
+-- уровня доступа, и администратор может изменить любой из них:
+--   * продажи квартир (клиенты, договоры, шахматка, объекты, задачи,
+--     должники, аренда) и
+--   * финансы;
+-- значения: 'none' -- нет, 'read' -- только просмотр, 'write' -- полный.
+-- Пока администратор ничего не менял (значение пустое), уровень берётся
+-- по роли, ровно как было: менеджер -- продажи полный; директор -- всё
+-- на просмотр; бухгалтер -- финансы полный; админ -- всё, и это нельзя
+-- отнять. Смена роли сбрасывает индивидуальные уровни.
+--
+-- Замки прежние (RLS), просто has_role()/can_write()/can_view_finance()/
+-- can_manage_finance() теперь читают уровни, а не роль напрямую.
+--
+-- Плюс: crm.settings.hidden_nav -- пункты бокового меню, которые админ
+-- скрыл для всех (например «Задачи», пока они не нужны).
+--
+-- Идемпотентно -- повторный запуск ничего не ломает.
+-- ============================================================
+
+alter table crm.profiles add column if not exists sales_level text;
+alter table crm.profiles add column if not exists finance_level text;
+
+alter table crm.profiles drop constraint if exists profiles_sales_level_check;
+alter table crm.profiles
+  add constraint profiles_sales_level_check
+  check (sales_level is null or sales_level in ('none', 'read', 'write'));
+alter table crm.profiles drop constraint if exists profiles_finance_level_check;
+alter table crm.profiles
+  add constraint profiles_finance_level_check
+  check (finance_level is null or finance_level in ('none', 'own', 'read', 'write'));
+
+-- Эффективные уровни: индивидуальное значение, иначе значение по роли.
+create or replace function crm.my_sales_level()
+returns text
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select case
+    when crm.my_role() = 'admin' then 'write'
+    else coalesce(
+      (select p.sales_level from crm.profiles p where p.id = auth.uid()),
+      case crm.my_role()
+        when 'manager' then 'write'
+        when 'director' then 'read'
+        else 'none'
+      end
+    )
+  end;
+$$;
+
+create or replace function crm.my_finance_level()
+returns text
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select case
+    when crm.my_role() = 'admin' then 'write'
+    else coalesce(
+      (select p.finance_level from crm.profiles p where p.id = auth.uid()),
+      case crm.my_role()
+        when 'accountant' then 'write'
+        when 'director' then 'read'
+        else 'none'
+      end
+    )
+  end;
+$$;
+
+grant execute on function crm.my_sales_level() to authenticated;
+grant execute on function crm.my_finance_level() to authenticated;
+
+-- Видит продажи (клиенты, договоры, квартиры, задачи...).
+create or replace function crm.has_role()
+returns boolean
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select crm.my_sales_level() in ('read', 'write');
+$$;
+
+-- Меняет продажи (создаёт клиентов, договоры, принимает платежи...).
+create or replace function crm.can_write()
+returns boolean
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select crm.my_sales_level() = 'write';
+$$;
+
+create or replace function crm.can_view_finance()
+returns boolean
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select crm.my_finance_level() in ('read', 'write');
+$$;
+
+create or replace function crm.can_manage_finance()
+returns boolean
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select crm.my_finance_level() = 'write';
+$$;
+
+-- Админ видит все здания; директор и бухгалтер -- все, но только если им открыт
+-- хоть какой-то раздел (продажи или финансы); остальные -- назначенные.
+create or replace function crm.can_view_building(p_building_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = crm, public
+stable
+as $$
+  select case
+    when crm.my_role() = 'admin' then true
+    when crm.my_role() in ('director', 'accountant') then crm.has_role() or crm.can_view_finance()
+    else exists (
+      select 1 from crm.manager_buildings mb
+      where mb.user_id = auth.uid() and mb.building_id = p_building_id
+    )
+  end;
+$$;
+
+-- Названия зданий нужны и тем, кто видит финансы (для выбора здания и
+-- отчётов), даже если продажи им закрыты; квартиры при этом остаются под
+-- прежним замком (objects_select требует продажи).
+drop policy if exists "buildings_select" on crm.buildings;
+create policy "buildings_select" on crm.buildings
+  for select to authenticated
+  using (crm.can_view_building(id) or crm.can_view_finance());
+
+-- Список сотрудников -- теперь с индивидуальными уровнями (пусто = по роли).
+drop function if exists crm.list_staff();
+create or replace function crm.list_staff()
+returns table (
+  id uuid, email text, role text, created_at timestamptz,
+  sales_level text, finance_level text
+)
+language plpgsql
+security definer
+set search_path = crm, public
+stable
+as $$
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может видеть список сотрудников';
+  end if;
+  return query
+    select u.id,
+           u.email::text,
+           coalesce(p.role, 'none') as role,
+           u.created_at,
+           p.sales_level,
+           p.finance_level
+    from auth.users u
+    left join crm.profiles p on p.id = u.id
+    order by u.created_at asc;
+end;
+$$;
+
+grant execute on function crm.list_staff() to authenticated;
+
+-- Смена роли сбрасывает индивидуальные уровни: новая роль -- новые права
+-- по умолчанию, а не остатки настроек от прежней.
+create or replace function crm.set_user_role(p_user uuid, p_role text)
+returns void
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может менять роли';
+  end if;
+  if p_role not in ('admin', 'manager', 'director', 'accountant', 'none') then
+    raise exception 'Неизвестная роль: %', p_role;
+  end if;
+  if p_user = auth.uid() and p_role <> 'admin' then
+    raise exception 'Нельзя снять роль администратора с самого себя';
+  end if;
+
+  if p_role = 'none' then
+    delete from crm.profiles where id = p_user;
+  else
+    insert into crm.profiles (id, role)
+    values (p_user, p_role)
+    on conflict (id) do update
+      set role = excluded.role,
+          sales_level = case when crm.profiles.role is distinct from excluded.role
+                             then null else crm.profiles.sales_level end,
+          finance_level = case when crm.profiles.role is distinct from excluded.role
+                               then null else crm.profiles.finance_level end;
+  end if;
+end;
+$$;
+
+grant execute on function crm.set_user_role(uuid, text) to authenticated;
+
+-- Индивидуальный доступ: пустая строка/null = «по роли».
+create or replace function crm.set_user_access(p_user uuid, p_sales text, p_finance text)
+returns void
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_sales text := nullif(p_sales, '');
+  v_finance text := nullif(p_finance, '');
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может менять доступ';
+  end if;
+  if v_sales is not null and v_sales not in ('none', 'read', 'write') then
+    raise exception 'Неизвестный уровень: %', v_sales;
+  end if;
+  if v_finance is not null and v_finance not in ('none', 'read', 'write') then
+    raise exception 'Неизвестный уровень: %', v_finance;
+  end if;
+
+  update crm.profiles
+  set sales_level = v_sales, finance_level = v_finance
+  where id = p_user;
+  if not found then
+    raise exception 'У сотрудника ещё нет роли';
+  end if;
+
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'update', 'staff_access', p_user,
+    jsonb_build_object(
+      'sales_level', coalesce(v_sales, 'role'),
+      'finance_level', coalesce(v_finance, 'role')
+    )
+  );
+end;
+$$;
+
+grant execute on function crm.set_user_access(uuid, text, text) to authenticated;
+
+-- ---------- пункты меню, скрытые администратором ----------
+alter table crm.settings add column if not exists hidden_nav text[] not null default '{}';
 
 notify pgrst, 'reload schema';

@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const { email, password, role } = (await request.json()) as {
     email: string;
     password: string;
-    role: "admin" | "manager" | "director";
+    role: "admin" | "manager" | "director" | "accountant" | "procurement";
   };
 
   if (!email || !password) {
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     .from("profiles")
     .upsert({
       id: data.user.id,
-      role: role === "admin" || role === "director" ? role : "manager",
+      role: role === "admin" || role === "director" || role === "accountant" || role === "procurement" ? role : "manager",
     });
 
   return NextResponse.json({ id: data.user.id, email: data.user.email });
@@ -76,9 +76,9 @@ export async function PATCH(request: Request) {
 
   const { userId, role } = (await request.json()) as {
     userId: string;
-    role: "admin" | "manager" | "director";
+    role: "admin" | "manager" | "director" | "accountant" | "procurement";
   };
-  if (!userId || !["admin", "manager", "director"].includes(role)) {
+  if (!userId || !["admin", "manager", "director", "accountant", "procurement"].includes(role)) {
     return NextResponse.json({ error: "Invalid userId/role" }, { status: 400 });
   }
 

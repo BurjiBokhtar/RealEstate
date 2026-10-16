@@ -15,6 +15,7 @@ import { HERO_THEMES, HERO_PATTERNS } from "@/components/HeroThemeSwitcher";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useRole } from "@/lib/auth/useRole";
 import { ChangePasswordCard } from "@/components/ChangePasswordCard";
+import { NavVisibility } from "@/components/settings/NavVisibility";
 import { CalendarIcon, DocumentIcon, TaskIcon, WarningIcon } from "@/components/icons";
 import type { SettingsInput } from "@/lib/settings/types";
 
@@ -548,6 +549,18 @@ export default function SettingsPage() {
           <SmsScheduler
             onMessage={(text, ok) => setToast({ message: text, type: ok ? "success" : "error" })}
           />
+        </Accordion>
+
+        <Accordion
+          title={t.settings.menu.title}
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-4 w-4">
+              <path d="M4 6h16M4 12h16M4 18h10" />
+            </svg>
+          }
+        >
+          <span className="-mt-2 text-xs text-[var(--ink-5)]">{t.settings.menu.hint}</span>
+          <NavVisibility />
         </Accordion>
       </div>
 

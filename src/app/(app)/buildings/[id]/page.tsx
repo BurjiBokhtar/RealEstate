@@ -32,7 +32,7 @@ import { IconAction, IconToolbar } from "@/components/ActionBar";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
 import type { Building } from "@/lib/buildings/types";
 import type { ObjectStatus, PropertyObject } from "@/lib/objects/types";
-import { useRole } from "@/lib/auth/useRole";
+import { useRole, useAccess } from "@/lib/auth/useRole";
 
 export default function BuildingDetailPage() {
   const { t } = useLocale();
@@ -88,6 +88,7 @@ export default function BuildingDetailPage() {
     type: "success",
   });
   const { role } = useRole();
+  const { canWriteSales } = useAccess();
 
   const pushUndo = (label: string, run: () => Promise<void>) =>
     setUndoStack((s) => [...s.slice(-9), { label, run }]);
@@ -353,7 +354,7 @@ export default function BuildingDetailPage() {
   // and recomputes the status, so a second right-click always frees the
   // unit back up.
   const handleQuickBook = async (unit: PropertyObject) => {
-    if (role === "director") return;
+    if (!canWriteSales) return;
     if (pendingQuickBook.has(unit.id)) return;
     const existing = contractsByUnit[unit.id];
     if (existing) {
@@ -579,7 +580,7 @@ export default function BuildingDetailPage() {
             editMode={editMode}
             units={saleUnits}
             contractsByUnit={contractsByUnit}
-            readOnly={role === "director"}
+            readOnly={!canWriteSales}
             onBookUnit={setBookingUnit}
             onQuickBook={handleQuickBook}
             onCancelQuickBook={handleCancelQuickBook}

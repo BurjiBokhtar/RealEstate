@@ -25,7 +25,7 @@ import { MoneyPairValue, type MoneyPair } from "@/components/MoneyPairValue";
 import { CONTRACT_STATUS_COLORS } from "@/lib/contracts/format";
 import { unitLabel } from "@/lib/objects/format";
 import { apartmentNumbersForBuildings } from "@/lib/buildings/apartmentNumbersFor";
-import { useRole } from "@/lib/auth/useRole";
+import { useRole, useAccess } from "@/lib/auth/useRole";
 import type { Client, ClientInput } from "@/lib/clients/types";
 import type { Contract, ContractInput, ContractPayment } from "@/lib/contracts/types";
 
@@ -88,6 +88,7 @@ export default function ClientDetailPage() {
   const params = useParams<{ id: string }>();
   const configured = isSupabaseConfigured();
   const { role } = useRole();
+  const { canWriteSales } = useAccess();
   const confirm = useConfirm();
 
   // Seeded from `configured` rather than set from inside the effect: the
@@ -380,7 +381,7 @@ export default function ClientDetailPage() {
     },
   ];
 
-  const readOnly = role === "director";
+  const readOnly = !canWriteSales;
 
   const paymentsByContract = payments.reduce<Record<string, ContractPayment[]>>((acc, p) => {
     (acc[p.contract_id] ??= []).push(p);
@@ -720,7 +721,7 @@ export default function ClientDetailPage() {
                                       onClick={() => setPricingContract(c)}
                                     />
                                   )}
-                                  {role !== "director" && (
+                                  {canWriteSales && (
                                     <IconAction
                                       label={
                                         editingContractId === c.id

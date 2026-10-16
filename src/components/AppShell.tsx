@@ -7,6 +7,7 @@ import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { createClient } from "@/lib/supabase/client";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useAuth } from "@/lib/auth/useRole";
+import { canView } from "@/lib/auth/access";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -65,13 +66,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // Role AND e-mail come from the same shared snapshot -- the shell used to
   // fire its own auth.getUser() on top of useRole()'s, for the one string it
   // prints in the sidebar footer.
-  const { role, loading: roleLoading, email: userEmail } = useAuth();
+  const { role, access, loading: roleLoading, email: userEmail } = useAuth();
   // Settings (company data, staff accounts, audit log) is admin territory --
   // the pages themselves refuse non-admins, but showing the menu item just
   // leads staff to an "access denied" dead end. RLS stays the real lock.
-  const visibleNavItems = navItems.filter(
-    (item) => item.key !== "settings" || role === "admin"
-  );
+  // What the person may open comes from their access (role default + what the
+  // administrator granted in Settings -> Сотрудники): the sections need a sales
+  // level, Settings is the administrator's. On top of that the administrator can
+  // hide sections for everyone (Settings -> Меню) -- hidden means "not in the
+  // menu", the page itself is still reachable by its address. While the role is
+  // still loading the menu is shown, as it always was, so the sidebar does not
+  // flash empty.
+  const hiddenNav = new Set(settings.hidden_nav ?? []);
+  const canSales = roleLoading ? true : canView(access.sales);
+  const visibleNavItems = navItems.filter((item) => {
+    if (item.key === "settings") return role === "admin";
+    return canSales && (item.key === "dashboard" || !hiddenNav.has(item.key));
+  });
   const pathname = usePathname();
   const router = useRouter();
   const brandName = settings.company_name || t.appName;
@@ -102,8 +113,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // A signed-in user with no assigned role gets NO app -- just a "waiting for
   // access" screen and a sign-out button. Server-side RLS already denies them
   // data; this stops the shell (and any readable list) from showing at all
-  // until an admin grants them a role.
-  if (!roleLoading && role === "none") {
+  // until an admin grants them a role -- or when every area was switched off for
+  // them (Settings -> Сотрудники -> Доступ).
+  if (!roleLoading && (role === "none" || !canView(access.sales))) {
     return (
       <div className="hero-gradient hero-panel flex min-h-screen w-full items-center justify-center p-6 text-white">
         <div className="w-full max-w-md rounded-2xl bg-white/10 p-8 text-center backdrop-blur-sm">
@@ -251,7 +263,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </span>
           </Link>
           <div className="flex shrink-0 items-center gap-2">
-            <QuickSearch />
+            {canSales && <QuickSearch />}
             <div className="flex items-center gap-1 rounded-full border border-[var(--border-c)] p-1 text-sm">
               {(["ru", "tj"] as Locale[]).map((l) => (
                 <button

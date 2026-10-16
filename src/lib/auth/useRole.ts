@@ -2,8 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { NO_ACCESS, canView, canWrite, effectiveAccess, isOwnOnly, type Access } from "@/lib/auth/access";
 
-export type Role = "admin" | "manager" | "director";
+export type Role = "admin" | "manager" | "director" | "accountant" | "procurement";
 // A signed-in user who has NOT been given a role yet (no profiles row) is
 // "none": they can authenticate but must not see or touch anything until an
 // admin assigns them a role. Distinct from the assignable staff roles.
@@ -13,6 +14,8 @@ export type AuthSnapshot = {
   userId: string | null;
   email: string | null;
   role: RoleOrNone;
+  /** What the person may do in sales and in finance (role default + admin overrides). */
+  access: Access;
   loading: boolean;
 };
 
@@ -36,7 +39,7 @@ export type AuthSnapshot = {
 // still verifies the token server-side on every request.
 // ---------------------------------------------------------------------------
 
-const INITIAL: AuthSnapshot = { userId: null, email: null, role: "none", loading: true };
+const INITIAL: AuthSnapshot = { userId: null, email: null, role: "none", access: NO_ACCESS, loading: true };
 
 let snapshot: AuthSnapshot = INITIAL;
 const listeners = new Set<() => void>();
@@ -48,6 +51,8 @@ function publish(next: AuthSnapshot) {
     snapshot.userId === next.userId &&
     snapshot.email === next.email &&
     snapshot.role === next.role &&
+    snapshot.access.sales === next.access.sales &&
+    snapshot.access.finance === next.access.finance &&
     snapshot.loading === next.loading
   ) {
     // Identical snapshot -- don't hand consumers a new object, or
@@ -65,30 +70,42 @@ async function load() {
   } = await supabase.auth.getSession();
   const user = session?.user ?? null;
   if (!user) {
-    publish({ userId: null, email: null, role: "none", loading: false });
+    publish({ userId: null, email: null, role: "none", access: NO_ACCESS, loading: false });
     return;
   }
-  const { data: profile } = await supabase
+  // The two access columns exist only once the database has been updated. If
+  // asking for them fails, ask for the role alone -- never lock everyone out
+  // because the program is a step ahead of the database.
+  type ProfileRow = { role?: string; sales_level?: string | null; finance_level?: string | null };
+  const withLevels = await supabase
     .schema("crm")
     .from("profiles")
-    .select("role")
+    .select("role, sales_level, finance_level")
     .eq("id", user.id)
     .maybeSingle();
+  let profile = withLevels.data as ProfileRow | null;
+  if (withLevels.error) {
+    const roleOnly = await supabase.schema("crm").from("profiles").select("role").eq("id", user.id).maybeSingle();
+    profile = roleOnly.data as ProfileRow | null;
+  }
   // Only an explicit, recognised role grants access. No profile row (or an
   // unknown value) means "none" -- the app is blocked for them until an
   // admin assigns a role. Never silently fall back to "manager".
-  const r = (profile as { role?: string } | null)?.role;
+  const r = profile?.role;
+  const role: RoleOrNone =
+    r === "admin" || r === "director" || r === "manager" || r === "accountant" || r === "procurement" ? r : "none";
   publish({
     userId: user.id,
     email: user.email ?? null,
-    role: r === "admin" || r === "director" || r === "manager" ? r : "none",
+    role,
+    access: role === "none" ? NO_ACCESS : effectiveAccess(role, profile?.sales_level, profile?.finance_level),
     loading: false,
   });
 }
 
 // Concurrent callers share one in-flight request instead of each firing their
 // own copy of the same two queries.
-export function refreshAuth(): Promise<void> {
+function refreshAuth(): Promise<void> {
   if (inflight) return inflight;
   inflight = load().finally(() => {
     inflight = null;
@@ -130,4 +147,21 @@ export function useAuth(): AuthSnapshot {
 export function useRole(): { role: RoleOrNone; loading: boolean } {
   const { role, loading } = useAuth();
   return { role, loading };
+}
+
+// What the signed-in person may do, ready to use: view/write per area.
+export function useAccess() {
+  const { access, role, loading } = useAuth();
+  return {
+    loading,
+    role,
+    sales: access.sales,
+    finance: access.finance,
+    canViewSales: canView(access.sales),
+    canWriteSales: canWrite(access.sales),
+    canViewFinance: canView(access.finance),
+    canManageFinance: canWrite(access.finance),
+    /** Buys for the company: sees and enters only their own expenses. */
+    financeOwn: isOwnOnly(access.finance),
+  };
 }

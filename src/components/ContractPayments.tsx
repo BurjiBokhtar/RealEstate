@@ -10,7 +10,7 @@ import { formatShortDate } from "@/lib/formatDate";
 import { SendActions } from "@/components/SendActions";
 import { AddButton } from "@/components/AddButton";
 import { receiptNumberFor } from "@/lib/contracts/receiptNumber";
-import { useRole } from "@/lib/auth/useRole";
+import { useRole, useAccess } from "@/lib/auth/useRole";
 import type { Contract, ContractPayment } from "@/lib/contracts/types";
 
 function addMonths(dateStr: string, months: number) {
@@ -64,6 +64,7 @@ export function ContractPayments({
   const { t } = useLocale();
   const confirm = useConfirm();
   const { role } = useRole();
+  const { canWriteSales } = useAccess();
   const [payments, setPayments] = useState<ContractPayment[]>([]);
   const [generating, setGenerating] = useState(false);
   const [newAmount, setNewAmount] = useState("");
@@ -219,7 +220,7 @@ export function ContractPayments({
   const payBounds = DATE_BOUNDS.past();
   const payDateInvalid = !isDateInRange(newDate, payBounds.min, payBounds.max);
 
-  const readOnly = role === "director";
+  const readOnly = !canWriteSales;
 
   // Received money (receipts), newest first; the plan stays due-date
   // ordered because receipt numbers derive from that ordering.
@@ -268,7 +269,7 @@ export function ContractPayments({
               .replace("{plan}", formatCurrency(unpaidPlanTotal, contract.currency))
               .replace("{remaining}", formatCurrency(remainingDebt, contract.currency))}
           </p>
-          {(role === "admin" || role === "manager") && contract.installment_months && (
+          {canWriteSales && contract.installment_months && (
             <button
               type="button"
               onClick={handleRegenerate}

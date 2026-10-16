@@ -97,11 +97,16 @@ function formatFieldValue(
 ): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? t.auditLog.yes : t.auditLog.no;
+  if ((key === "sales_level" || key === "finance_level") && typeof value === "string") {
+    return value === "role"
+      ? t.users.byRole
+      : (t.users.levels[value as keyof typeof t.users.levels] ?? value);
+  }
   if (/(_date|_at)$/.test(key)) {
     const d = new Date(String(value));
     if (!Number.isNaN(d.getTime())) return d.toLocaleDateString("ru-RU");
   }
-  if ((key === "amount" || key === "paid_amount" || key === "price") && typeof value === "number") {
+  if ((key === "amount" || key === "paid_amount" || key === "price" || key === "schedule_remaining") && typeof value === "number") {
     return currency ? formatCurrency(value, currency) : String(value);
   }
   return String(value);
