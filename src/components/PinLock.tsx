@@ -1,12 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
+import { createClient } from "@/lib/supabase/client";
+import { forgetSessionToken } from "@/lib/auth/deviceSession";
 
 const PIN_KEY = "appPinHash";
 // Lock the screen after this much inactivity. The app is often left open on a
 // shared front desk, so it re-locks on its own.
 const LOCK_AFTER_MS = 3 * 60_000;
+// A wrong PIN this many times in a row (counted across reloads, so refreshing
+// the page is no way round it) signs the person out and forgets the PIN: back
+// to the password, then a new PIN. The PIN is a screen lock on top of the
+// session, so guessing at it must not be free.
+const FAIL_KEY = "appPinFails";
+const MAX_FAILS = 5;
 const PIN_LEN = 4;
 
 async function hashPin(pin: string): Promise<string> {
@@ -26,6 +35,7 @@ async function hashPin(pin: string): Promise<string> {
 // replacement for the login -- the Supabase session still gates the real data.
 export function PinLock() {
   const { t } = useLocale();
+  const router = useRouter();
   const [ready, setReady] = useState(false);
   const [hasPin, setHasPin] = useState(false);
   const [locked, setLocked] = useState(false);
@@ -101,14 +111,26 @@ export function PinLock() {
       // Unlock flow.
       const stored = window.localStorage.getItem(PIN_KEY);
       if ((await hashPin(pin)) === stored) {
+        window.localStorage.removeItem(FAIL_KEY);
         setLocked(false);
         setEntry("");
       } else {
-        setError(t.pin.wrong);
+        const fails = Number(window.localStorage.getItem(FAIL_KEY) ?? 0) + 1;
         setEntry("");
+        if (fails >= MAX_FAILS) {
+          window.localStorage.removeItem(FAIL_KEY);
+          window.localStorage.removeItem(PIN_KEY);
+          forgetSessionToken();
+          await createClient().auth.signOut();
+          router.replace("/login?reason=pin");
+          router.refresh();
+          return;
+        }
+        window.localStorage.setItem(FAIL_KEY, String(fails));
+        setError(fails >= 3 ? t.pin.wrongLeft.replace("{n}", String(MAX_FAILS - fails)) : t.pin.wrong);
       }
     },
-    [hasPin, firstEntry, t]
+    [hasPin, firstEntry, t, router]
   );
 
   // Single entry point used by the keypad, the physical keyboard and the phone

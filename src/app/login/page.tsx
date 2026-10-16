@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
+import { claimSession } from "@/lib/auth/deviceSession";
 import { SetupNotice } from "@/components/SetupNotice";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LoginScene } from "@/components/LoginScene";
@@ -13,6 +14,22 @@ import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 
 const FIELD_CLASS =
   "h-11 w-full rounded-lg border border-slate-300 px-3.5 text-sm transition-colors focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10";
+
+// Why the person is back at the sign-in screen (?reason=...): they were signed
+// out because the account was opened on another device, or because the PIN was
+// entered wrong too many times. Its own component inside <Suspense>: reading the
+// query string makes this part client-rendered on an otherwise static page.
+function ReasonNotice() {
+  const { t } = useLocale();
+  const reason = useSearchParams().get("reason");
+  const text = reason === "other-device" ? t.login.otherDevice : reason === "pin" ? t.login.pinLocked : "";
+  if (!text) return null;
+  return (
+    <p role="status" className="rounded-lg bg-[var(--wash-amber)] px-3 py-2.5 text-sm text-[var(--wash-amber-ink)]">
+      {text}
+    </p>
+  );
+}
 
 export default function LoginPage() {
   const { t, locale, setLocale } = useLocale();
@@ -70,11 +87,15 @@ export default function LoginPage() {
       email,
       password,
     });
-    setSubmitting(false);
     if (signInError) {
+      setSubmitting(false);
       setError(t.login.error);
       return;
     }
+    // This device takes the account's one seat (any other device is signed out
+    // on its next check). Never blocks: a database that is behind just skips it.
+    await claimSession(supabase);
+    setSubmitting(false);
     router.push("/");
     router.refresh();
   };
@@ -153,6 +174,9 @@ export default function LoginPage() {
             error. Signing in is impossible either way, but this way the
             reason is on screen. */}
         {!configured && <SetupNotice />}
+        <Suspense fallback={null}>
+          <ReasonNotice />
+        </Suspense>
 
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.login.email}</span>

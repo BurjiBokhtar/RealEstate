@@ -23,6 +23,18 @@ type StaffUser = {
   finance_level?: FinanceLevel | null;
 };
 
+// Where an account is open right now (crm.list_sessions): the device it last
+// signed in on and when it was last seen.
+type StaffSession = { device: string | null; last_seen: string };
+
+function agoText(iso: string, t: ReturnType<typeof useLocale>["t"]): string {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return t.users.ago.now;
+  if (minutes < 60) return t.users.ago.min.replace("{n}", String(minutes));
+  if (minutes < 60 * 24) return t.users.ago.hour.replace("{n}", String(Math.round(minutes / 60)));
+  return t.users.ago.day.replace("{n}", String(Math.round(minutes / (60 * 24))));
+}
+
 async function authHeaders() {
   const supabase = createClient();
   const {
@@ -41,6 +53,10 @@ export default function UsersPage() {
 
   const [users, setUsers] = useState<StaffUser[]>([]);
   const [buildings, setBuildings] = useState<Building[]>([]);
+  // "One account, one device": the switch (null = the database is not updated
+  // yet, so no switch is shown) and where each account is open.
+  const [singleSession, setSingleSession] = useState<boolean | null>(null);
+  const [sessions, setSessions] = useState<Record<string, StaffSession>>({});
   const [assignments, setAssignments] = useState<Record<string, Set<string>>>({});
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,11 +79,21 @@ export default function UsersPage() {
     // Users come from an in-database RPC (list_staff), not the service-key
     // API -- so this page works even when SUPABASE_SERVICE_ROLE_KEY is
     // wrong or unset.
-    const [staffRes, buildingsRes, assignmentsRes] = await Promise.all([
+    const [staffRes, buildingsRes, assignmentsRes, sessionsRes, switchRes] = await Promise.all([
       supabase.schema("crm").rpc("list_staff"),
       supabase.schema("crm").from("buildings").select("*").order("name"),
       supabase.schema("crm").from("manager_buildings").select("user_id, building_id"),
+      supabase.schema("crm").rpc("list_sessions"),
+      supabase.schema("crm").from("settings").select("single_session").maybeSingle(),
     ]);
+    setSessions(
+      sessionsRes.error
+        ? {}
+        : Object.fromEntries(
+            ((sessionsRes.data ?? []) as Array<StaffSession & { user_id: string }>).map((s) => [s.user_id, s])
+          )
+    );
+    setSingleSession(switchRes.error || !switchRes.data ? null : Boolean(switchRes.data.single_session));
     if (staffRes.error) {
       setError(staffRes.error.message);
       setUsers([]);
@@ -143,6 +169,18 @@ export default function UsersPage() {
     if (rpcError) {
       setError(rpcError.message);
       setUsers(prev); // revert
+    }
+  };
+
+  const handleSingleSession = async () => {
+    if (singleSession === null) return;
+    const next = !singleSession;
+    setSingleSession(next);
+    setError(null);
+    const { error: dbError } = await createClient().schema("crm").from("settings").update({ single_session: next }).eq("id", true);
+    if (dbError) {
+      setError(dbError.message);
+      setSingleSession(!next);
     }
   };
 
@@ -262,6 +300,34 @@ export default function UsersPage() {
         </div>
       )}
 
+      {singleSession !== null && (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-[var(--ink-1)]">{t.users.singleSession}</span>
+            <span className="mt-0.5 block text-xs leading-snug text-[var(--ink-4)]">{t.users.singleSessionHint}</span>
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={singleSession}
+            aria-label={t.users.singleSession}
+            onClick={() => void handleSingleSession()}
+            className={`relative h-7 w-12 shrink-0 rounded-full border transition-colors duration-150 ${
+              singleSession
+                ? "border-brand bg-brand"
+                : "border-[var(--border-strong-c)] bg-[var(--hover-c2)]"
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className={`absolute top-[3px] h-5 w-5 rounded-full transition-all duration-150 ${
+                singleSession ? "left-[24px] bg-[var(--on-brand)]" : "left-[3px] bg-[var(--ink-5)]"
+              }`}
+            />
+          </button>
+        </div>
+      )}
+
       {error && <p className="text-sm text-[var(--wash-rose-ink)]">{error}</p>}
 
       {loading ? (
@@ -292,6 +358,7 @@ export default function UsersPage() {
                   roleOptions={roleOptions}
                   buildings={buildings}
                   assigned={assignments[u.id]}
+                  session={sessions[u.id]}
                   expanded={expandedUser === u.id}
                   onToggleExpand={() =>
                     setExpandedUser((prev) => (prev === u.id ? null : u.id))
@@ -315,6 +382,7 @@ function UserRow({
   roleOptions,
   buildings,
   assigned,
+  session,
   expanded,
   onToggleExpand,
   onRoleChange,
@@ -326,6 +394,7 @@ function UserRow({
   roleOptions: { value: StaffRole; label: string }[];
   buildings: Building[];
   assigned: Set<string> | undefined;
+  session: StaffSession | undefined;
   expanded: boolean;
   onToggleExpand: () => void;
   onRoleChange: (r: StaffRole) => void;
@@ -351,6 +420,13 @@ function UserRow({
       <tr className="border-b border-[var(--border-c2)] last:border-0">
         <td className="px-4 py-2.5">
           {user.email}
+          <span className="block text-xs text-[var(--ink-5)]">
+            {session
+              ? t.users.sessionOn
+                  .replace("{device}", session.device ?? "—")
+                  .replace("{when}", agoText(session.last_seen, t))
+              : t.users.sessionNone}
+          </span>
         </td>
         <td className="px-4 py-2.5">
           <select

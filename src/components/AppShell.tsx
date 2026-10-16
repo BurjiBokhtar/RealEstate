@@ -12,6 +12,7 @@ import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { PinLock } from "@/components/PinLock";
+import { SessionGuard } from "@/components/SessionGuard";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { applyHeroTheme } from "@/components/HeroThemeSwitcher";
 import type { Locale } from "@/lib/i18n/dictionaries";
@@ -233,6 +234,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <PinLock />
+      <SessionGuard />
       <div className="flex h-full min-w-0 flex-1 flex-col print:block print:h-auto">
         <InstallPrompt />
         <OfflineBanner />

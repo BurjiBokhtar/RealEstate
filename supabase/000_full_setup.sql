@@ -7014,3 +7014,119 @@ grant execute on function crm.set_user_access(uuid, text, text) to authenticated
 alter table crm.settings add column if not exists hidden_nav text[] not null default '{}';
 
 notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 075_single_session.sql
+-- ############################################################
+
+-- ============================================================
+-- 075: ОДИН АККАУНТ -- ОДНО УСТРОЙСТВО.
+--
+-- ЗАЧЕМ. Пароль или телефон с открытым сеансом могут оказаться у второго
+-- человека; два устройства под одним аккаунтом -- это и есть такой случай.
+-- Теперь вход с нового устройства завершает сеанс на прежнем («побеждает
+-- последний вход»): потерянный телефон или забытый выход не блокируют
+-- человека, но и параллельно под одним аккаунтом работать нельзя.
+--
+-- КАК. При входе устройство придумывает себе случайный токен и записывает его
+-- сюда (crm.claim_session). Приложение каждые полминуты и при возвращении на
+-- вкладку спрашивает crm.check_session(токен): 'ok' -- это устройство
+-- актуальное; 'other' -- вошли с другого, надо выйти; 'none' -- записи ещё нет
+-- (первый запуск после обновления), устройство занимает место. Таблицу
+-- напрямую не читает никто -- только эти функции.
+--
+-- Выключатель: crm.settings.single_session (по умолчанию включено).
+-- Идемпотентно.
+-- ============================================================
+
+alter table crm.settings add column if not exists single_session boolean not null default true;
+
+create table if not exists crm.user_sessions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  token text not null,
+  device text,
+  started_at timestamptz not null default now(),
+  last_seen timestamptz not null default now()
+);
+
+alter table crm.user_sessions enable row level security;
+-- ни одной политики и никаких прямых прав: только через функции ниже
+revoke all on crm.user_sessions from anon, authenticated;
+grant all on crm.user_sessions to service_role;
+
+create or replace function crm.claim_session(p_token text, p_device text default null)
+returns void
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Нужно войти в систему';
+  end if;
+  if length(coalesce(p_token, '')) < 16 then
+    raise exception 'Некорректный токен сеанса';
+  end if;
+  insert into crm.user_sessions (user_id, token, device)
+  values (auth.uid(), p_token, left(p_device, 200))
+  on conflict (user_id) do update
+    set token = excluded.token, device = excluded.device,
+        started_at = now(), last_seen = now();
+end;
+$$;
+
+grant execute on function crm.claim_session(text, text) to authenticated;
+
+-- 'ok' | 'other' | 'none' (см. выше). Если выключатель снят -- всегда 'ok'.
+create or replace function crm.check_session(p_token text)
+returns text
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_token text;
+  v_seen timestamptz;
+begin
+  if auth.uid() is null then
+    return 'none';
+  end if;
+  if not coalesce((select s.single_session from crm.settings s where s.id), true) then
+    return 'ok';
+  end if;
+  select token, last_seen into v_token, v_seen from crm.user_sessions where user_id = auth.uid();
+  if v_token is null then
+    return 'none';
+  end if;
+  if v_token = coalesce(p_token, '') then
+    -- отметка «был на связи» -- не чаще раза в минуту, чтобы не писать зря
+    if v_seen < now() - interval '1 minute' then
+      update crm.user_sessions set last_seen = now() where user_id = auth.uid();
+    end if;
+    return 'ok';
+  end if;
+  return 'other';
+end;
+$$;
+
+grant execute on function crm.check_session(text) to authenticated;
+
+-- Где сейчас открыт каждый аккаунт -- для администратора (Настройки -> Доступ).
+create or replace function crm.list_sessions()
+returns table (user_id uuid, device text, started_at timestamptz, last_seen timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = crm, public
+as $$
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор';
+  end if;
+  return query select s.user_id, s.device, s.started_at, s.last_seen from crm.user_sessions s;
+end;
+$$;
+
+grant execute on function crm.list_sessions() to authenticated;
+
+notify pgrst, 'reload schema';
