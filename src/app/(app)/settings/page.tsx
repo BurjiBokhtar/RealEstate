@@ -123,12 +123,16 @@ export default function SettingsPage() {
     company_name: "",
     company_director: "",
     company_address: "",
+    company_city: "",
     company_bank_details: "",
     company_logo_url: "",
     hero_theme: "atlas",
     hero_pattern: "none",
   });
   const [saving, setSaving] = useState(false);
+  // False when the settings row has no company_city column: block 069 of the
+  // database file has not been run yet. Saving then leaves the field out.
+  const [cityColumn, setCityColumn] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [testPhone, setTestPhone] = useState("");
   const [testSending, setTestSending] = useState(false);
@@ -166,6 +170,7 @@ export default function SettingsPage() {
       .maybeSingle()
       .then(({ data }) => {
         if (!data) return;
+        setCityColumn("company_city" in data);
         setValues({
           sms_provider: data.sms_provider ?? "Payom.tj",
           sms_api_key: data.sms_api_key ?? "",
@@ -177,6 +182,7 @@ export default function SettingsPage() {
           company_name: data.company_name ?? "",
           company_director: data.company_director ?? "",
           company_address: data.company_address ?? "",
+          company_city: data.company_city ?? "",
           company_bank_details: data.company_bank_details ?? "",
           company_logo_url: data.company_logo_url ?? "",
           hero_theme: data.hero_theme ?? "atlas",
@@ -209,6 +215,7 @@ export default function SettingsPage() {
         company_name: values.company_name || null,
         company_director: values.company_director || null,
         company_address: values.company_address || null,
+        ...(cityColumn ? { company_city: values.company_city || null } : {}),
         company_bank_details: values.company_bank_details || null,
         company_logo_url: values.company_logo_url || null,
         hero_theme: values.hero_theme || null,
@@ -365,6 +372,19 @@ export default function SettingsPage() {
               onChange={(e) => update("company_address", e.target.value)}
               className={FIELD_CLASS}
             />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-[var(--ink-2)]">{t.settings.company.city}</span>
+            <input
+              value={values.company_city}
+              onChange={(e) => update("company_city", e.target.value)}
+              placeholder={t.settings.company.cityPlaceholder}
+              disabled={!cityColumn}
+              className={FIELD_CLASS}
+            />
+            {!cityColumn && (
+              <span className="text-xs text-[var(--wash-amber-ink)]">{t.settings.company.cityMissing}</span>
+            )}
           </label>
           <label className="flex flex-col gap-1 text-sm">
             <span className="font-medium text-[var(--ink-2)]">

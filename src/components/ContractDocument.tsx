@@ -191,6 +191,12 @@ export function ContractDocument({
   // "ЧДММ «Х»" would otherwise print as "ҶДММ «ЧДММ «Х»»".
   const companyName = bareCompanyName(settings.company_name) || "____________";
   const director = settings.company_director || "____________";
+  // Signing city + dispute-court jurisdiction below both follow the COMPANY's
+  // own city (Settings -> company_city), never a fixed one: this template is
+  // resold to different companies in different cities, and a fixed city here
+  // would print the wrong signing place and the wrong court for every
+  // company that isn't based wherever this default was written for.
+  const companyCity = settings.company_city || "____________";
   const buildingAddress =
     contract.object?.building?.address ?? contract.object?.address ?? "____________";
   // The price per m² printed on the contract is THIS deal's individually
@@ -420,7 +426,7 @@ export function ContractDocument({
 
           <div className="flex items-baseline justify-between text-[12.5px] print:mt-1">
             <Var>{shortDate(contract.signed_date)}</Var>
-            <span className="font-bold">ш. Бохтар</span>
+            <span className="font-bold">ш. {companyCity}</span>
           </div>
 
           {/* Deal summary ("Маълумоти аҳд") -- an accent rail with the flat
@@ -718,8 +724,8 @@ export function ContractDocument({
           <p className="text-justify">
             8.1. Баҳсҳои зимни амалисозии шартномаи мазкур рухдиҳандаро метавон бо роҳи
             гуфтушунид ҳал намуд. Дар мавриди бо гуфтушунид ҳал нагардидани баҳс, он дар
-            асоси Қонунҳои амалкунандаи Ҷумҳурии Тоҷикистон дар Суди иқтисодии шаҳри Бохтар
-            ҳаллу фасл карда мешавад.
+            асоси Қонунҳои амалкунандаи Ҷумҳурии Тоҷикистон дар Суди иқтисодии шаҳри{" "}
+            {companyCity} ҳаллу фасл карда мешавад.
           </p>
           <p className="text-justify">
             8.2. Шартномаи мазкур аз лаҳзаи ба имзо расонидани ҳар ду тараф эътибор пайдо

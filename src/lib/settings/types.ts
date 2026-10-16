@@ -21,6 +21,7 @@ export type Settings = {
   company_name: string | null;
   company_director: string | null;
   company_address: string | null;
+  company_city: string | null;
   company_bank_details: string | null;
   company_logo_url: string | null;
   // Company-wide dashboard hero look (admin-set). Each user may still override
@@ -41,6 +42,7 @@ export type SettingsInput = {
   company_name: string;
   company_director: string;
   company_address: string;
+  company_city: string;
   company_bank_details: string;
   company_logo_url: string;
   hero_theme: string;
