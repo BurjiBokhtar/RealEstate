@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/isConfigured";
@@ -12,8 +12,6 @@ import { formatShortDate } from "@/lib/formatDate";
 import { ExportMenu } from "@/components/ExportMenu";
 import { ControlGroup, GroupDivider } from "@/components/ActionBar";
 import { SortIcon } from "@/components/icons";
-import { HBarChart } from "@/components/charts/HBarChart";
-import { STATUS_HUES } from "@/components/charts/palette";
 import { DueThisMonthChart } from "@/components/DueThisMonthChart";
 import { ShiftedSchedules } from "@/components/ShiftedSchedules";
 import { waLink } from "@/lib/whatsapp";
@@ -266,9 +264,6 @@ export default function DebtorsPage() {
   const { t } = useLocale();
   const configured = isSupabaseConfigured();
   const [rows, setRows] = useState<ContractDebt[]>([]);
-  const [totals, setTotals] = useState<
-    Array<{ currency: Currency; overdue: number; remaining: number; contracts: number }>
-  >([]);
   // Explicit, and visible on screen: what the list is ordered by, and which
   // way. Defaults to the longest-without-paying first -- the list is a call
   // queue, and the person who has gone longest without paying is the one to
@@ -279,9 +274,6 @@ export default function DebtorsPage() {
   // this one" is the first thing anybody asks of this list.
   const [buildingId, setBuildingId] = useState<string>("all");
   const [buildings, setBuildings] = useState<Array<{ id: string; name: string }>>([]);
-  const [byBuilding, setByBuilding] = useState<
-    Array<{ name: string; overdue: number; remaining: number; contracts: number; currency: Currency }>
-  >([]);
   const [totalCount, setTotalCount] = useState(0);
   const [page, setPage] = useState(1);
   // "Loading" is derived, not stored. It is exactly "the data on screen does
@@ -360,93 +352,22 @@ export default function DebtorsPage() {
   // not just the stored "№6-4".
   const apartmentNumbers = useApartmentNumbers(rows.map((r) => r.buildingId));
 
-  // The headline totals cover EVERY debtor, not the 25 on screen, so they come
-  // from their own aggregate instead of being summed from `rows`.
+  // The ЖК filter lists every building, whatever is picked now. Fetched once.
   useEffect(() => {
     if (!configured) return;
     let cancelled = false;
     createClient()
       .schema("crm")
-      .rpc("overdue_totals", { p_building_id: buildingId === "all" ? null : buildingId })
-      .then(({ data, error }) => {
-        if (cancelled || error) {
-          if (error) console.error("overdue_totals failed:", error.message);
-          return;
-        }
-        setTotals(
-          (
-            (data ?? []) as Array<{
-              currency: Currency;
-              contracts: number;
-              total_overdue: number;
-              remaining_total: number;
-            }>
-          )
-            .map((r) => ({
-              currency: r.currency,
-              contracts: r.contracts,
-              overdue: Number(r.total_overdue),
-              remaining: Number(r.remaining_total ?? 0),
-            }))
-            .filter((r) => r.overdue > 0)
-        );
+      .from("buildings")
+      .select("id, name")
+      .order("name")
+      .then(({ data }) => {
+        if (!cancelled) setBuildings((data ?? []) as Array<{ id: string; name: string }>);
       });
     return () => {
       cancelled = true;
     };
-  }, [configured, buildingId, reloadNonce]);
-
-  // The chart shows every building regardless of the filter -- narrowing the
-  // list to one ЖК shouldn't hide the comparison that tells you which ЖК to
-  // narrow to. Fetched once.
-  useEffect(() => {
-    if (!configured) return;
-    let cancelled = false;
-    const supabase = createClient();
-    Promise.all([
-      supabase.schema("crm").from("buildings").select("id, name").order("name"),
-      supabase.schema("crm").rpc("overdue_by_building"),
-    ]).then(([bRes, oRes]) => {
-      if (cancelled) return;
-      setBuildings((bRes.data ?? []) as Array<{ id: string; name: string }>);
-      if (oRes.error) {
-        console.error("overdue_by_building failed:", oRes.error.message);
-        return;
-      }
-      setByBuilding(
-        (
-          (oRes.data ?? []) as Array<{
-            building_name: string;
-            currency: Currency;
-            contracts: number;
-            total_overdue: number;
-            remaining_total: number | null;
-          }>
-        ).map((r) => ({
-          name: r.building_name,
-          currency: r.currency,
-          contracts: r.contracts,
-          overdue: Number(r.total_overdue),
-          remaining: Number(r.remaining_total ?? 0),
-        }))
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [configured, reloadNonce]);
-
-  // Grouped by currency: one panel and one scale per currency, because TJS and
-  // USD on a shared axis compare nothing.
-  const byCurrency = useMemo(() => {
-    const seen: Currency[] = [];
-    for (const r of byBuilding) if (!seen.includes(r.currency)) seen.push(r.currency);
-    return seen.map((currency) => ({
-      currency,
-      rows: byBuilding.filter((r) => r.currency === currency),
-      total: totals.find((tt) => tt.currency === currency) ?? null,
-    }));
-  }, [byBuilding, totals]);
+  }, [configured]);
 
   const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -577,62 +498,7 @@ export default function DebtorsPage() {
       {/* Administrator only, and only when some schedule looks pushed forward. */}
       <ShiftedSchedules ready={configured && !loading} onRestored={() => setReloadNonce((n) => n + 1)} />
 
-      {/* One panel PER CURRENCY, each on its own scale.
-          The previous version put every building on a single axis regardless of
-          currency, so 1 072 475 TJS and 99 205 USD were compared as if they
-          were the same unit -- the USD bars were flattened to slivers and every
-          building appeared twice with no hint why. Currencies do not share an
-          axis. Horizontal bars, so "Кайҳонавадон 36 Б" gets the card width
-          instead of 40px under a column. */}
-      {byCurrency.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {byCurrency.map(({ currency, rows: cRows, total }) => (
-            <div
-              key={currency}
-              className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm"
-            >
-              <div className="mb-4 flex flex-col gap-0.5">
-                <p className="text-sm font-semibold text-[var(--ink-2)]">
-                  {t.debtors.chartTitle} · {currency}
-                </p>
-                {total && (
-                  <p className="text-xs text-[var(--ink-4)]">
-                    {t.debtors.chartTotalLabel}{" "}
-                    <span className="font-semibold text-[var(--wash-rose-ink)]">
-                      {formatCurrency(total.overdue, currency)}
-                    </span>
-                    {total.remaining > 0 && (
-                      <> · {t.debtors.chartOfRemaining.replace("{sum}", formatCurrency(total.remaining, currency))}</>
-                    )}
-                  </p>
-                )}
-              </div>
-              <HBarChart
-                data={cRows.map((b) => ({
-                  label: b.name,
-                  // One bar per ЖК, as long as the money overdue there; the
-                  // share of the remaining balance is said in words under it
-                  // (an earlier two-layer bar -- overdue inside the whole
-                  // balance -- was read as noise).
-                  value: b.overdue,
-                  hue: STATUS_HUES.sold,
-                  hint: t.debtors.chartRowHint
-                    .replace("{n}", String(b.contracts))
-                    .replace(
-                      "{pct}",
-                      String(b.remaining > 0 ? Math.min(100, Math.max(1, Math.round((b.overdue / b.remaining) * 100))) : 100)
-                    ),
-                }))}
-                formatValue={(n) => formatCurrency(n, currency)}
-              />
-              <p className="mt-3 text-xs text-[var(--ink-5)]">{t.debtors.chartHint}</p>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Who has to pay THIS month, per ЖК -- the forward-looking counterpart
-          of the overdue charts above. */}
+      {/* Who has to pay THIS month, per ЖК. */}
       <DueThisMonthChart />
 
       {/* Two separate controls with their own labels -- a filter and a sort --

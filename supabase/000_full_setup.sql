@@ -6535,7 +6535,10 @@ $$;
 grant execute on function crm.contract_baseline_plan(uuid) to authenticated;
 
 -- ---------- договоры, у которых график уехал вперёд ----------
-create or replace function crm.schedule_shifts()
+-- (блок 082 меняет состав колонок этой функции, а create or replace этого не умеет --
+-- поэтому перед каждым созданием она удаляется, иначе повторный запуск файла падал бы)
+drop function if exists crm.schedule_shifts();
+create function crm.schedule_shifts()
 returns table (
   contract_id uuid,
   contract_number text,
@@ -7397,5 +7400,201 @@ as $$
 $$;
 
 grant execute on function crm.contract_baseline_plan(uuid) to authenticated;
+
+notify pgrst, 'reload schema';
+
+-- ############################################################
+-- ### 082_schedule_shift_review.sql
+-- ############################################################
+
+-- ============================================================
+-- 082: карточка «График сдвинут вперёд» -- можно решить по каждому договору.
+--
+-- Карточка (блок 065) находит договоры, у которых по датам самого договора
+-- просрочка была бы больше, чем сейчас. Но такая разница бывает не только от
+-- старого блока 056: график могли ПЕРЕНЕСТИ сознательно (договорённость с
+-- клиентом, кнопка «Пересчитать график», смена суммы договора -- всё это
+-- честно начинает график заново). «Вернуть график» таким договорам выдумало бы
+-- долг, которого нет. Поэтому:
+--
+--  1. crm.schedule_shifts() теперь отдаёт и сведения для решения: дату
+--     договора, срок, сумму, сколько оплачено, с какой даты график идёт сейчас
+--     и клиента (для ссылки);
+--  2. crm.dismiss_schedule_shift(id) -- «оставить как есть»: договор больше не
+--     попадает в карточку (запоминается в crm.schedule_shift_dismissed, только
+--     администратор, пишется в журнал);
+--  3. crm.undo_restore_schedule(id) -- отменить возврат графика: прежний план
+--     берётся из crm.schedule_backup и ставится на место (только администратор).
+--
+-- Идемпотентно, данные договоров сама не меняет.
+-- ============================================================
+
+create table if not exists crm.schedule_shift_dismissed (
+  contract_id uuid primary key references crm.contracts(id) on delete cascade,
+  dismissed_by uuid,
+  dismissed_at timestamptz not null default now()
+);
+
+alter table crm.schedule_shift_dismissed enable row level security;
+drop policy if exists "schedule_shift_dismissed_select" on crm.schedule_shift_dismissed;
+create policy "schedule_shift_dismissed_select" on crm.schedule_shift_dismissed
+  for select to authenticated using (crm.is_admin());
+revoke all on crm.schedule_shift_dismissed from anon;
+grant select on crm.schedule_shift_dismissed to authenticated;
+grant all on crm.schedule_shift_dismissed to service_role;
+
+-- Состав колонок изменился -- create or replace не умеет, поэтому drop.
+drop function if exists crm.schedule_shifts();
+create function crm.schedule_shifts()
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  currency text,
+  signed_date date,
+  installment_months integer,
+  contract_amount numeric,
+  paid_amount numeric,
+  next_plan_date date,
+  overdue_now numeric,
+  overdue_by_contract_date numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with cand as (
+    select c.id, c.number, c.currency::text as cur, c.paid_amount, c.amount,
+           c.client_id, c.installment_months as months,
+           coalesce(c.signed_date, c.created_at::date) as signed,
+           coalesce(cl.name, '—') as client_name
+    from crm.contracts c
+    left join crm.clients cl on cl.id = c.client_id
+    where c.payment_type in ('installment', 'rent')
+      and c.status <> 'cancelled'
+      and c.installment_months > 0
+      and c.amount > c.paid_amount
+      and exists (select 1 from crm.contract_payments p where p.contract_id = c.id and not p.paid)
+      and not exists (select 1 from crm.schedule_shift_dismissed d where d.contract_id = c.id)
+  ),
+  restored as (
+    select cd.id,
+           coalesce(sum(
+             least(b.amount, greatest(b.cum - greatest(cd.paid_amount - b.down, 0), 0))
+           ) filter (where b.due_date < current_date), 0) as overdue
+    from cand cd
+    cross join lateral crm.contract_baseline_plan(cd.id) b
+    group by cd.id
+  ),
+  now_ as (
+    select oi.contract_id as id, sum(oi.unpaid_amount) as overdue
+    from crm.overdue_installments oi
+    where oi.due_date < current_date and oi.unpaid_amount > 0.005
+    group by oi.contract_id
+  ),
+  nxt as (
+    select p.contract_id as id, min(p.due_date) as next_date
+    from crm.contract_payments p
+    where not p.paid and p.contract_id in (select id from cand)
+    group by p.contract_id
+  )
+  select cd.id, cd.number, cd.client_id, cd.client_name, cd.cur,
+         cd.signed, cd.months, cd.amount, cd.paid_amount, nxt.next_date,
+         coalesce(n.overdue, 0), r.overdue
+  from cand cd
+  join restored r on r.id = cd.id
+  left join now_ n on n.id = cd.id
+  left join nxt on nxt.id = cd.id
+  where r.overdue > coalesce(n.overdue, 0) + 0.5
+  order by r.overdue - coalesce(n.overdue, 0) desc, cd.id;
+$$;
+
+grant execute on function crm.schedule_shifts() to authenticated;
+
+-- «Оставить как есть»: график перенесён сознательно, из карточки убрать.
+create or replace function crm.dismiss_schedule_shift(p_contract_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может скрыть договор из этой карточки';
+  end if;
+  if not exists (select 1 from crm.contracts where id = p_contract_id) then
+    raise exception 'Contract not found';
+  end if;
+
+  insert into crm.schedule_shift_dismissed (contract_id, dismissed_by)
+  values (p_contract_id, auth.uid())
+  on conflict (contract_id) do nothing;
+
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'update', 'contract', p_contract_id,
+    jsonb_build_object(
+      'schedule_shift_dismissed', true,
+      '_context', crm.audit_context('contract', p_contract_id)
+    )
+  );
+end;
+$$;
+
+grant execute on function crm.dismiss_schedule_shift(uuid) to authenticated;
+
+-- Отменить возврат графика: последний сохранённый план ставится на место.
+create or replace function crm.undo_restore_schedule(p_contract_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = crm, public
+as $$
+declare
+  v_at timestamptz;
+  v_rows integer;
+begin
+  if not crm.is_admin() then
+    raise exception 'Только администратор может отменить возврат графика';
+  end if;
+
+  select max(saved_at) into v_at
+  from crm.schedule_backup
+  where contract_id = p_contract_id and reason = 'restore_schedule';
+  if v_at is null then
+    raise exception 'Нет сохранённого графика для этого договора';
+  end if;
+
+  perform set_config('crm.audit_off', 'on', true);
+
+  delete from crm.contract_payments where contract_id = p_contract_id and not paid;
+
+  insert into crm.contract_payments (contract_id, due_date, amount, paid, paid_date)
+  select contract_id, due_date, amount, false, null
+  from crm.schedule_backup
+  where contract_id = p_contract_id and reason = 'restore_schedule' and saved_at = v_at;
+  get diagnostics v_rows = row_count;
+
+  delete from crm.schedule_backup
+  where contract_id = p_contract_id and reason = 'restore_schedule' and saved_at = v_at;
+
+  perform set_config('crm.audit_off', 'off', true);
+
+  insert into crm.audit_log (actor_id, action, entity_type, entity_id, details)
+  values (
+    auth.uid(), 'update', 'contract', p_contract_id,
+    jsonb_build_object(
+      'schedule_restore_undone', true,
+      'schedule_payments', v_rows,
+      '_context', crm.audit_context('contract', p_contract_id)
+    )
+  );
+  return v_rows;
+end;
+$$;
+
+grant execute on function crm.undo_restore_schedule(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
