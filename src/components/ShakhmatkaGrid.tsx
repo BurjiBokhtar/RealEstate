@@ -23,11 +23,11 @@ export type UnitContractInfo = {
   isQuickBooking: boolean;
 };
 
-// A cell is CELL wide and 4rem (64px) tall: the flat number in the middle, the number of
-// rooms in its top-left corner and the area along the bottom (variant "B" of the
-// label layouts). Every width below -- merged cells, entrance columns, the empty
-// "+" slots -- is derived from this, so changing it moves them all together.
-const CELL = 72;
+// A cell is CELL wide and 3.5rem (56px) tall: the flat number on the left, and on the
+// right the number of rooms over the area (variant "D", the wide one, of the label
+// layouts). Every width below -- merged cells, entrance columns, the empty "+" slots
+// -- is derived from this, so changing it moves them all together.
+const CELL = 112;
 const GAP = 8;
 
 // Apartments and houses are the "main" shakhmatka. Everything else (shops,
@@ -244,29 +244,27 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`relative flex h-16 flex-col items-center justify-center overflow-hidden rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-14 items-center justify-between gap-1.5 overflow-hidden rounded-md px-2.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
         } ${CELL_COLORS[unit.status]}`}
       >
-        {/* The number stays where it always was (centre), lifted a little to leave room
-            for the area under it; rooms and area are small and quiet so they never
-            compete with it. A flat with no rooms or no area simply shows nothing there. */}
-        <span className="pb-1.5 text-[15px] font-semibold leading-none">
+        {/* The number is the big thing on the left; rooms and area sit in a small, quiet
+            column on the right so they never compete with it. A flat with no rooms or
+            no area simply shows nothing there. */}
+        <span className="text-[17px] font-semibold leading-none">
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
-        {unit.rooms != null && unit.rooms > 0 && (
-          <span className="absolute left-1.5 top-1 text-[10.5px] font-medium leading-none opacity-80">
-            {unit.rooms} {t.buildings.roomsFilterShort}
-          </span>
-        )}
-        {unit.area != null && unit.area > 0 && (
-          <span className="absolute inset-x-0 bottom-2 text-center text-[10.5px] font-medium leading-none opacity-80">
-            {formatArea(unit.area)}
-          </span>
-        )}
+        <span className="flex flex-col items-end gap-1 pb-0.5 text-[10.5px] font-medium leading-none opacity-80">
+          {unit.rooms != null && unit.rooms > 0 && (
+            <span>
+              {unit.rooms} {t.buildings.roomsFilterShort}
+            </span>
+          )}
+          {unit.area != null && unit.area > 0 && <span>{formatArea(unit.area)}</span>}
+        </span>
 
         {/* How much of this flat is actually paid for, readable without
             hovering anything: a thin fill along the bottom edge while money is
@@ -281,7 +279,7 @@ function UnitCell({
           (payProgress.settled ? (
             <span
               aria-hidden="true"
-              className="absolute right-1 top-1 text-emerald-600"
+              className="absolute left-1 top-1 text-emerald-600"
               title={t.buildings.hover.fullyPaid}
             >
               <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
@@ -721,14 +719,16 @@ export function ShakhmatkaGrid({
                             type="button"
                             title={t.buildings.addUnitHere}
                             onClick={() => onAddUnit(floor, block, slot.position)}
-                            className="flex h-16 w-[72px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
+                            style={{ width: CELL }}
+                            className="flex h-14 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
                           >
                             +
                           </button>
                         ) : (
                           <div
                             key={`ghost-${block}-${floor}-${slot.position}`}
-                            className="h-16 w-[72px] shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
+                            style={{ width: CELL }}
+                            className="h-14 shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
                           />
                         )
                       )}
