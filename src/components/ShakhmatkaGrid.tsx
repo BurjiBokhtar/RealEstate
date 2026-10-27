@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { justWentBack } from "@/lib/useScrollMemory";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
 import { STATUS_HUES } from "@/components/charts/palette";
@@ -21,7 +23,11 @@ export type UnitContractInfo = {
   isQuickBooking: boolean;
 };
 
-const CELL = 64;
+// A cell is CELL wide and 4rem (64px) tall: the flat number in the middle, the number of
+// rooms in its top-left corner and the area along the bottom (variant "B" of the
+// label layouts). Every width below -- merged cells, entrance columns, the empty
+// "+" slots -- is derived from this, so changing it moves them all together.
+const CELL = 72;
 const GAP = 8;
 
 // Apartments and houses are the "main" shakhmatka. Everything else (shops,
@@ -54,6 +60,37 @@ const TYPE_META: Record<string, { prefix: string; ring: string }> = {
 // can never be given one -- площадь × ставка has nothing to multiply. Sold
 // flats are excluded: their price is settled and not part of any potential.
 export type GapFilter = "no_price" | "no_area" | null;
+
+// The filters survive leaving the building and coming back (to a contract, a client,
+// the cash desk and "back"): kept per building for the length of the tab. A stored
+// value that no longer makes sense is ignored rather than trusted.
+type SavedFilters = { status: ObjectStatus | null; rooms: number | null; gap: GapFilter };
+const NO_FILTERS: SavedFilters = { status: null, rooms: null, gap: null };
+const STATUSES: ObjectStatus[] = ["available", "reserved", "sold", "rented", "in_progress"];
+
+export function loadFilters(buildingId: string): SavedFilters {
+  if (typeof window === "undefined") return NO_FILTERS;
+  try {
+    const raw = window.sessionStorage.getItem(`shakhmatka-filters:${buildingId}`);
+    if (!raw) return NO_FILTERS;
+    const v = JSON.parse(raw) as Partial<SavedFilters>;
+    return {
+      status: STATUSES.includes(v.status as ObjectStatus) ? (v.status as ObjectStatus) : null,
+      rooms: typeof v.rooms === "number" ? v.rooms : null,
+      gap: v.gap === "no_price" || v.gap === "no_area" ? v.gap : null,
+    };
+  } catch {
+    return NO_FILTERS;
+  }
+}
+
+export function saveFilters(buildingId: string, filters: SavedFilters) {
+  try {
+    window.sessionStorage.setItem(`shakhmatka-filters:${buildingId}`, JSON.stringify(filters));
+  } catch {
+    // storage blocked -- the filters just are not remembered
+  }
+}
 
 export function hasGap(unit: PropertyObject, gap: Exclude<GapFilter, null>): boolean {
   if (unit.status === "sold") return false;
@@ -207,16 +244,29 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`relative flex h-14 flex-col items-center justify-center overflow-hidden rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-16 flex-col items-center justify-center overflow-hidden rounded-md text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
         } ${CELL_COLORS[unit.status]}`}
       >
-        <span>
+        {/* The number stays where it always was (centre), lifted a little to leave room
+            for the area under it; rooms and area are small and quiet so they never
+            compete with it. A flat with no rooms or no area simply shows nothing there. */}
+        <span className="pb-1.5 text-[15px] font-semibold leading-none">
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
+        {unit.rooms != null && unit.rooms > 0 && (
+          <span className="absolute left-1.5 top-1 text-[10.5px] font-medium leading-none opacity-80">
+            {unit.rooms} {t.buildings.roomsFilterShort}
+          </span>
+        )}
+        {unit.area != null && unit.area > 0 && (
+          <span className="absolute inset-x-0 bottom-2 text-center text-[10.5px] font-medium leading-none opacity-80">
+            {formatArea(unit.area)}
+          </span>
+        )}
 
         {/* How much of this flat is actually paid for, readable without
             hovering anything: a thin fill along the bottom edge while money is
@@ -475,6 +525,35 @@ export function ShakhmatkaGrid({
 }) {
   const { t } = useLocale();
 
+  // A wide shakhmatka scrolls sideways inside its own box. Remember how far, per
+  // address, and give it back on "back" (the page's vertical position is handled
+  // by useScrollMemory in the app shell).
+  const pathname = usePathname();
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
+  const hasUnits = units.length > 0;
+  useEffect(() => {
+    const box = scrollBoxRef.current;
+    if (!box) return;
+    const key = `shakhmatka-x:${pathname}`;
+    if (justWentBack()) {
+      try {
+        const x = Number(window.sessionStorage.getItem(key));
+        if (Number.isFinite(x) && x > 0) box.scrollLeft = x;
+      } catch {
+        // nothing remembered
+      }
+    }
+    const onScroll = () => {
+      try {
+        window.sessionStorage.setItem(key, String(Math.round(box.scrollLeft)));
+      } catch {
+        // storage blocked
+      }
+    };
+    box.addEventListener("scroll", onScroll, { passive: true });
+    return () => box.removeEventListener("scroll", onScroll);
+  }, [pathname, hasUnits]);
+
   if (units.length === 0) {
     return <p className="text-[var(--ink-5)]">{t.buildings.noUnits}</p>;
   }
@@ -571,7 +650,7 @@ export function ShakhmatkaGrid({
           `openUpward` on UnitCell), so every downward-opening card always
           has real rows below it to render over, and this padding only needs
           to cover ordinary breathing room, not a worst-case card height. */}
-      <div className="overflow-x-auto overflow-y-hidden">
+      <div ref={scrollBoxRef} className="overflow-x-auto overflow-y-hidden">
         <div className="flex w-fit flex-col gap-2 pb-2">
           {hasBlocks && (
             <div className="flex items-center gap-3">
@@ -642,14 +721,14 @@ export function ShakhmatkaGrid({
                             type="button"
                             title={t.buildings.addUnitHere}
                             onClick={() => onAddUnit(floor, block, slot.position)}
-                            className="flex h-14 w-16 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
+                            className="flex h-16 w-[72px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
                           >
                             +
                           </button>
                         ) : (
                           <div
                             key={`ghost-${block}-${floor}-${slot.position}`}
-                            className="h-14 w-16 shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
+                            className="h-16 w-[72px] shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
                           />
                         )
                       )}

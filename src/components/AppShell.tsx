@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useSettings } from "@/lib/settings/SettingsProvider";
 import { useAuth } from "@/lib/auth/useRole";
 import { canView } from "@/lib/auth/access";
+import { useScrollMemory } from "@/lib/useScrollMemory";
 import { OfflineBanner } from "@/components/OfflineBanner";
 import { QuickSearch } from "@/components/QuickSearch";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -86,6 +87,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
   const pathname = usePathname();
   const router = useRouter();
+  // <main> is what scrolls; "back" gives it its position back (see useScrollMemory).
+  const mainRef = useRef<HTMLElement>(null);
+  useScrollMemory(mainRef);
   const brandName = settings.company_name || t.appName;
 
   // Apply the hero theme app-wide: the company-wide default (admin Settings)
@@ -285,7 +289,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--surface-0)] p-4 pb-24 sm:p-5 sm:pb-5 print:overflow-visible print:bg-white print:p-0">
+        <main ref={mainRef} className="flex-1 overflow-y-auto overflow-x-hidden bg-[var(--surface-0)] p-4 pb-24 sm:p-5 sm:pb-5 print:overflow-visible print:bg-white print:p-0">
           {children}
         </main>
 

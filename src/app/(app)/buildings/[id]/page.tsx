@@ -13,6 +13,8 @@ import {
   ShakhmatkaFilters,
   type UnitContractInfo,
   type GapFilter,
+  loadFilters,
+  saveFilters,
 } from "@/components/ShakhmatkaGrid";
 import { ContractBookingModal } from "@/components/ContractBookingModal";
 import { QuickAddUnitModal } from "@/components/QuickAddUnitModal";
@@ -72,11 +74,18 @@ export default function BuildingDetailPage() {
   // Filter state lives here, not in the grid: the bar that drives it now sits
   // in the page header beside the toolbar, while the cells it dims are inside
   // the grid.
-  const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(null);
-  const [roomsFilter, setRoomsFilter] = useState<number | null>(null);
+  // Kept per building for the length of the tab, so coming back from a contract
+  // finds the same filters (nothing it renders depends on them until the building
+  // has loaded, so reading the stored values here cannot cause a hydration mismatch).
+  const [initialFilters] = useState(() => loadFilters(params.id));
+  const [statusFilter, setStatusFilter] = useState<ObjectStatus | null>(initialFilters.status);
+  const [roomsFilter, setRoomsFilter] = useState<number | null>(initialFilters.rooms);
   // "Which flats are missing a price / an area" -- the gap the dashboard
   // reports as a number with nowhere to go and look at it.
-  const [gapFilter, setGapFilter] = useState<GapFilter>(null);
+  const [gapFilter, setGapFilter] = useState<GapFilter>(initialFilters.gap);
+  useEffect(() => {
+    saveFilters(params.id, { status: statusFilter, rooms: roomsFilter, gap: gapFilter });
+  }, [params.id, statusFilter, roomsFilter, gapFilter]);
   // A stack of reversible structural edits (merge / split / delete / add) made
   // this session, so a mis-click can be undone with one button -- the data is
   // captured before each action and re-applied on undo.
@@ -462,8 +471,14 @@ export default function BuildingDetailPage() {
       )}
 
       {building && (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+        // The header, the filters and the grid share ONE column that is as wide as
+        // the grid itself (and never wider than the page). Before, the header row
+        // spanned the whole screen: on a wide monitor the filters and icons sat at
+        // the far right edge while the small grid stayed at the left. The header
+        // rows below are "w-0 min-w-full": they take no part in working out that
+        // width (the grid decides it) but stretch to it, wrapping if they must.
+        <div className="flex w-fit min-w-[min(100%,40rem)] max-w-full flex-col gap-5">
+          <div className="flex w-0 min-w-full flex-wrap items-start justify-between gap-x-4 gap-y-3">
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-semibold">{building.name}</h1>
@@ -480,27 +495,10 @@ export default function BuildingDetailPage() {
                 sitting with a buyer, and the rest of this toolbar edits the
                 building, which they may not do. It appears only when a plan
                 has actually been uploaded. */}
-            {/* Filters and actions share one right-hand cluster, both at the
-                small size so they line up as a single band instead of a tall
-                icon row above a separate strip of chips. min-w-0: this is
-                itself a flex item (of the title/toolbar row above), and a
-                flex item's default min-width is its content's width, not 0
-                -- without this, the browser would still treat "everything
-                ShakhmatkaFilters needs unwrapped" as this row's own floor,
-                even though ShakhmatkaFilters' own ControlGroup is already
-                free to shrink and scroll. */}
+            {/* The building's own actions (plan, edit, report, settings, duplicate) sit at the
+                right edge of the grid; the filters have a row of their own just below, at
+                its left edge -- see the column above. */}
             <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-            {saleUnits.length > 0 && (
-              <ShakhmatkaFilters
-                units={saleUnits}
-                statusFilter={statusFilter}
-                onStatusChange={setStatusFilter}
-                roomsFilter={roomsFilter}
-                onRoomsChange={setRoomsFilter}
-                gapFilter={gapFilter}
-                onGapChange={setGapFilter}
-              />
-            )}
             {/* Guarded as a whole: ControlGroup always draws its bordered
                 box, so rendering it for a manager looking at a building with
                 no plan would leave an empty bordered stub in the header. */}
@@ -543,6 +541,20 @@ export default function BuildingDetailPage() {
             )}
             </div>
           </div>
+
+          {saleUnits.length > 0 && (
+            <div className="w-0 min-w-full">
+              <ShakhmatkaFilters
+                units={saleUnits}
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                roomsFilter={roomsFilter}
+                onRoomsChange={setRoomsFilter}
+                gapFilter={gapFilter}
+                onGapChange={setGapFilter}
+              />
+            </div>
+          )}
 
           {showPlan && building.plan_url && (
             <PlanViewerModal
@@ -633,7 +645,7 @@ export default function BuildingDetailPage() {
               }}
             />
           )}
-        </>
+        </div>
       )}
       <Toast
         message={toast.message ?? repriceNotice?.message ?? null}
