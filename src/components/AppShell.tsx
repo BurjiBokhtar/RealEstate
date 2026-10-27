@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
@@ -88,8 +88,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   // <main> is what scrolls; "back" gives it its position back (see useScrollMemory).
-  const mainRef = useRef<HTMLElement>(null);
-  useScrollMemory(mainRef);
+  const mainRef = useScrollMemory();
   const brandName = settings.company_name || t.appName;
 
   // Apply the hero theme app-wide: the company-wide default (admin Settings)

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 
 // "Back" returns you to the exact place you left.
@@ -17,6 +17,11 @@ import { usePathname } from "next/navigation";
 // so right after "back" the page is still too short to scroll that far. The
 // position is therefore re-applied on every frame until it can be reached (at
 // most three seconds), and given up the moment the person scrolls themselves.
+//
+// Usage: `const mainRef = useScrollMemory();` and `<main ref={mainRef}>`. It is a
+// callback ref on purpose: the shell can render something else first (the
+// "waiting for access" screen while the role loads), so <main> may appear a
+// render or two after the hook first runs -- the listeners must attach then.
 
 const PREFIX = "scrollpos:";
 const GIVE_UP_MS = 3000;
@@ -82,8 +87,15 @@ function restore(el: HTMLElement, key: string) {
   tick();
 }
 
-export function useScrollMemory(ref: RefObject<HTMLElement | null>) {
+export function useScrollMemory() {
   const pathname = usePathname();
+  const elRef = useRef<HTMLElement | null>(null);
+  // Bumped each time an element is attached: what re-runs the effect below.
+  const [mounts, setMounts] = useState(0);
+  const mainRef = useCallback((node: HTMLElement | null) => {
+    elRef.current = node;
+    if (node) setMounts((n) => n + 1);
+  }, []);
 
   // Back / Forward in the browser. Registered once.
   useEffect(() => {
@@ -92,18 +104,18 @@ export function useScrollMemory(ref: RefObject<HTMLElement | null>) {
       // Same page, different query (a filter, a page number): no route change
       // follows, so restore straight away.
       window.setTimeout(() => {
-        const el = ref.current;
-        if (el && justWentBack()) restore(el, addressKey());
+        const node = elRef.current;
+        if (node && justWentBack()) restore(node, addressKey());
       }, 0);
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [ref]);
+  }, []);
 
   // Remember where this address is scrolled to; and on every route change decide
   // between "back: give the position back" and "new page: start at the top".
   useEffect(() => {
-    const el = ref.current;
+    const el = elRef.current;
     if (!el) return;
 
     let saveFrame = 0;
@@ -137,5 +149,7 @@ export function useScrollMemory(ref: RefObject<HTMLElement | null>) {
       el.removeEventListener("touchstart", onUserInput);
       el.removeEventListener("keydown", onUserInput);
     };
-  }, [ref, pathname]);
+  }, [mounts, pathname]);
+
+  return mainRef;
 }
