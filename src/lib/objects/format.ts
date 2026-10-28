@@ -4,11 +4,16 @@ import type { ObjectStatus } from "./types";
 // lib/currency.ts.
 const areaFormat = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 2 });
 
+/** The area as a bare number ("54,3"), for places too small to carry the unit. */
+export function formatAreaValue(area: number) {
+  // Round to at most 2 decimals and group thousands, so a stored 55.2999999
+  // reads "55.3" instead of a long tail of digits.
+  return areaFormat.format(area);
+}
+
 export function formatArea(area: number | null) {
   if (area === null) return "—";
-  // Round to at most 2 decimals and group thousands, so a stored 55.2999999
-  // reads "55.3 м²" instead of a long tail of digits.
-  return `${areaFormat.format(area)} м²`;
+  return `${formatAreaValue(area)} м²`;
 }
 
 export const STATUS_COLORS: Record<ObjectStatus, string> = {

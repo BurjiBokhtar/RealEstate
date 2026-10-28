@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { justWentBack } from "@/lib/useScrollMemory";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
+import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea, formatAreaValue } from "@/lib/objects/format";
 import { STATUS_HUES } from "@/components/charts/palette";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
@@ -23,12 +23,16 @@ export type UnitContractInfo = {
   isQuickBooking: boolean;
 };
 
-// A cell is CELL wide and 3.5rem (56px) tall: the flat number on the left, and on the
-// right the number of rooms over the area (variant "D", the wide one, of the label
-// layouts). Every width below -- merged cells, entrance columns, the empty "+" slots
-// -- is derived from this, so changing it moves them all together.
-const CELL = 112;
-const GAP = 8;
+// A cell is CELL wide and 38px tall: the flat number on the left, and on the right the
+// rooms ("2к") over the bare area ("54,3"); the full words are in the hover card (variant
+// "mini" of the label layouts -- small enough for about four to fit a phone). 70px is what
+// a three-digit flat number needs next to a three-digit area ("126" and "104,3").
+// Every width below -- merged cells, entrance columns, the empty "+" slots -- is derived
+// from CELL and GAP, so changing them moves everything together.
+const CELL = 70;
+const GAP = 4;
+// The strip of floor numbers that stays pinned at the left while the grid scrolls sideways.
+const FLOOR_STRIP = "w-7";
 
 // Apartments and houses are the "main" shakhmatka. Everything else (shops,
 // offices, parking, land, construction) is non-residential and lives in its
@@ -244,7 +248,7 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`relative flex h-14 items-center justify-between gap-1.5 overflow-hidden rounded-md px-2.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-[38px] items-center justify-between gap-1 overflow-hidden rounded-md px-1.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
@@ -253,17 +257,18 @@ function UnitCell({
         {/* The number is the big thing on the left; rooms and area sit in a small, quiet
             column on the right so they never compete with it. A flat with no rooms or
             no area simply shows nothing there. */}
-        <span className="text-[17px] font-semibold leading-none">
+        <span className="text-[14px] font-semibold leading-none">
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
-        <span className="flex flex-col items-end gap-1 pb-0.5 text-[10.5px] font-medium leading-none opacity-80">
+        <span className="flex flex-col items-end gap-0.5 pb-0.5 text-[10.5px] font-medium leading-none opacity-80">
           {unit.rooms != null && unit.rooms > 0 && (
             <span>
-              {unit.rooms} {t.buildings.roomsFilterShort}
+              {unit.rooms}
+              {t.buildings.roomsFilterShort.charAt(0)}
             </span>
           )}
-          {unit.area != null && unit.area > 0 && <span>{formatArea(unit.area)}</span>}
+          {unit.area != null && unit.area > 0 && <span>{formatAreaValue(unit.area)}</span>}
         </span>
 
         {/* How much of this flat is actually paid for, readable without
@@ -279,17 +284,17 @@ function UnitCell({
           (payProgress.settled ? (
             <span
               aria-hidden="true"
-              className="absolute left-1 top-1 text-emerald-600"
+              className="absolute bottom-0.5 left-1 text-emerald-600"
               title={t.buildings.hover.fullyPaid}
             >
-              <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" className="h-2.5 w-2.5" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 12.5l5.5 5.5L20 6.5" />
               </svg>
             </span>
           ) : (
             <span
               aria-hidden="true"
-              className={`absolute inset-x-0 bottom-0 h-1.5 ${STATUS_PROGRESS_COLORS[unit.status].track}`}
+              className={`absolute inset-x-0 bottom-0 h-1 ${STATUS_PROGRESS_COLORS[unit.status].track}`}
             >
               <span
                 className={`block h-full ${STATUS_PROGRESS_COLORS[unit.status].fill}`}
@@ -529,6 +534,9 @@ export function ShakhmatkaGrid({
   const pathname = usePathname();
   const scrollBoxRef = useRef<HTMLDivElement>(null);
   const hasUnits = units.length > 0;
+  // A whole floor picked by tapping its number: its row is highlighted and a small
+  // summary of its flats floats at the bottom of the screen.
+  const [selectedFloor, setSelectedFloor] = useState<number | null>(null);
   useEffect(() => {
     const box = scrollBoxRef.current;
     if (!box) return;
@@ -626,6 +634,16 @@ export function ShakhmatkaGrid({
     blockWidths.set(block, slotCount * CELL + Math.max(0, slotCount - 1) * GAP);
   }
 
+  // Flats on the picked floor (all entrances), by status, for the floating summary.
+  const floorCounts = new Map<ObjectStatus, number>();
+  if (selectedFloor !== null) {
+    for (const u of gridUnits) {
+      if ((u.floor ?? 0) === selectedFloor) {
+        floorCounts.set(u.status, (floorCounts.get(u.status) ?? 0) + 1);
+      }
+    }
+  }
+
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
 
@@ -649,18 +667,20 @@ export function ShakhmatkaGrid({
           has real rows below it to render over, and this padding only needs
           to cover ordinary breathing room, not a worst-case card height. */}
       <div ref={scrollBoxRef} className="overflow-x-auto overflow-y-hidden">
-        <div className="flex w-fit flex-col gap-2 pb-2">
+        <div className="flex w-fit flex-col gap-1 pb-2">
           {hasBlocks && (
-            <div className="flex items-center gap-3">
-              <span className="w-16 shrink-0" />
-              <div className="flex gap-4">
+            <div className="flex items-center gap-1.5">
+              <span className={`sticky left-0 z-20 ${FLOOR_STRIP} shrink-0 self-stretch bg-[var(--surface-0)]`} />
+              <div className="flex gap-3">
                 {blocks.map((block) => (
                   <p
                     key={block}
                     style={{ width: blockWidths.get(block) }}
                     className="shrink-0 text-sm font-semibold text-[var(--ink-2)]"
                   >
-                    {block || t.buildings.noBlock}
+                    {/* Stays at the left edge (just right of the floor strip) for as
+                        long as any part of its entrance is on screen. */}
+                    <span className="sticky left-9 inline-block">{block || t.buildings.noBlock}</span>
                   </p>
                 ))}
               </div>
@@ -673,11 +693,29 @@ export function ShakhmatkaGrid({
             // upward instead, so it always has somewhere to render into.
             const openUpward = floorIndex >= floors.length - 4;
             return (
-            <div key={floor} className="flex items-center gap-3">
-              <span className="w-16 shrink-0 text-xs font-medium text-[var(--ink-4)]">
-                {t.buildings.floorLabel} {floor}
-              </span>
-              <div className="flex gap-4">
+            <div
+              key={floor}
+              className={`flex items-center gap-1.5 rounded-lg py-0.5 ${
+                selectedFloor === floor ? "bg-[color-mix(in_srgb,var(--brand)_14%,transparent)]" : ""
+              }`}
+            >
+              {/* Just the number, pinned to the left edge: scroll the grid sideways and
+                  the floor you are reading stays with you. Tapping it picks the whole
+                  floor (highlight + summary), tapping again lets go. */}
+              <button
+                type="button"
+                onClick={() => setSelectedFloor(selectedFloor === floor ? null : floor)}
+                aria-pressed={selectedFloor === floor}
+                title={`${t.buildings.floorLabel} ${floor}`}
+                className={`sticky left-0 z-20 ${FLOOR_STRIP} shrink-0 self-stretch rounded-md text-xs font-medium transition-colors ${
+                  selectedFloor === floor
+                    ? "bg-brand text-[var(--on-brand)]"
+                    : "bg-[var(--surface-0)] text-[var(--ink-4)] shadow-[1px_0_0_var(--border-c)] hover:text-[var(--ink-2)]"
+                }`}
+              >
+                {floor}
+              </button>
+              <div className="flex gap-3">
                 {blocks.map((block) => {
                   const cellUnits = gridUnits
                     .filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor)
@@ -687,7 +725,7 @@ export function ShakhmatkaGrid({
                     <div
                       key={block}
                       style={{ width: blockWidths.get(block) }}
-                      className="flex shrink-0 flex-nowrap gap-2"
+                      className="flex shrink-0 flex-nowrap gap-1"
                     >
                       {slots.map((slot) =>
                         slot.kind === "unit" ? (
@@ -720,7 +758,7 @@ export function ShakhmatkaGrid({
                             title={t.buildings.addUnitHere}
                             onClick={() => onAddUnit(floor, block, slot.position)}
                             style={{ width: CELL }}
-                            className="flex h-14 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
+                            className="flex h-[38px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
                           >
                             +
                           </button>
@@ -728,7 +766,7 @@ export function ShakhmatkaGrid({
                           <div
                             key={`ghost-${block}-${floor}-${slot.position}`}
                             style={{ width: CELL }}
-                            className="h-14 shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
+                            className="h-[38px] shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
                           />
                         )
                       )}
@@ -741,6 +779,32 @@ export function ShakhmatkaGrid({
           })}
         </div>
       </div>
+
+      {/* What is on the picked floor, floating at the bottom of the screen while the
+          grid is in view (above the phone tab bar). Tapping it lets the floor go. */}
+      {selectedFloor !== null && (
+        <button
+          type="button"
+          onClick={() => setSelectedFloor(null)}
+          title={`${t.buildings.floorLabel} ${selectedFloor}`}
+          className="sticky bottom-20 z-30 flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-1 self-center rounded-full border border-[var(--border-c)] bg-[var(--surface-1)] px-3.5 py-1.5 text-xs shadow-lg sm:bottom-4"
+        >
+          <span className="font-semibold text-[var(--ink-2)]">
+            {t.buildings.floorLabel} {selectedFloor}
+          </span>
+          {(Object.keys(t.buildings.legend) as Array<keyof typeof t.buildings.legend>)
+            .filter((status) => floorCounts.get(status))
+            .map((status) => (
+              <span key={status} className="flex items-center gap-1 text-[var(--ink-4)]">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: STATUS_HUES[status].solid }}
+                />
+                {t.buildings.legend[status]} {floorCounts.get(status)}
+              </span>
+            ))}
+        </button>
+      )}
 
       {/* Non-residential units (shops, offices, parking, land, construction)
           live in their own section so they never stretch or space out the main
@@ -803,7 +867,7 @@ export function ShakhmatkaGrid({
                           up tidily; a merged (span>1) cell spans that many
                           columns and still aligns. */}
                       <div
-                        className="grid justify-start gap-2"
+                        className="grid justify-start gap-1"
                         style={{ gridTemplateColumns: `repeat(auto-fill, ${CELL}px)` }}
                       >
                         {cells.map((unit) => (
