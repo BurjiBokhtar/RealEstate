@@ -24,14 +24,14 @@ export type UnitContractInfo = {
   isQuickBooking: boolean;
 };
 
-// A cell is CELL wide and 38px tall: the flat number, and -- only when the bar above the
-// grid asks for it (see useCellMetric) -- one more value beside it, the rooms ("2к") or the
-// area rounded to whole metres ("54"); everything else is in the hover card. One value at a
-// time keeps the cells calm, and about five fit a phone. 60px is what a three-digit flat
-// number needs next to a three-digit area ("126" and "104").
+// A cell is a CELL-pixel square (44px; h-11 is the same 44px): the flat number in a medium
+// weight, and -- only when the bar above the grid asks for it (see useCellMetric) -- one
+// small value under it, the rooms ("2к") or the area rounded to whole metres ("54");
+// everything else is in the hover card. One value at a time keeps the cells calm, and about
+// six fit a phone.
 // Every width below -- merged cells, entrance columns, the empty "+" slots -- is derived
 // from CELL and GAP, so changing them moves everything together.
-const CELL = 60;
+const CELL = 44;
 const GAP = 4;
 // The strip of floor numbers that stays pinned at the left while the grid scrolls sideways.
 const FLOOR_STRIP = "w-7";
@@ -252,29 +252,27 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`relative flex h-[38px] items-center ${
-          metric === "none" ? "justify-center" : "justify-between"
-        } gap-1 overflow-hidden rounded-md px-1.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-11 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-md text-[11px] font-medium leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
         } ${CELL_COLORS[unit.status]}`}
       >
-        {/* The number is the big thing on the left; rooms and area sit in a small, quiet
-            column on the right so they never compete with it. A flat with no rooms or
-            no area simply shows nothing there. */}
-        <span className="text-[15px] font-semibold leading-none">
+        {/* The number, not too big and not bold; the chosen value sits under it, small and
+            quiet so it never competes. A flat with no rooms or no area simply shows
+            nothing there. */}
+        <span className="text-[13px] font-medium leading-none">
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
         {metric === "rooms" && unit.rooms != null && unit.rooms > 0 && (
-          <span className="text-[11px] font-medium leading-none opacity-80">
+          <span className="text-[11px] font-normal leading-none opacity-80">
             {unit.rooms}
             {t.buildings.roomsFilterShort.charAt(0)}
           </span>
         )}
         {metric === "area" && unit.area != null && unit.area > 0 && (
-          <span className="text-[11px] font-medium leading-none opacity-80">
+          <span className="text-[11px] font-normal leading-none opacity-80">
             {Math.round(unit.area)}
           </span>
         )}
@@ -766,7 +764,7 @@ export function ShakhmatkaGrid({
                             title={t.buildings.addUnitHere}
                             onClick={() => onAddUnit(floor, block, slot.position)}
                             style={{ width: CELL }}
-                            className="flex h-[38px] shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
+                            className="flex h-11 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-[var(--border-c)] text-[var(--ink-5)] transition-all hover:border-slate-400 hover:bg-[var(--surface-2)] hover:text-[var(--ink-4)] active:scale-95"
                           >
                             +
                           </button>
@@ -774,7 +772,7 @@ export function ShakhmatkaGrid({
                           <div
                             key={`ghost-${block}-${floor}-${slot.position}`}
                             style={{ width: CELL }}
-                            className="h-[38px] shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
+                            className="h-11 shrink-0 rounded-md border-2 border-dashed border-[var(--border-c2)]"
                           />
                         )
                       )}
