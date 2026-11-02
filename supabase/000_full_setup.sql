@@ -7635,3 +7635,79 @@ begin
     insert into crm.applied_fixes (name) values ('083_audit_noise_cleanup');
   end if;
 end $$;
+
+-- ### 084_dashboard_period_totals.sql
+
+-- ============================================================
+-- 084: дашборд -- «Приход» и «Продано» ЗА ВЫБРАННЫЙ ПЕРИОД
+--
+-- ЧТО БЫЛО НЕ ТАК. Выбираешь «Сегодня» / «Этот месяц» / «Этот год», а
+-- «Общий приход» (и такая же цифра в шапке) остаётся суммой за всё время:
+-- crm.dashboard_summary берёт paid/debt/counts как снимок на сегодня и
+-- периодом пользуется только для графиков и «Выручки по ЖК». Выглядело так,
+-- будто период ничего не фильтрует.
+--
+-- ЧТО ДЕЛАЕТ ЭТОТ БЛОК. Отдельная небольшая функция (dashboard_summary не
+-- трогаем) с двумя числами за [p_from, p_to] -- те же ЖК, что и на остальном
+-- дашборде (выбранный; а при «все» -- без завершённых):
+--   income -- сколько денег пришло: платежи с датой оплаты в периоде
+--             (так же считается график «Приход по дням»);
+--   sales  -- сколько договоров подписано в периоде и на какую сумму
+--             (так же считается «Выручка по месяцам»).
+-- Отменённые договоры не входят ни туда, ни туда.
+--
+-- Без set search_path: под RLS такая функция работает заметно медленнее
+-- (см. блок 081); все таблицы указаны с схемой.
+--
+-- Идемпотентно, данные не трогает.
+-- ============================================================
+
+create or replace function crm.dashboard_period_totals(
+  p_building_id uuid default null,
+  p_from date default null,
+  p_to date default null
+)
+returns jsonb
+language sql
+stable
+security invoker
+as $$
+with scoped as (
+  select c.id, c.amount, c.currency, c.signed_date
+  from crm.contracts c
+  join crm.objects o on o.id = c.object_id
+  left join crm.buildings b on b.id = o.building_id
+  where c.status <> 'cancelled'
+    and case
+          when p_building_id is not null then o.building_id = p_building_id
+          else coalesce(b.construction_status, 'in_progress') <> 'completed'
+        end
+),
+income as (
+  select
+    coalesce(sum(p.amount) filter (where s.currency <> 'USD'), 0) as tjs,
+    coalesce(sum(p.amount) filter (where s.currency  = 'USD'), 0) as usd
+  from crm.contract_payments p
+  join scoped s on s.id = p.contract_id
+  where p.paid
+    and p.paid_date is not null
+    and (p_from is null or p.paid_date >= p_from)
+    and (p_to   is null or p.paid_date <= p_to)
+),
+sales as (
+  select
+    (count(*))::int                                              as contracts,
+    coalesce(sum(amount) filter (where currency <> 'USD'), 0)    as tjs,
+    coalesce(sum(amount) filter (where currency  = 'USD'), 0)    as usd
+  from scoped
+  where signed_date is not null
+    and (p_from is null or signed_date >= p_from)
+    and (p_to   is null or signed_date <= p_to)
+)
+select jsonb_build_object(
+  'income', (select jsonb_build_object('tjs', tjs, 'usd', usd) from income),
+  'sales',  (select jsonb_build_object('contracts', contracts, 'tjs', tjs, 'usd', usd) from sales)
+);
+$$;
+
+grant execute on function crm.dashboard_period_totals(uuid, date, date) to authenticated;

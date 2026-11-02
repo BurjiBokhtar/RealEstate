@@ -80,6 +80,16 @@ type DueMonth =
   | { key: string; pair: MoneyPair; unpaidContracts: number; contracts: number }
   | { key: string; error: string };
 
+// What came in (payments received) and what was signed (contracts) DURING the picked
+// period (crm.dashboard_period_totals, block 084). dashboard_summary shows debt, stock,
+// potential and area as a snapshot of today, so on its own a period changed only the
+// charts -- the headline income stayed the all-time sum and the picker looked broken.
+// Kept apart from dashboard_summary for the same reason as DueMonth: a database that
+// has not been updated yet makes only this figure fall back, not the whole page.
+type PeriodTotals =
+  | { key: string; income: MoneyPair; sales: MoneyPair; contracts: number }
+  | { key: string; error: string };
+
 // What the page renders before the first response lands, and if the request
 // fails -- so every reader below can stay unconditional.
 const EMPTY_SUMMARY: DashboardSummary = {
@@ -149,6 +159,7 @@ export default function DashboardPage() {
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [dueMonth, setDueMonth] = useState<DueMonth | null>(null);
+  const [periodTotals, setPeriodTotals] = useState<PeriodTotals | null>(null);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -217,6 +228,49 @@ export default function DashboardPage() {
     };
   }, [configured, selectedBuildingId, periodBounds, queryKey]);
 
+  // Income received and contracts signed inside the picked period, for the same
+  // building scope. Only asked for when a period is picked ("all time" is the
+  // summary's own paid figure).
+  useEffect(() => {
+    if (!configured || !periodBounds) return;
+    let cancelled = false;
+    createClient()
+      .schema("crm")
+      .rpc("dashboard_period_totals", {
+        p_building_id: selectedBuildingId === "all" ? null : selectedBuildingId,
+        p_from: periodBounds.start,
+        p_to: periodBounds.end,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("dashboard_period_totals failed:", error.message);
+          setPeriodTotals({ key: queryKey, error: error.message });
+          return;
+        }
+        const d = (data ?? {}) as {
+          income?: { tjs?: number; usd?: number };
+          sales?: { contracts?: number; tjs?: number; usd?: number };
+        };
+        setPeriodTotals({
+          key: queryKey,
+          income: { tjs: Number(d.income?.tjs ?? 0), usd: Number(d.income?.usd ?? 0) },
+          sales: { tjs: Number(d.sales?.tjs ?? 0), usd: Number(d.sales?.usd ?? 0) },
+          contracts: Number(d.sales?.contracts ?? 0),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, selectedBuildingId, periodBounds, queryKey]);
+  // The figures for the CURRENT building and period, or nothing: while they load, or
+  // if the database lacks the function, the page keeps showing the all-time income.
+  const periodOk =
+    periodBounds && periodTotals && periodTotals.key === queryKey && "income" in periodTotals
+      ? periodTotals
+      : null;
+  const periodLoading = configured && periodBounds !== null && periodTotals?.key !== queryKey;
+
   // The same building scope as the rest of the page, and not the period: like
   // debt, this is a snapshot of the current state, not a flow over the picked
   // period. With "all" selected a finished ЖК stays out, as everywhere else
@@ -263,7 +317,8 @@ export default function DashboardPage() {
 
   const counts = summary.counts;
   const area = summary.area;
-  const paidRevenue = summary.paid;
+  // With a period picked this is what was RECEIVED in it; otherwise everything received so far.
+  const paidRevenue = periodOk ? periodOk.income : summary.paid;
   const totalDebt = summary.debt;
   const potentialRevenue = summary.potential;
   const revenueByBuilding = summary.revenue_by_building;
@@ -384,13 +439,14 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-5">
       <DashboardHero
         t={t}
-        loading={loading}
+        loading={loading || periodLoading}
         brandName={brandName}
         totalUnits={counts.total}
         availableCount={counts.available}
         reservedCount={counts.reserved}
         soldCount={counts.sold}
         paidRevenue={paidRevenue}
+        paidLabel={periodOk ? t.dashboard.incomeInPeriod : t.dashboard.paidRevenue}
         buildings={buildings}
         selectedBuildingId={selectedBuildingId}
         onBuildingChange={setSelectedBuildingId}
@@ -422,12 +478,12 @@ export default function DashboardPage() {
           debtors page, where the follow-up actually happens. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard
-          label={t.dashboard.totalIncome}
+          label={periodOk ? t.dashboard.incomeInPeriod : t.dashboard.totalIncome}
           value={<MoneyPairValue value={paidRevenue} animate />}
           icon={StatIcons.coins}
           tone="emerald"
           delay={80}
-          loading={loading}
+          loading={loading || periodLoading}
         />
         <StatCard
           label={t.dashboard.totalDebt}
@@ -481,6 +537,24 @@ export default function DashboardPage() {
           loading={loading}
         />
       </div>
+
+      {/* With a period picked: what was signed in it, and a plain word about which
+          figures do NOT follow the period (a debt or a stock of flats is a state of
+          today, not something that happens "during" a month). */}
+      {periodOk && (
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-lg border border-[var(--border-c)] bg-[var(--surface-2)] px-4 py-2.5 text-xs text-[var(--ink-4)]">
+          <div className="flex items-center gap-2">
+            <span>{t.dashboard.periodSales}:</span>
+            <span className="text-sm text-[var(--ink-2)]">
+              <MoneyPairValue value={periodOk.sales} />
+            </span>
+            <span>
+              · {t.dashboard.periodSalesCount.replace("{n}", String(periodOk.contracts))}
+            </span>
+          </div>
+          <span>{t.dashboard.snapshotNote}</span>
+        </div>
+      )}
 
       {/* Площадь по статусам, во всю ширину: только 14px высотой, поэтому ей
           не нужна отдельная колонка. */}

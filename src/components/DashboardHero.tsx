@@ -30,6 +30,7 @@ export function DashboardHero({
   reservedCount,
   soldCount,
   paidRevenue,
+  paidLabel,
   buildings,
   selectedBuildingId,
   onBuildingChange,
@@ -44,6 +45,8 @@ export function DashboardHero({
   reservedCount: number;
   soldCount: number;
   paidRevenue: MoneyPair;
+  // "Received" for all time, or "received in the period" once one is picked.
+  paidLabel: string;
   buildings: Building[];
   selectedBuildingId: string;
   onBuildingChange: (id: string) => void;
@@ -203,7 +206,7 @@ export function DashboardHero({
           >
             <div className="rounded-xl bg-white/10 px-4 py-3 backdrop-blur-sm">
               <p className="text-[11px] uppercase tracking-wide text-white/60">
-                {t.dashboard.paidRevenue}
+                {paidLabel}
               </p>
               <div className="mt-1 text-2xl">
                 {loading ? "…" : <MoneyPairValue value={paidRevenue} animate />}

@@ -63,6 +63,11 @@ export const dictionaries = {
       revenueByBuilding: "Выручка по ЖК",
       paidRevenue: "Оплачено (получено)",
       totalIncome: "Общий приход",
+      incomeInPeriod: "Приход за период",
+      periodSales: "Подписано за период",
+      periodSalesCount: "договоров: {n}",
+      snapshotNote:
+        "Долг, потенциал, площадь, заполненность и число квартир показаны на сегодня — период на них не влияет.",
       totalDebt: "Долг покупателей",
       overdueTile: "Просрочено",
       totalArea: "Общая площадь",
@@ -1180,6 +1185,11 @@ export const dictionaries = {
       revenueByBuilding: "Даромад аз рӯи МИ",
       paidRevenue: "Пардохт шуд (гирифта шуд)",
       totalIncome: "Даромади умумӣ",
+      incomeInPeriod: "Даромад дар давра",
+      periodSales: "Дар давра имзо шуд",
+      periodSalesCount: "шартномаҳо: {n}",
+      snapshotNote:
+        "Қарз, иқтидор, масоҳат, пуршавӣ ва шумораи хонаҳо барои имрӯз нишон дода мешаванд — давра ба онҳо таъсир намекунад.",
       totalDebt: "Қарзи харидорон",
       overdueTile: "Гузашта аз мӯҳлат",
       totalArea: "Масоҳати умумӣ",
