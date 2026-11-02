@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { justWentBack } from "@/lib/useScrollMemory";
+import { setCellMetric, useCellMetric, type CellMetric } from "@/lib/useCellMetric";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea, formatAreaValue } from "@/lib/objects/format";
+import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
 import { STATUS_HUES } from "@/components/charts/palette";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
@@ -23,13 +24,14 @@ export type UnitContractInfo = {
   isQuickBooking: boolean;
 };
 
-// A cell is CELL wide and 38px tall: the flat number on the left, and on the right the
-// rooms ("2к") over the bare area ("54,3"); the full words are in the hover card (variant
-// "mini" of the label layouts -- small enough for about four to fit a phone). 70px is what
-// a three-digit flat number needs next to a three-digit area ("126" and "104,3").
+// A cell is CELL wide and 38px tall: the flat number, and -- only when the bar above the
+// grid asks for it (see useCellMetric) -- one more value beside it, the rooms ("2к") or the
+// area rounded to whole metres ("54"); everything else is in the hover card. One value at a
+// time keeps the cells calm, and about five fit a phone. 60px is what a three-digit flat
+// number needs next to a three-digit area ("126" and "104").
 // Every width below -- merged cells, entrance columns, the empty "+" slots -- is derived
 // from CELL and GAP, so changing them moves everything together.
-const CELL = 70;
+const CELL = 60;
 const GAP = 4;
 // The strip of floor numbers that stays pinned at the left while the grid scrolls sideways.
 const FLOOR_STRIP = "w-7";
@@ -149,6 +151,8 @@ function UnitCell({
   // padding is no longer load-bearing and can shrink back down to nothing.
   openUpward?: boolean;
 }) {
+  // What goes next to the flat number: nothing, the rooms or the area (the bar above).
+  const metric = useCellMetric();
   const { t } = useLocale();
   const router = useRouter();
   // Where "back" should return to. Opening a sold flat lands on the buyer's
@@ -248,7 +252,9 @@ function UnitCell({
         }}
         disabled={isPending}
         style={{ width }}
-        className={`relative flex h-[38px] items-center justify-between gap-1 overflow-hidden rounded-md px-1.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
+        className={`relative flex h-[38px] items-center ${
+          metric === "none" ? "justify-center" : "justify-between"
+        } gap-1 overflow-hidden rounded-md px-1.5 text-[11px] font-semibold leading-tight transition-all hover:scale-105 hover:ring-2 hover:ring-offset-1 hover:ring-[color-mix(in_srgb,var(--brand)_45%,transparent)] ${
           isPending ? "animate-pulse opacity-60" : ""
         } ${dimmed ? "opacity-20 saturate-0" : ""} ${
           typeMeta ? `${typeMeta.ring} ring-offset-1` : ""
@@ -257,19 +263,21 @@ function UnitCell({
         {/* The number is the big thing on the left; rooms and area sit in a small, quiet
             column on the right so they never compete with it. A flat with no rooms or
             no area simply shows nothing there. */}
-        <span className="text-[14px] font-semibold leading-none">
+        <span className="text-[15px] font-semibold leading-none">
           {typeMeta?.prefix}
           {apartmentNumber ?? "—"}
         </span>
-        <span className="flex flex-col items-end gap-0.5 pb-0.5 text-[10.5px] font-medium leading-none opacity-80">
-          {unit.rooms != null && unit.rooms > 0 && (
-            <span>
-              {unit.rooms}
-              {t.buildings.roomsFilterShort.charAt(0)}
-            </span>
-          )}
-          {unit.area != null && unit.area > 0 && <span>{formatAreaValue(unit.area)}</span>}
-        </span>
+        {metric === "rooms" && unit.rooms != null && unit.rooms > 0 && (
+          <span className="text-[11px] font-medium leading-none opacity-80">
+            {unit.rooms}
+            {t.buildings.roomsFilterShort.charAt(0)}
+          </span>
+        )}
+        {metric === "area" && unit.area != null && unit.area > 0 && (
+          <span className="text-[11px] font-medium leading-none opacity-80">
+            {Math.round(unit.area)}
+          </span>
+        )}
 
         {/* How much of this flat is actually paid for, readable without
             hovering anything: a thin fill along the bottom edge while money is
@@ -999,8 +1007,27 @@ export function ShakhmatkaFilters({
 
   const anyActive = statusFilter !== null || roomsFilter !== null || gapFilter !== null;
 
+  // What the cells show next to the flat number. "№" = nothing, just the numbers.
+  const metric = useCellMetric();
+  const metricOptions: Array<{ value: CellMetric; label: string; title: string }> = [
+    { value: "none", label: "№", title: t.buildings.floorLabel },
+    { value: "rooms", label: t.buildings.hover.rooms, title: t.buildings.hover.rooms },
+    { value: "area", label: t.buildings.hover.area, title: t.buildings.hover.area },
+  ];
+
   return (
     <ControlGroup size="sm" scrollable>
+      {metricOptions.map((o) => (
+        <PillButton
+          key={o.value}
+          active={metric === o.value}
+          onClick={() => setCellMetric(o.value)}
+          title={o.title}
+          label={o.label}
+        />
+      ))}
+      <GroupDivider />
+
       {presentStatuses.map((status) => {
         const active = statusFilter === status;
         return (
