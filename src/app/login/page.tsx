@@ -50,14 +50,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [resetting, setResetting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // "Forgot password": the same card turns into a small recovery form. The login IS
-  // the person's e-mail, so recovery is one field. `sentTo` is the address the last
-  // link was requested for; `cooldown` is the seconds before asking again (Supabase
-  // sends one recovery e-mail per address per minute).
-  const [mode, setMode] = useState<"signin" | "recover">("signin");
-  const [sentTo, setSentTo] = useState<string | null>(null);
-  const [cooldown, setCooldown] = useState(0);
   // Company branding for the header. The login page runs before auth, and
   // full settings are staff-only -- public_branding() (026) exposes exactly
   // the name and logo, nothing else. Falls back to the app name until the
@@ -89,57 +84,9 @@ export default function LoginPage() {
       });
   }, [configured]);
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = window.setTimeout(() => setCooldown((s) => s - 1), 1000);
-    return () => window.clearTimeout(id);
-  }, [cooldown]);
-
-  const handleRecover = async () => {
-    setError("");
-    const address = email.trim();
-    if (!address) {
-      setError(t.login.resetEnterEmail);
-      return;
-    }
-    setSubmitting(true);
-    const supabase = createClient();
-    // For an address that has no account Supabase answers "ok" as well, so the form
-    // cannot be used to find out who works here. Only real failures come back as an
-    // error: too many requests, or the project has no mail sending set up -- the
-    // second one used to be swallowed and the person waited for a letter that was
-    // never going to come.
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(address, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setSubmitting(false);
-    if (resetError) {
-      if (resetError.status === 429 || resetError.code === "over_email_send_rate_limit") {
-        setCooldown(60);
-        setError(t.login.recoverRateLimited);
-      } else {
-        console.error("resetPasswordForEmail failed:", resetError.message);
-        setError(t.login.recoverFailed);
-      }
-      return;
-    }
-    setSentTo(address);
-    setCooldown(60);
-  };
-
-  const backToSignIn = () => {
-    setMode("signin");
-    setError("");
-    setSentTo(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!configured) return;
-    if (mode === "recover") {
-      void handleRecover();
-      return;
-    }
     setSubmitting(true);
     setError("");
     const supabase = createClient();
@@ -208,9 +155,7 @@ export default function LoginPage() {
               <h1 className="bg-gradient-to-r from-[var(--brand-strong)] to-[var(--brand)] bg-clip-text text-xl font-bold tracking-tight text-transparent">
                 {brand.name || t.appName}
               </h1>
-              <p className="text-sm text-slate-500">
-                {mode === "recover" ? t.login.recoverTitle : t.login.title}
-              </p>
+              <p className="text-sm text-slate-500">{t.login.title}</p>
             </div>
           </div>
           <div className="flex shrink-0 overflow-hidden rounded-lg border border-slate-200">
@@ -236,74 +181,62 @@ export default function LoginPage() {
             error. Signing in is impossible either way, but this way the
             reason is on screen. */}
         {!configured && <SetupNotice />}
-        {mode === "signin" && <ReasonNotice />}
+        <ReasonNotice />
 
-        {mode === "recover" && (
-          <p className="text-sm leading-relaxed text-slate-600">{t.login.recoverHint}</p>
-        )}
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700">{t.login.email}</span>
           <input
             type="email"
             required
-            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={FIELD_CLASS}
           />
         </label>
-        {mode === "signin" && (
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-slate-700">{t.login.password}</span>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={FIELD_CLASS}
-            />
-          </label>
-        )}
-        {error && (
-          <p role="alert" className="text-sm text-red-600">
-            {error}
-          </p>
-        )}
-        {mode === "recover" && sentTo && (
-          <p role="status" className="rounded-lg bg-[var(--wash-emerald)] px-3 py-2.5 text-sm text-[var(--wash-emerald-ink)]">
-            {t.login.recoverSentTo.replace("{email}", sentTo)}
-          </p>
-        )}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="font-medium text-slate-700">{t.login.password}</span>
+          <input
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={FIELD_CLASS}
+          />
+        </label>
+        {error && <p className="text-sm text-red-600">{error}</p>}
+        {notice && <p className="text-sm text-emerald-600">{notice}</p>}
         <button
           type="submit"
-          disabled={submitting || !configured || (mode === "recover" && cooldown > 0)}
+          disabled={submitting || !configured}
           className="btn-brand mt-1 h-11 rounded-lg text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
         >
-          {submitting
-            ? t.common.loading
-            : mode === "signin"
-              ? t.login.submit
-              : cooldown > 0
-                ? t.login.recoverWait.replace("{s}", String(cooldown))
-                : sentTo
-                  ? t.login.recoverResend
-                  : t.login.recoverSend}
+          {submitting ? t.common.loading : t.login.submit}
         </button>
         <button
           type="button"
-          disabled={!configured}
-          onClick={() => {
-            if (mode === "signin") {
-              setMode("recover");
-              setError("");
-              setSentTo(null);
-            } else {
-              backToSignIn();
+          disabled={resetting || !configured}
+          onClick={async () => {
+            setError("");
+            setNotice("");
+            if (!configured) return;
+            if (!email.trim()) {
+              setError(t.login.resetEnterEmail);
+              return;
             }
+            setResetting(true);
+            const supabase = createClient();
+            // Sends only to addresses that exist in Supabase Auth; the
+            // wording never confirms whether an account exists, so the
+            // form can't be used to probe for staff e-mails.
+            await supabase.auth.resetPasswordForEmail(email.trim(), {
+              redirectTo: `${window.location.origin}/reset-password`,
+            });
+            setResetting(false);
+            setNotice(t.login.resetSent);
           }}
           className="-mx-1.5 self-center rounded px-1.5 py-0.5 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50"
         >
-          {mode === "signin" ? t.login.forgot : `← ${t.login.recoverBack}`}
+          {t.login.forgot}
         </button>
       </form>
 
