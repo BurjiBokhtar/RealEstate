@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { claimSession } from "@/lib/auth/deviceSession";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
 import { LoginScene } from "@/components/LoginScene";
 
@@ -54,11 +55,17 @@ export default function ResetPasswordPage() {
     setSubmitting(true);
     const supabase = createClient();
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setSubmitting(false);
     if (updateError) {
+      setSubmitting(false);
       setError(updateError.message);
       return;
     }
+    // Following the e-mailed link is a sign-in, so this device takes the account's
+    // one seat, exactly as the login form does. Without it the next session check
+    // finds a seat held by some other device (or none of ours) and signs the person
+    // straight back out with "you signed in on another device".
+    await claimSession(supabase);
+    setSubmitting(false);
     router.replace("/");
     router.refresh();
   };
