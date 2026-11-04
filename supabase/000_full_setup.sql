@@ -7711,3 +7711,178 @@ select jsonb_build_object(
 $$;
 
 grant execute on function crm.dashboard_period_totals(uuid, date, date) to authenticated;
+
+-- ### 085_due_this_month_minus_received.sql
+
+-- ============================================================
+-- 085: «К оплате в этом месяце» уменьшается, когда клиент платит В ЭТОМ месяце
+--
+-- ЧТО БЫЛО НЕ ТАК. Блок 064 считал остаток этого месяца той же раскладкой,
+-- что и просрочку: деньги закрывают самые СТАРЫЕ строки графика первыми.
+-- Клиент без долгов, заплативший за месяц, исчезал из суммы -- всё верно.
+-- Но у клиента с просрочкой платёж этого месяца уходил на старые месяцы, и
+-- строка текущего месяца оставалась «не закрытой»: человек заплатил свой
+-- ежемесячный взнос, а карточка на дашборде не менялась. Так же при
+-- частичной оплате: заплатил 4 000 из 10 000 -- в карточке всё ещё 10 000.
+--
+-- КАК СЧИТАЕМ ТЕПЕРЬ. По каждому договору, у которого есть платёж в этом
+-- месяце:
+--   запланировано  -- сумма строк графика на этот месяц (как раньше);
+--   поступило      -- сколько денег пришло в ПЛАН за этот месяц: прирост
+--                     «пула» раскладки (оплачено минус первоначальный взнос,
+--                     см. представление overdue_installments) с начала
+--                     месяца. Первоначальный взнос, внесённый в этом месяце,
+--                     в «поступило» не входит -- он не часть графика;
+--   осталось       -- меньшее из двух:
+--                       * остаток строк месяца по старой раскладке (учитывает
+--                         предоплату, внесённую раньше), и
+--                       * запланировано минус поступило в этом месяце.
+-- Долг прошлых месяцев по-прежнему виден в «Должниках» и «Просрочено»; он не
+-- «съедается» и не прячется -- просто платёж этого месяца считается платежом
+-- этого месяца.
+--
+-- Меняются два представления данных: новое представление
+-- crm.due_this_month_by_contract (одна строка на договор) и обе функции
+-- due_this_month_contracts() / due_this_month_totals() -- сигнатуры и состав
+-- колонок те же, интерфейс не трогаем. set search_path у функций убран: под
+-- RLS он замедляет вызов (см. блок 081); таблицы везде указаны с схемой.
+--
+-- Идемпотентно, данные не трогает.
+-- ============================================================
+
+create or replace view crm.due_this_month_by_contract
+with (security_invoker = on)
+as
+with bounds as (
+  select date_trunc('month', current_date)::date                       as m0,
+         (date_trunc('month', current_date) + interval '1 month')::date as m1
+),
+month_rows as (
+  select oi.contract_id,
+         sum(oi.scheduled_amount) as scheduled,
+         sum(oi.unpaid_amount)    as unpaid_fifo
+  from crm.overdue_installments oi, bounds b
+  where oi.due_date >= b.m0
+    and oi.due_date <  b.m1
+  group by oi.contract_id
+),
+plan_total as (
+  select p.contract_id, sum(p.amount) as plan_total
+  from crm.contract_payments p
+  where not p.paid
+    and p.contract_id in (select contract_id from month_rows)
+  group by p.contract_id
+),
+received as (
+  select p.contract_id, sum(p.amount) as received
+  from crm.contract_payments p, bounds b
+  where p.paid
+    and coalesce(p.paid_date, p.due_date) >= b.m0
+    and p.contract_id in (select contract_id from month_rows)
+  group by p.contract_id
+)
+select
+  mr.contract_id,
+  mr.scheduled as scheduled_amount,
+  least(mr.unpaid_fifo, greatest(mr.scheduled - applied.v, 0)) as unpaid_amount
+from month_rows mr
+join crm.contracts c on c.id = mr.contract_id
+left join plan_total pt on pt.contract_id = mr.contract_id
+left join received   r  on r.contract_id  = mr.contract_id
+cross join lateral (
+  -- Сколько денег легло на ПЛАН за этот месяц: пул сейчас минус пул на начало месяца.
+  select greatest(c.paid_amount - (c.amount - coalesce(pt.plan_total, 0)), 0)
+       - greatest(c.paid_amount - coalesce(r.received, 0) - (c.amount - coalesce(pt.plan_total, 0)), 0) as v
+) applied;
+
+grant select on crm.due_this_month_by_contract to authenticated;
+
+
+create or replace function crm.due_this_month_contracts(p_building_id uuid default null)
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  client_phone text,
+  object_id uuid,
+  object_name text,
+  object_block text,
+  object_floor integer,
+  building_id uuid,
+  building_name text,
+  currency text,
+  scheduled_amount numeric,
+  unpaid_amount numeric
+)
+language sql
+stable
+security invoker
+as $$
+  select
+    c.id,
+    c.number,
+    cl.id,
+    coalesce(cl.name, '—'),
+    cl.phone,
+    o.id,
+    o.name,
+    o.block,
+    o.floor,
+    o.building_id,
+    coalesce(b.name, '—'),
+    c.currency::text,
+    d.scheduled_amount,
+    d.unpaid_amount
+  from crm.due_this_month_by_contract d
+  join crm.contracts c on c.id = d.contract_id
+  left join crm.clients   cl on cl.id = c.client_id
+  left join crm.objects   o  on o.id = c.object_id
+  left join crm.buildings b  on b.id = o.building_id
+  where (p_building_id is null or o.building_id = p_building_id)
+  order by d.unpaid_amount desc, c.id;
+$$;
+
+grant execute on function crm.due_this_month_contracts(uuid) to authenticated;
+
+
+create or replace function crm.due_this_month_totals(
+  p_building_id uuid default null,
+  p_active_only boolean default false
+)
+returns table (
+  currency text,
+  contracts int,
+  unpaid_contracts int,
+  scheduled_total numeric,
+  unpaid_total numeric
+)
+language sql
+stable
+security invoker
+as $$
+  select
+    c.currency::text,
+    (count(*))::int,
+    (count(*) filter (where d.unpaid_amount > 0.005))::int,
+    sum(d.scheduled_amount),
+    sum(d.unpaid_amount)
+  from crm.due_this_month_by_contract d
+  join crm.contracts c on c.id = d.contract_id
+  left join crm.objects   o on o.id = c.object_id
+  left join crm.buildings b on b.id = o.building_id
+  where (p_building_id is null or o.building_id = p_building_id)
+    -- Как на дашборде: в общей сводке достроенный ЖК не участвует,
+    -- а если выбран конкретный дом -- показывается как есть.
+    and (
+      p_building_id is not null
+      or not p_active_only
+      or coalesce(b.construction_status, 'in_progress') <> 'completed'
+    )
+  group by c.currency
+  order by sum(d.unpaid_amount) desc;
+$$;
+
+grant execute on function crm.due_this_month_totals(uuid, boolean) to authenticated;
+
+notify pgrst, 'reload schema';
