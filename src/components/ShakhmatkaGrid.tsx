@@ -37,15 +37,14 @@ const GAP = 4;
 const FLOOR_STRIP = "w-7";
 
 // Apartments and houses are the "main" shakhmatka. Everything else (shops,
-// offices, parking, land, construction) is non-residential and lives in its
-// own section below -- so a basement full of parking bays, or a strip of
-// shops, can never stretch the apartment grid or shove entrances apart.
+// offices, parking, land, construction) is non-residential and is drawn as a
+// second zone below the flats -- same entrance columns, its own floor rows --
+// so a basement full of parking bays, or a strip of shops, can never stretch
+// the apartment rows or shove entrances apart.
 const RESIDENTIAL_TYPES = new Set(["apartment", "house"]);
 function isResidential(u: PropertyObject): boolean {
   return RESIDENTIAL_TYPES.has(u.type ?? "apartment");
 }
-// Order non-residential groups predictably.
-const NON_RES_ORDER = ["commercial", "office", "parking", "land", "construction_site"];
 
 // Non-residential units are marked visually distinct from flats: a coloured
 // ring, a slight separation, and a purpose prefix on the number so a
@@ -585,8 +584,13 @@ export function ShakhmatkaGrid({
   // right -- the way a real shakhmatka grows -- instead of an alphabetical
   // order that reshuffles them.
   const gridUnits = residentialUnits.length > 0 ? residentialUnits : units;
+  // Shops, offices, parking and the rest are drawn as a second zone UNDER the flats, in the
+  // same entrance columns and with the same floor strip, so one look at the grid shows what
+  // is where in the building: flats above, commercial floors below. They never widen or
+  // renumber the flats' rows (each zone only pads a column to its own widest floor).
+  const zoneUnits = residentialUnits.length > 0 ? otherUnits : [];
   const blockFirstCreated = new Map<string, string>();
-  for (const u of gridUnits) {
+  for (const u of [...gridUnits, ...zoneUnits]) {
     const b = u.block ?? "";
     const ts = u.created_at ?? "";
     const seen = blockFirstCreated.get(b);
@@ -597,6 +601,7 @@ export function ShakhmatkaGrid({
   );
   const hasBlocks = blocks.length > 1 || blocks[0] !== "";
   const floors = Array.from(new Set(gridUnits.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
+  const zoneFloors = Array.from(new Set(zoneUnits.map((u) => u.floor ?? 0))).sort((a, b) => b - a);
 
   // Widest floor of each block, measured by how many units it actually has
   // (not by stored position values). This is what pins the block's column
@@ -605,17 +610,26 @@ export function ShakhmatkaGrid({
   // entrance far to the right.
   const maxUnitsByBlock = new Map<string, number>();
   for (const block of blocks) {
-    const perFloor = new Map<number, number>();
-    for (const u of gridUnits) {
-      if ((u.block ?? "") !== block) continue;
-      const f = u.floor ?? 0;
-      perFloor.set(f, (perFloor.get(f) ?? 0) + (u.span || 1));
+    let widest = 0;
+    for (const list of [gridUnits, zoneUnits]) {
+      const perFloor = new Map<number, number>();
+      for (const u of list) {
+        if ((u.block ?? "") !== block) continue;
+        const f = u.floor ?? 0;
+        perFloor.set(f, (perFloor.get(f) ?? 0) + (u.span || 1));
+      }
+      widest = Math.max(widest, ...perFloor.values());
     }
-    maxUnitsByBlock.set(block, Math.max(0, ...perFloor.values()));
+    maxUnitsByBlock.set(block, widest);
   }
 
   type Slot = { kind: "unit"; unit: PropertyObject } | { kind: "ghost"; position: number };
-  function floorSlots(block: string, floor: number, cellUnits: PropertyObject[]): Slot[] {
+  function floorSlots(
+    block: string,
+    floor: number,
+    cellUnits: PropertyObject[],
+    ghosts: boolean
+  ): Slot[] {
     // Pack the floor's units left-to-right in order, ignoring gaps in their
     // stored positions -- so a floor always shows exactly as many cells as it
     // has units, side by side, with no confusing empty holes. One trailing
@@ -624,7 +638,7 @@ export function ShakhmatkaGrid({
       (a, b) => (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0)
     );
     const slots: Slot[] = sorted.map((unit) => ({ kind: "unit" as const, unit }));
-    if (!readOnly) {
+    if (!readOnly && ghosts) {
       const last = sorted[sorted.length - 1];
       const nextPos = last ? (last.position_in_floor ?? sorted.length) + 1 : 1;
       slots.push({ kind: "ghost", position: nextPos });
@@ -640,10 +654,24 @@ export function ShakhmatkaGrid({
     blockWidths.set(block, slotCount * CELL + Math.max(0, slotCount - 1) * GAP);
   }
 
-  // Flats on the picked floor (all entrances), by status, for the floating summary.
+  // The rows of the grid, top to bottom: the flats' floors, then (if there is anything but
+  // flats) a divider and the commercial floors. A whole-floor pick lights up both zones.
+  type FloorRow =
+    | { kind: "floor"; floor: number; source: PropertyObject[]; zone: boolean; index: number }
+    | { kind: "divider" };
+  const floorRows: FloorRow[] = [
+    ...floors.map((floor, index) => ({ kind: "floor" as const, floor, source: gridUnits, zone: false, index })),
+    ...(zoneFloors.length > 0 ? [{ kind: "divider" as const }] : []),
+    ...zoneFloors.map((floor, index) => ({ kind: "floor" as const, floor, source: zoneUnits, zone: true, index })),
+  ];
+  const rowWidth =
+    blocks.reduce((sum, b) => sum + (blockWidths.get(b) ?? 0), 0) + Math.max(0, blocks.length - 1) * 12;
+
+  // Premises on the picked floor (all entrances, flats and commercial), by status, for the
+  // floating summary.
   const floorCounts = new Map<ObjectStatus, number>();
   if (selectedFloor !== null) {
-    for (const u of gridUnits) {
+    for (const u of units) {
       if ((u.floor ?? 0) === selectedFloor) {
         floorCounts.set(u.status, (floorCounts.get(u.status) ?? 0) + 1);
       }
@@ -693,14 +721,31 @@ export function ShakhmatkaGrid({
             </div>
           )}
 
-          {floors.map((floor, floorIndex) => {
+          {floorRows.map((row) => {
+            if (row.kind === "divider") {
+              return (
+                <div key="zone-divider" className="flex items-center gap-1.5 pt-3">
+                  <span className={`sticky left-0 z-20 ${FLOOR_STRIP} shrink-0 self-stretch bg-[var(--surface-0)]`} />
+                  <div style={{ width: rowWidth }} className="border-t border-[var(--border-c)] pt-1.5">
+                    <p className="sticky left-9 inline-block text-xs font-semibold uppercase tracking-wide text-[var(--ink-4)]">
+                      {t.buildings.commercialZone}
+                      <span className="ml-2 font-normal normal-case tracking-normal text-[var(--ink-5)]">
+                        ({zoneUnits.length})
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            const { floor, source, zone } = row;
             // The hover card is up to ~260px tall (roughly 4 rows) -- any
             // row with fewer than 4 rows left below it flips its card
             // upward instead, so it always has somewhere to render into.
-            const openUpward = floorIndex >= floors.length - 4;
+            // The commercial zone is the bottom of the grid, so all of it opens upward.
+            const openUpward = zone || row.index >= floors.length - 4;
             return (
             <div
-              key={floor}
+              key={`${zone ? "z" : "m"}-${floor}`}
               className={`flex items-center gap-1.5 rounded-lg py-0.5 ${
                 selectedFloor === floor ? "bg-[color-mix(in_srgb,var(--brand)_14%,transparent)]" : ""
               }`}
@@ -723,10 +768,12 @@ export function ShakhmatkaGrid({
               </button>
               <div className="flex gap-3">
                 {blocks.map((block) => {
-                  const cellUnits = gridUnits
+                  const cellUnits = source
                     .filter((u) => (u.block ?? "") === block && (u.floor ?? 0) === floor)
                     .sort((a, b) => (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0));
-                  const slots = floorSlots(block, floor, cellUnits);
+                  // No "+" add-slot in the commercial zone: a new cell there would be born
+                  // as a flat. Commercial premises are added in the structure editor.
+                  const slots = floorSlots(block, floor, cellUnits, !zone);
                   return (
                     <div
                       key={block}
@@ -810,107 +857,6 @@ export function ShakhmatkaGrid({
               </span>
             ))}
         </button>
-      )}
-
-      {/* Non-residential units (shops, offices, parking, land, construction)
-          live in their own section so they never stretch or space out the main
-          apartment shakhmatka above. Each type wraps freely, so a basement of
-          40 parking bays just flows onto more rows instead of widening a
-          column. */}
-      {otherUnits.length > 0 && (
-        <div className="flex flex-col gap-4 border-t border-[var(--border-c)] pt-4">
-          {NON_RES_ORDER.map((type) => {
-            const group = otherUnits
-              .filter((u) => (u.type ?? "apartment") === type)
-              .sort((a, b) => {
-                const bc = (a.block ?? "").localeCompare(b.block ?? "");
-                if (bc !== 0) return bc;
-                const fa = a.floor ?? 0;
-                const fb = b.floor ?? 0;
-                if (fa !== fb) return fa - fb;
-                return (a.position_in_floor ?? 0) - (b.position_in_floor ?? 0);
-              });
-            if (group.length === 0) return null;
-            const meta = TYPE_META[type];
-            // Split each type by block/entrance so two blocks' commercial
-            // units don't run together into one row with restarting numbers
-            // (М1…М26, then М1… again). Each block gets its own labelled grid.
-            const blockCreated = new Map<string, string>();
-            for (const u of group) {
-              const b = u.block ?? "";
-              const ts = u.created_at ?? "";
-              const seen = blockCreated.get(b);
-              if (seen === undefined || ts < seen) blockCreated.set(b, ts);
-            }
-            const typeBlocks = [...blockCreated.keys()].sort((a, b) =>
-              (blockCreated.get(a) ?? "").localeCompare(blockCreated.get(b) ?? "")
-            );
-            return (
-              <div key={type} className="flex flex-col gap-2.5">
-                <p className="flex items-center gap-2 text-sm font-semibold text-[var(--ink-2)]">
-                  {meta && (
-                    <span
-                      className={`inline-flex h-5 min-w-5 items-center justify-center rounded px-1 text-[11px] ${meta.ring} ring-offset-1`}
-                    >
-                      {meta.prefix}
-                    </span>
-                  )}
-                  {t.objects.types[type as keyof typeof t.objects.types] ?? type}
-                  <span className="text-xs font-normal text-[var(--ink-5)]">
-                    ({group.length})
-                  </span>
-                </p>
-                {typeBlocks.map((block) => {
-                  const cells = group.filter((u) => (u.block ?? "") === block);
-                  return (
-                    <div key={block} className="flex flex-col gap-1.5">
-                      {block && (
-                        <p className="text-xs font-medium text-[var(--ink-4)]">
-                          {block} <span className="text-[var(--ink-5)]">({cells.length})</span>
-                        </p>
-                      )}
-                      {/* A real grid (fixed CELL-wide columns) so the cells line
-                          up tidily; a merged (span>1) cell spans that many
-                          columns and still aligns. */}
-                      <div
-                        className="grid justify-start gap-1"
-                        style={{ gridTemplateColumns: `repeat(auto-fill, ${CELL}px)` }}
-                      >
-                        {cells.map((unit) => (
-                          <div
-                            key={unit.id}
-                            style={{ gridColumn: `span ${unit.span || 1}` }}
-                          >
-                            <UnitCell
-                              unit={unit}
-                              apartmentNumber={apartmentNumbers.get(unit.id)}
-                              floorUnits={cells}
-                              contractInfo={contractsByUnit[unit.id]}
-                              onBookUnit={onBookUnit}
-                              onQuickBook={onQuickBook}
-                              onCancelQuickBook={onCancelQuickBook}
-                              isPending={pendingUnitIds.has(unit.id)}
-                              onMergeUnits={onMergeUnits}
-                              onSplitUnit={onSplitUnit}
-                              onDeleteUnit={onDeleteUnit}
-                              canEditSold={canEditSold}
-                              readOnly={readOnly}
-                              onViewUnit={onViewUnit}
-                              statusFilter={statusFilter}
-                              roomsFilter={roomsFilter}
-                              gapFilter={gapFilter}
-                              editMode={editMode}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
       )}
 
       {/* What the bar and the tick on a cell mean. This is a reading key, not

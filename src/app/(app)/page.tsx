@@ -90,6 +90,26 @@ type PeriodTotals =
   | { key: string; income: MoneyPair; sales: MoneyPair; contracts: number }
   | { key: string; error: string };
 
+// Shops and offices, parking, anything let out for rent, land: counted apart from the
+// flats (crm.dashboard_other_units, block 086). Its own call for the same reason as
+// DueMonth -- a database that has not been updated yet must not take the page down.
+type OtherGroupKey = "commercial" | "parking" | "rent" | "other";
+type OtherGroup = {
+  group: OtherGroupKey;
+  total: number;
+  available: number;
+  reserved: number;
+  sold: number;
+  rented: number;
+  in_progress: number;
+  area_total: number;
+  area_available: number;
+  potential: MoneyPair;
+  paid: MoneyPair;
+  debt: MoneyPair;
+};
+type OtherUnits = { key: string; groups: OtherGroup[] } | { key: string; error: string };
+
 // What the page renders before the first response lands, and if the request
 // fails -- so every reader below can stay unconditional.
 const EMPTY_SUMMARY: DashboardSummary = {
@@ -160,6 +180,7 @@ export default function DashboardPage() {
   const [failure, setFailure] = useState<string | null>(null);
   const [dueMonth, setDueMonth] = useState<DueMonth | null>(null);
   const [periodTotals, setPeriodTotals] = useState<PeriodTotals | null>(null);
+  const [otherUnits, setOtherUnits] = useState<OtherUnits | null>(null);
 
   const periodBounds = useMemo(() => {
     if (periodFilter === "all") return null;
@@ -227,6 +248,59 @@ export default function DashboardPage() {
       cancelled = true;
     };
   }, [configured, selectedBuildingId, periodBounds, queryKey]);
+
+  // The non-flat premises of the picked building (or of every unfinished one). A snapshot
+  // of today, so it does not follow the period.
+  useEffect(() => {
+    if (!configured) return;
+    let cancelled = false;
+    const key = selectedBuildingId;
+    createClient()
+      .schema("crm")
+      .rpc("dashboard_other_units", {
+        p_building_id: selectedBuildingId === "all" ? null : selectedBuildingId,
+      })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          console.error("dashboard_other_units failed:", error.message);
+          setOtherUnits({ key, error: error.message });
+          return;
+        }
+        const num = (v: unknown) => Number(v ?? 0);
+        const pair = (v: { tjs?: number; usd?: number } | undefined): MoneyPair => ({
+          tjs: num(v?.tjs),
+          usd: num(v?.usd),
+        });
+        const rows = (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>;
+        setOtherUnits({
+          key,
+          groups: rows.map((r) => ({
+            group: r.group as OtherGroupKey,
+            total: num(r.total),
+            available: num(r.available),
+            reserved: num(r.reserved),
+            sold: num(r.sold),
+            rented: num(r.rented),
+            in_progress: num(r.in_progress),
+            area_total: num(r.area_total),
+            area_available: num(r.area_available),
+            potential: pair(r.potential as { tjs?: number; usd?: number }),
+            paid: pair(r.paid as { tjs?: number; usd?: number }),
+            debt: pair(r.debt as { tjs?: number; usd?: number }),
+          })),
+        });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured, selectedBuildingId]);
+  const otherGroups =
+    otherUnits && otherUnits.key === selectedBuildingId && "groups" in otherUnits
+      ? otherUnits.groups
+      : [];
+  const otherFailed =
+    otherUnits && otherUnits.key === selectedBuildingId && "error" in otherUnits;
 
   // Income received and contracts signed inside the picked period, for the same
   // building scope. Only asked for when a period is picked ("all time" is the
@@ -598,6 +672,80 @@ export default function DashboardPage() {
             </div>
           </div>
           <RingChart data={occupancyRows} colors={RING_COLORS} activeSegment={legendSegment} />
+        </div>
+      )}
+
+      {/* Shops and offices, parking, rentals, land: their own block, never mixed into the
+          flats above. A tile per group -- how many premises, how they split by status, the
+          floor area, what is still unsold worth, and the money on their contracts. */}
+      {otherFailed && (
+        <p className="rounded-lg border border-[var(--border-c)] bg-[var(--surface-2)] px-4 py-2 text-xs text-[var(--ink-4)]">
+          {t.dashboard.otherUnits}: {t.dashboard.otherUnitsFailed}
+        </p>
+      )}
+      {otherGroups.length > 0 && (
+        <div className="rounded-2xl border border-[var(--border-c)] bg-[var(--surface-1)] p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p className="text-sm font-semibold text-[var(--ink-2)]">{t.dashboard.otherUnits}</p>
+            <p className="text-xs text-[var(--ink-5)]">{t.dashboard.otherUnitsNote}</p>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {otherGroups.map((g) => {
+              const slices = (
+                ["sold", "rented", "reserved", "available", "in_progress"] as ObjectStatus[]
+              )
+                .filter((s) => g[s] > 0)
+                .map((s) => ({
+                  key: s,
+                  label: t.objects.statuses[s],
+                  value: g[s],
+                  hue: STATUS_HUES[s],
+                }));
+              const money: Array<{ label: string; value: MoneyPair }> = [
+                { label: t.dashboard.potentialRevenue, value: g.potential },
+                { label: t.dashboard.paidRevenue, value: g.paid },
+                { label: t.dashboard.totalDebt, value: g.debt },
+              ].filter((m) => m.value.tjs > 0 || m.value.usd > 0);
+              return (
+                <div
+                  key={g.group}
+                  className="flex flex-col gap-3 rounded-xl border border-[var(--border-c)] bg-[var(--surface-2)] p-3.5"
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-sm font-semibold text-[var(--ink-2)]">
+                      {t.dashboard.otherGroups[g.group]}
+                    </p>
+                    <p className="text-2xl font-bold tabular-nums text-[var(--ink-1)]">{g.total}</p>
+                  </div>
+                  <StackBar segments={slices} formatValue={(n) => String(n)} />
+                  <div className="flex flex-col gap-1.5 border-t border-[var(--border-c)] pt-2.5 text-xs text-[var(--ink-4)]">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{t.dashboard.totalArea}</span>
+                      <span className="font-semibold tabular-nums text-[var(--ink-2)]">
+                        {formatArea(g.area_total)}
+                      </span>
+                    </div>
+                    {g.area_available > 0 && (
+                      <div className="flex items-center justify-between gap-3">
+                        <span>{t.dashboard.areaForSale}</span>
+                        <span className="font-semibold tabular-nums text-[var(--ink-2)]">
+                          {formatArea(g.area_available)}
+                        </span>
+                      </div>
+                    )}
+                    {money.map((m) => (
+                      <div key={m.label} className="flex items-center justify-between gap-3">
+                        <span>{m.label}</span>
+                        <span className="text-xs text-[var(--ink-2)]">
+                          <MoneyPairValue value={m.value} align="right" />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

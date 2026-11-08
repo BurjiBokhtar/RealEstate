@@ -7886,3 +7886,378 @@ $$;
 grant execute on function crm.due_this_month_totals(uuid, boolean) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ### 086_apartments_vs_other_units.sql
+
+-- ============================================================
+-- 086: магазины, офисы, парковки, земля и аренда больше не считаются
+--      квартирами -- у них своя статистика.
+--
+-- ЧТО БЫЛО НЕ ТАК. Помещение «под магазин» (этажи 1-2, тип «Коммерция»)
+-- хоть и рисуется в шахматке отдельно, но на дашборде попадало в «Всего»,
+-- «Свободно», «Продано», площадь, потенциал и заполненность по ЖК -- как
+-- обычная квартира. То же в списках «Дома» / «Объекты» («В продаже · N») и
+-- для помещений, которые сдаются в аренду (listing_type = 'rent').
+--
+-- ЧТО МЕНЯЕТСЯ.
+--   * crm.dashboard_summary(): счётчики, площадь, потенциал и заполненность
+--     считаются только по квартирам и домам на продажу. Деньги (приход,
+--     долг, выручка, должники) остаются общими по компании -- как на
+--     странице «Должники», чтобы две страницы не спорили друг с другом.
+--   * crm.building_unit_stats(): то же для списков домов.
+--   * crm.dashboard_other_units(): новая, одна строка на группу -- коммерция
+--     (магазины и офисы), парковка, аренда, прочее (земля, стройплощадки):
+--     сколько помещений, по статусам, площадь, потенциал и деньги по их
+--     договорам (они уже входят в общие суммы дашборда).
+--
+-- Данные не трогает. Идемпотентно -- можно запускать повторно.
+-- ============================================================
+
+create or replace function crm.building_unit_stats()
+returns table (
+  building_id uuid,
+  total int,
+  available int,
+  available_area numeric
+)
+language sql
+stable
+security invoker
+as $$
+  select
+    o.building_id,
+    (count(*))::int,
+    (count(*) filter (where o.status = 'available'))::int,
+    coalesce(sum(o.area) filter (where o.status = 'available'), 0)
+  from crm.objects o
+  where o.building_id is not null
+    and o.type in ('apartment', 'house')
+    and o.listing_type <> 'rent'
+  group by o.building_id;
+$$;
+
+grant execute on function crm.building_unit_stats() to authenticated;
+
+
+create or replace function crm.dashboard_summary(
+  p_building_id uuid default null,
+  p_from date default null,
+  p_to date default null
+)
+returns jsonb
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+with
+scoped_objects as (
+  select o.id, o.status, o.building_id, o.price, o.currency, o.area, o.type, o.listing_type
+  from crm.objects o
+  left join crm.buildings b on b.id = o.building_id
+  where case
+          when p_building_id is not null then o.building_id = p_building_id
+          else coalesce(b.construction_status, 'in_progress') <> 'completed'
+        end
+),
+-- Квартиры и дома на продажу. Только они считаются в «Всего / Свободно / Продано»,
+-- площади, потенциале и заполненности. Магазины, офисы, парковки, земля и всё,
+-- что сдаётся в аренду, учитываются отдельно (см. crm.dashboard_other_units()).
+main_objects as (
+  select * from scoped_objects
+  where type in ('apartment', 'house') and listing_type <> 'rent'
+),
+scoped_contracts as (
+  select c.id, c.client_id, c.amount, c.paid_amount, c.currency,
+         c.signed_date, c.status, so.building_id
+  from crm.contracts c
+  join scoped_objects so on so.id = c.object_id
+),
+-- Every live (not cancelled) contract in scope, with NO date restriction.
+-- The one thing paid/debt/top_debtors actually want: today's, this
+-- month's and this year's totals are all the same number, because those
+-- three are a snapshot of current state, not a flow during the period.
+live_state_contracts as (
+  select *
+  from scoped_contracts
+  where status <> 'cancelled'
+),
+-- Same, but additionally restricted to contracts SIGNED inside the
+-- chosen period -- for the metrics that actually mean "sales this
+-- period" (month_rev, day_rev's contract lookup, bld_rev).
+live_contracts as (
+  select *
+  from live_state_contracts
+  where (p_from is null or (signed_date is not null and signed_date >= p_from))
+    and (p_to   is null or (signed_date is not null and signed_date <= p_to))
+),
+rel_buildings as (
+  select b.id, b.name
+  from crm.buildings b
+  where case
+          when p_building_id is not null then b.id = p_building_id
+          else b.construction_status <> 'completed'
+        end
+),
+obj_stats as (
+  select
+    (count(*))::int                                             as total,
+    (count(*) filter (where status = 'available'))::int         as available,
+    (count(*) filter (where status = 'reserved'))::int          as reserved,
+    (count(*) filter (where status = 'sold'))::int              as sold,
+    (count(*) filter (where status = 'in_progress'))::int       as in_progress,
+    coalesce(sum(area), 0)                                      as area_total,
+    coalesce(sum(area) filter (where status = 'available'), 0)   as area_available,
+    coalesce(sum(area) filter (where status = 'reserved'), 0)    as area_reserved,
+    coalesce(sum(area) filter (where status = 'sold'), 0)        as area_sold,
+    coalesce(sum(area) filter (where status = 'rented'), 0)      as area_rented,
+    coalesce(sum(area) filter (where status = 'in_progress'), 0) as area_in_progress,
+    coalesce(sum(price) filter (where status <> 'sold' and currency <> 'USD'), 0) as pot_tjs,
+    coalesce(sum(price) filter (where status <> 'sold' and currency  = 'USD'), 0) as pot_usd,
+    (count(*) filter (where status <> 'sold' and price is not null and price > 0))::int
+      as pot_units,
+    (count(*) filter (where status <> 'sold' and (price is null or price = 0)))::int
+      as pot_no_price
+  from main_objects
+),
+money as (
+  select
+    coalesce(sum(paid_amount) filter (where currency <> 'USD'), 0) as paid_tjs,
+    coalesce(sum(paid_amount) filter (where currency  = 'USD'), 0) as paid_usd,
+    coalesce(sum(greatest(amount - paid_amount, 0)) filter (where currency <> 'USD'), 0) as debt_tjs,
+    coalesce(sum(greatest(amount - paid_amount, 0)) filter (where currency  = 'USD'), 0) as debt_usd
+  from live_state_contracts
+),
+overdue as (
+  select
+    coalesce(sum(oi.unpaid_amount) filter (where c.currency <> 'USD'), 0) as tjs,
+    coalesce(sum(oi.unpaid_amount) filter (where c.currency  = 'USD'), 0) as usd,
+    (count(distinct c.id))::int                                          as contracts
+  from crm.overdue_installments oi
+  join scoped_contracts c on c.id = oi.contract_id
+  where oi.due_date < current_date
+    and oi.unpaid_amount > 0.005
+    and c.status <> 'cancelled'
+),
+-- The end of the window: the last month that actually has a signing, so the
+-- chart lands where the data is even if the newest contract is not this month.
+month_end as (
+  select coalesce(
+           date_trunc('month', max(signed_date)),
+           date_trunc('month', current_date)
+         ) as m
+  from scoped_contracts
+  where status <> 'cancelled' and signed_date is not null
+),
+-- Six consecutive calendar months. A month with no sales must be a zero on the
+-- axis, not a missing point.
+month_axis as (
+  select to_char(g, 'YYYY-MM') as month
+  from month_end me,
+       generate_series(me.m - interval '5 months', me.m, interval '1 month') as g
+),
+month_rev as (
+  select
+    ax.month,
+    coalesce(sum(c.amount) filter (where c.currency <> 'USD'), 0) as tjs,
+    coalesce(sum(c.amount) filter (where c.currency  = 'USD'), 0) as usd
+  from month_axis ax
+  left join scoped_contracts c
+         on c.status <> 'cancelled'
+        and c.signed_date is not null
+        and to_char(c.signed_date, 'YYYY-MM') = ax.month
+  group by ax.month
+  order by ax.month
+),
+-- Same treatment for the daily chart: every day in the chosen period appears,
+-- including the ones with no money received.
+day_axis as (
+  select g::date as day
+  from generate_series(
+         coalesce(p_from, current_date),
+         coalesce(p_to, current_date),
+         interval '1 day'
+       ) as g
+  where p_from is not null and p_to is not null
+),
+day_rev as (
+  select
+    ax.day,
+    coalesce(sum(p.amount) filter (where c.currency <> 'USD'), 0) as tjs,
+    coalesce(sum(p.amount) filter (where c.currency  = 'USD'), 0) as usd
+  from day_axis ax
+  left join crm.contract_payments p
+         on p.paid and p.paid_date = ax.day
+  left join scoped_contracts c
+         on c.id = p.contract_id
+        and c.status <> 'cancelled'
+  group by ax.day
+  order by ax.day
+),
+occ as (
+  select
+    rb.id, rb.name,
+    (count(*))::int                                          as total,
+    (count(*) filter (where so.status = 'available'))::int    as available,
+    (count(*) filter (where so.status = 'reserved'))::int     as reserved,
+    (count(*) filter (where so.status = 'sold'))::int         as sold,
+    (count(*) filter (where so.status = 'rented'))::int       as rented,
+    (count(*) filter (where so.status = 'in_progress'))::int  as in_progress
+  from rel_buildings rb
+  join main_objects so on so.building_id = rb.id
+  group by rb.id, rb.name
+),
+bld_rev as (
+  select
+    rb.id, rb.name,
+    coalesce(sum(lc.amount) filter (where lc.currency <> 'USD'), 0) as tjs,
+    coalesce(sum(lc.amount) filter (where lc.currency  = 'USD'), 0) as usd
+  from rel_buildings rb
+  join live_contracts lc on lc.building_id = rb.id
+  group by rb.id, rb.name
+),
+debtors as (
+  select
+    lc.client_id,
+    cl.name,
+    lc.currency::text                       as currency,
+    sum(lc.amount - lc.paid_amount)         as remaining
+  from live_state_contracts lc
+  join crm.clients cl on cl.id = lc.client_id
+  where lc.amount - lc.paid_amount > 0
+  group by 1, 2, 3
+  order by 4 desc
+  limit 5
+),
+completed as (
+  select
+    (select count(*) from crm.buildings where construction_status = 'completed')::int as buildings,
+    (select count(*)
+       from crm.objects o
+       join crm.buildings b on b.id = o.building_id
+      where b.construction_status = 'completed')::int as units
+)
+select jsonb_build_object(
+  'counts', (
+    select jsonb_build_object(
+      'total', total, 'available', available, 'reserved', reserved,
+      'sold', sold, 'in_progress', in_progress
+    ) from obj_stats
+  ),
+  'area', (select jsonb_build_object('total', area_total, 'available', area_available) from obj_stats),
+  'area_split', (
+    select jsonb_build_object(
+      'sold', area_sold, 'reserved', area_reserved, 'available', area_available,
+      'rented', area_rented, 'in_progress', area_in_progress
+    ) from obj_stats
+  ),
+  'potential', (select jsonb_build_object('tjs', pot_tjs, 'usd', pot_usd) from obj_stats),
+  'potential_units', (select pot_units from obj_stats),
+  'potential_no_price', (select pot_no_price from obj_stats),
+  'paid', (select jsonb_build_object('tjs', paid_tjs, 'usd', paid_usd) from money),
+  'debt', (select jsonb_build_object('tjs', debt_tjs, 'usd', debt_usd) from money),
+  'overdue', (select jsonb_build_object('tjs', tjs, 'usd', usd) from overdue),
+  'overdue_contracts', (select contracts from overdue),
+  'revenue_months', coalesce((
+    select jsonb_agg(jsonb_build_object('month', month, 'tjs', tjs, 'usd', usd) order by month)
+    from month_rev
+  ), '[]'::jsonb),
+  'revenue_days', coalesce((
+    select jsonb_agg(jsonb_build_object('day', day, 'tjs', tjs, 'usd', usd) order by day)
+    from day_rev
+  ), '[]'::jsonb),
+  'occupancy', coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', id, 'name', name, 'total', total,
+      'available', available, 'reserved', reserved, 'sold', sold,
+      'rented', rented, 'in_progress', in_progress
+    ) order by name)
+    from occ
+  ), '[]'::jsonb),
+  'revenue_by_building', coalesce((
+    select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'tjs', tjs, 'usd', usd)
+                     order by (tjs + usd) desc)
+    from bld_rev where tjs > 0 or usd > 0
+  ), '[]'::jsonb),
+  'top_debtors', coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'client_id', client_id, 'name', name, 'currency', currency, 'remaining', remaining
+    ) order by remaining desc)
+    from debtors
+  ), '[]'::jsonb),
+  'completed', (select jsonb_build_object('buildings', buildings, 'units', units) from completed)
+);
+$$;
+
+grant execute on function crm.dashboard_summary(uuid, date, date) to authenticated;
+
+create or replace function crm.dashboard_other_units(p_building_id uuid default null)
+returns jsonb
+language sql
+stable
+security invoker
+as $$
+with scoped as (
+  select
+    o.id, o.status, o.area, o.price, o.currency,
+    case
+      when o.listing_type = 'rent'                 then 'rent'
+      when o.type in ('commercial', 'office')      then 'commercial'
+      when o.type = 'parking'                      then 'parking'
+      else 'other'
+    end as grp
+  from crm.objects o
+  left join crm.buildings b on b.id = o.building_id
+  where not (o.type in ('apartment', 'house') and o.listing_type <> 'rent')
+    and case
+          when p_building_id is not null then o.building_id = p_building_id
+          else coalesce(b.construction_status, 'in_progress') <> 'completed'
+        end
+),
+units as (
+  select
+    grp,
+    (count(*))::int                                              as total,
+    (count(*) filter (where status = 'available'))::int           as available,
+    (count(*) filter (where status = 'reserved'))::int            as reserved,
+    (count(*) filter (where status = 'sold'))::int                as sold,
+    (count(*) filter (where status = 'rented'))::int              as rented,
+    (count(*) filter (where status = 'in_progress'))::int         as in_progress,
+    coalesce(sum(area), 0)                                        as area_total,
+    coalesce(sum(area) filter (where status = 'available'), 0)    as area_available,
+    -- Для аренды «потенциал» не считаем: цена там может быть арендной ставкой.
+    coalesce(sum(price) filter (where grp <> 'rent' and status not in ('sold', 'rented') and currency <> 'USD'), 0) as pot_tjs,
+    coalesce(sum(price) filter (where grp <> 'rent' and status not in ('sold', 'rented') and currency  = 'USD'), 0) as pot_usd
+  from scoped
+  group by grp
+),
+money as (
+  select
+    s.grp,
+    coalesce(sum(c.paid_amount) filter (where c.currency <> 'USD'), 0) as paid_tjs,
+    coalesce(sum(c.paid_amount) filter (where c.currency  = 'USD'), 0) as paid_usd,
+    coalesce(sum(greatest(c.amount - c.paid_amount, 0)) filter (where c.currency <> 'USD'), 0) as debt_tjs,
+    coalesce(sum(greatest(c.amount - c.paid_amount, 0)) filter (where c.currency  = 'USD'), 0) as debt_usd
+  from scoped s
+  join crm.contracts c on c.object_id = s.id and c.status <> 'cancelled'
+  group by s.grp
+)
+select coalesce(jsonb_agg(
+  jsonb_build_object(
+    'group', u.grp,
+    'total', u.total, 'available', u.available, 'reserved', u.reserved,
+    'sold', u.sold, 'rented', u.rented, 'in_progress', u.in_progress,
+    'area_total', u.area_total, 'area_available', u.area_available,
+    'potential', jsonb_build_object('tjs', u.pot_tjs, 'usd', u.pot_usd),
+    'paid', jsonb_build_object('tjs', coalesce(m.paid_tjs, 0), 'usd', coalesce(m.paid_usd, 0)),
+    'debt', jsonb_build_object('tjs', coalesce(m.debt_tjs, 0), 'usd', coalesce(m.debt_usd, 0))
+  )
+  order by case u.grp when 'commercial' then 1 when 'parking' then 2 when 'rent' then 3 else 4 end
+), '[]'::jsonb)
+from units u
+left join money m on m.grp = u.grp;
+$$;
+
+grant execute on function crm.dashboard_other_units(uuid) to authenticated;
+
+notify pgrst, 'reload schema';

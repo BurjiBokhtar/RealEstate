@@ -163,7 +163,11 @@ export default function BuildingReportPage() {
     let availableArea = 0;
     const contractValue: Pair = { tjs: 0, usd: 0 };
     const debt: Pair = { tjs: 0, usd: 0 };
+    // The summary tiles are about the FLATS for sale. Shops, offices, parking and anything
+    // let out for rent are counted apart (they still appear in the snapshot and list below),
+    // the same split the dashboard makes.
     for (const u of units) {
+      if (!(u.type === "apartment" || u.type === "house") || u.listing_type === "rent") continue;
       counts[u.status] += 1;
       totalArea += u.area ?? 0;
       if (u.status === "available") availableArea += u.area ?? 0;
@@ -276,7 +280,14 @@ export default function BuildingReportPage() {
         {/* Summary tiles */}
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
           {[
-            { label: t.dashboard.totalObjects, value: String(units.length) },
+            {
+              label: t.dashboard.totalObjects,
+              value: String(
+                units.filter(
+                  (u) => (u.type === "apartment" || u.type === "house") && u.listing_type !== "rent"
+                ).length
+              ),
+            },
             { label: t.objects.statuses.sold, value: String(stats.counts.sold) },
             { label: t.objects.statuses.reserved, value: String(stats.counts.reserved) },
             { label: t.objects.statuses.available, value: String(stats.counts.available) },
