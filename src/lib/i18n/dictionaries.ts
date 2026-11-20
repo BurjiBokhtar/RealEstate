@@ -678,6 +678,16 @@ export const dictionaries = {
       noUnits: "Помещений ещё нет — добавьте их по этажам ниже.",
       noBlock: "Без блока",
       clearFilter: "Сбросить фильтр",
+      filters: {
+        button: "Фильтры",
+        all: "Все",
+        reservedShort: "Бронь",
+        statusTitle: "Статус",
+        gapsTitle: "Не заполнено",
+        cellShows: "В ячейке",
+        cellNumberOnly: "Только номер",
+        reset: "Сбросить",
+      },
       noPriceFilter: "без цены",
       noPriceFilterHint:
         "Непроданные квартиры без цены — именно они не входят в «Потенциал непроданных» на дашборде.",
@@ -1810,6 +1820,16 @@ export const dictionaries = {
       noUnits: "Ҳоло ҳуҷра нест — онҳоро аз рӯи ошёна дар поён илова кунед.",
       noBlock: "Бе блок",
       clearFilter: "Бекор кардани филтр",
+      filters: {
+        button: "Филтрҳо",
+        all: "Ҳама",
+        reservedShort: "Брон",
+        statusTitle: "Ҳолат",
+        gapsTitle: "Пур нашудааст",
+        cellShows: "Дар ҳуҷайра",
+        cellNumberOnly: "Танҳо рақам",
+        reset: "Бекор кардан",
+      },
       noPriceFilter: "бе нарх",
       noPriceFilterHint:
         "Хонаҳои нафурӯхтаи бе нарх — маҳз онҳо ба «Иқтидори хонаҳои нафурӯхта» дар дашборд дохил намешаванд.",
