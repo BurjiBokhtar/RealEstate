@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { justWentBack } from "@/lib/useScrollMemory";
 import { setCellMetric, useCellMetric, type CellMetric } from "@/lib/useCellMetric";
 import { useLocale } from "@/lib/i18n/LocaleProvider";
-import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea } from "@/lib/objects/format";
+import { CELL_COLORS, STATUS_COLORS, STATUS_PROGRESS_COLORS, formatArea, formatAreaValue } from "@/lib/objects/format";
 import { STATUS_HUES } from "@/components/charts/palette";
 import { formatCurrency, type Currency } from "@/lib/currency";
 import { computeApartmentNumbers } from "@/lib/buildings/apartmentNumbers";
@@ -26,7 +26,7 @@ export type UnitContractInfo = {
 
 // A cell is a CELL-pixel square (48px; h-12 is the same 48px): the flat number in a regular
 // (thin) weight, and -- only when the bar above the grid asks for it (see useCellMetric) --
-// one small value under it, the rooms ("2к") or the area rounded to whole metres ("54");
+// one small value under it, the rooms ("2к") or the real area ("54,3", never rounded);
 // everything else is in the hover card. One value at a time keeps the cells calm, and about
 // six fit a phone.
 // Every width below -- merged cells, entrance columns, the empty "+" slots -- is derived
@@ -272,7 +272,7 @@ function UnitCell({
         )}
         {metric === "area" && unit.area != null && unit.area > 0 && (
           <span className="text-[11px] font-normal leading-none opacity-80">
-            {Math.round(unit.area)}
+            {formatAreaValue(unit.area)}
           </span>
         )}
 
