@@ -8261,3 +8261,158 @@ $$;
 grant execute on function crm.dashboard_other_units(uuid) to authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ### 087_debt_tolerance.sql
+
+-- ============================================================
+-- 087: недоплата меньше 1 сомони не считается просрочкой.
+--
+-- ЧТО БЫЛО НЕ ТАК. Рассрочка делится на дробные суммы (8 333,33), а клиент
+-- платит круглое (8 333). Недостающие 0,33 считались долгом: порог был
+-- 0,005, то есть полкопейки. Клиент попадал в «Должники», на дашборд и в
+-- «К оплате в этом месяце» из-за недоплаты в несколько дирам.
+--
+-- ЧТО МЕНЯЕТСЯ. Одно место -- представление crm.overdue_installments,
+-- откуда берут цифры и «Должники», и дашборд, и «К оплате в этом месяце»:
+-- остаток строки графика меньше crm.debt_tolerance() (1 денежная единица
+-- валюты договора) считается нулём. Порог меняется в одной функции.
+--
+-- Недоплата не пропадает, а переезжает на следующий платёж (деньги ложатся
+-- на график по очереди). Если клиент каждый месяц платит на 0,33 меньше, на
+-- четвёртый месяц недостача дойдёт до 1,32 -- и тогда она станет просрочкой.
+--
+-- Данные не трогает. Идемпотентно -- можно запускать повторно.
+-- ============================================================
+
+create or replace function crm.debt_tolerance()
+returns numeric
+language sql
+immutable
+as $$ select 1::numeric $$;
+
+grant execute on function crm.debt_tolerance() to authenticated;
+
+-- Те же колонки и типы, что в блоке 043 -- поэтому create or replace.
+create or replace view crm.overdue_installments
+with (security_invoker = on)
+as
+with plan as (
+  select
+    p.id,
+    p.contract_id,
+    p.due_date,
+    p.amount,
+    sum(p.amount) over (
+      partition by p.contract_id
+      order by p.due_date, p.id
+      rows between unbounded preceding and current row
+    ) as cum
+  from crm.contract_payments p
+  where not p.paid
+),
+ctx as (
+  select
+    c.id                          as contract_id,
+    c.amount                      as contract_amount,
+    c.paid_amount,
+    coalesce(sum(pl.amount), 0)   as plan_total
+  from crm.contracts c
+  left join plan pl on pl.contract_id = c.id
+  where c.status <> 'cancelled'
+  group by c.id, c.amount, c.paid_amount
+),
+rows_ as (
+  select
+    pl.id,
+    pl.contract_id,
+    pl.due_date,
+    pl.amount,
+    least(
+      pl.amount,
+      greatest(pl.cum - greatest(ctx.paid_amount - (ctx.contract_amount - ctx.plan_total), 0), 0)
+    ) as unpaid
+  from plan pl
+  join ctx on ctx.contract_id = pl.contract_id
+)
+select
+  r.id            as payment_id,
+  r.contract_id,
+  r.due_date,
+  r.amount        as scheduled_amount,
+  case when r.unpaid < crm.debt_tolerance() then 0::numeric else r.unpaid end as unpaid_amount
+from rows_ r;
+
+grant select on crm.overdue_installments to authenticated;
+
+-- «График сдвинулся»: сравнение «по датам договора» и «сейчас» не должно
+-- срабатывать на те же копейки -- порог 0,5 заменён на допуск.
+drop function if exists crm.schedule_shifts();
+create function crm.schedule_shifts()
+returns table (
+  contract_id uuid,
+  contract_number text,
+  client_id uuid,
+  client_name text,
+  currency text,
+  signed_date date,
+  installment_months integer,
+  contract_amount numeric,
+  paid_amount numeric,
+  next_plan_date date,
+  overdue_now numeric,
+  overdue_by_contract_date numeric
+)
+language sql
+stable
+security invoker
+set search_path = crm, public
+as $$
+  with cand as (
+    select c.id, c.number, c.currency::text as cur, c.paid_amount, c.amount,
+           c.client_id, c.installment_months as months,
+           coalesce(c.signed_date, c.created_at::date) as signed,
+           coalesce(cl.name, '—') as client_name
+    from crm.contracts c
+    left join crm.clients cl on cl.id = c.client_id
+    where c.payment_type in ('installment', 'rent')
+      and c.status <> 'cancelled'
+      and c.installment_months > 0
+      and c.amount > c.paid_amount
+      and exists (select 1 from crm.contract_payments p where p.contract_id = c.id and not p.paid)
+      and not exists (select 1 from crm.schedule_shift_dismissed d where d.contract_id = c.id)
+  ),
+  restored as (
+    select cd.id,
+           coalesce(sum(
+             least(b.amount, greatest(b.cum - greatest(cd.paid_amount - b.down, 0), 0))
+           ) filter (where b.due_date < current_date), 0) as overdue
+    from cand cd
+    cross join lateral crm.contract_baseline_plan(cd.id) b
+    group by cd.id
+  ),
+  now_ as (
+    select oi.contract_id as id, sum(oi.unpaid_amount) as overdue
+    from crm.overdue_installments oi
+    where oi.due_date < current_date and oi.unpaid_amount > 0.005
+    group by oi.contract_id
+  ),
+  nxt as (
+    select p.contract_id as id, min(p.due_date) as next_date
+    from crm.contract_payments p
+    where not p.paid and p.contract_id in (select id from cand)
+    group by p.contract_id
+  )
+  select cd.id, cd.number, cd.client_id, cd.client_name, cd.cur,
+         cd.signed, cd.months, cd.amount, cd.paid_amount, nxt.next_date,
+         coalesce(n.overdue, 0), r.overdue
+  from cand cd
+  join restored r on r.id = cd.id
+  left join now_ n on n.id = cd.id
+  left join nxt on nxt.id = cd.id
+  where r.overdue > coalesce(n.overdue, 0) + greatest(crm.debt_tolerance(), 0.5)
+  order by r.overdue - coalesce(n.overdue, 0) desc, cd.id;
+$$;
+
+grant execute on function crm.schedule_shifts() to authenticated;
+
+notify pgrst, 'reload schema';
